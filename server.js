@@ -31,8 +31,8 @@ app.use(
   })
 );
 
-// ✅ Static desde raíz (index.html, otc.html, etc.)
-app.use(express.static(__dirname));
+// -------------------- Static --------------------
+app.use(express.static(path.join(__dirname, "public")));
 
 // -------------------- ENV --------------------
 const LODGIFY_API_KEY =
@@ -478,9 +478,9 @@ app.get("/api/otc.csv", async (req, res) => {
   }
 });
 
-// ✅ Home
+// -------------------- Home --------------------
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const PORT = Number(process.env.PORT || 8080);
