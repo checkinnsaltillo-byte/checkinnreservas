@@ -347,8 +347,7 @@ app.get("/api/otc.csv", async (req, res) => {
     const [propsMap, bookings] = await Promise.all([
       fetchPropertiesMap(),
       fetchAllBookings({ fromISO, toISO, limit }),
-    ]);
-
+    ]); 
     const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
     const csv = rowsToCSV(rows);
 
