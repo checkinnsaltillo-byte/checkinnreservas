@@ -187,19 +187,54 @@ async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
   return all;
 }
 
-function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
+function clampNightsWithinRange(arrivalISO, departureISO, fromISO, toISO) {
+  const a = new Date(`${arrivalISO}T00:00:00Z`);
+  const d = new Date(`${departureISO}T00:00:00Z`);
   const from = new Date(`${fromISO}T00:00:00Z`);
-  const to = new Date(`${toISO}T23:59:59Z`);
+  const toExclusive = new Date(`${toISO}T00:00:00Z`);
+  toExclusive.setUTCDate(toExclusive.getUTCDate() + 1); // fin inclusivo
+
+  // overlap: [a,d) con [from,toExclusive)
+  const start = a > from ? a : from;
+  const end = d < toExclusive ? d : toExclusive;
+
+  const ms = end - start;
+  if (ms <= 0) return 0;
+  return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
+function overlaps(arrivalISO, departureISO, fromISO, toISO) {
+  const a = new Date(`${arrivalISO}T00:00:00Z`);
+  const d = new Date(`${departureISO}T00:00:00Z`);
+  const from = new Date(`${fromISO}T00:00:00Z`);
+  const to = new Date(`${toISO}T00:00:00Z`);
+  to.setUTCDate(to.getUTCDate() + 1); // inclusivo
+
+  return a < to && d > from;
+}
+
+function prorate(amount, totalNights, nightsInRange) {
+  const x = safeNum(amount);
+  if (!x) return 0;
+  if (!totalNights || !nightsInRange) return 0;
+  return (x * nightsInRange) / totalNights;
+}
+
+function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
   const rows = [];
 
   for (const b of bookings) {
     if (!b?.arrival || !b?.departure) continue;
 
-    const a = new Date(`${b.arrival}T00:00:00Z`);
-    if (a < from || a > to) continue;
+    // ✅ incluir si toca el rango
+    if (!overlaps(b.arrival, b.departure, fromISO, toISO)) continue;
 
+    const totalN = nights(b.arrival, b.departure);
+    const nInRange = clampNightsWithinRange(b.arrival, b.departure, fromISO, toISO);
+    if (!nInRange) continue;
+
+    const a = new Date(`${b.arrival}T00:00:00Z`);
     const dep = new Date(`${b.departure}T00:00:00Z`);
-    const n = nights(b.arrival, b.departure);
 
     const houseId = Number(b.property_id);
     const houseName = propsMap.get(houseId) || String(houseId || "");
@@ -212,12 +247,18 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
       Id: b.id,
       Source: guessSourceLabel(b),
       SourceText: b.source_text || "",
-      ChannelBooking: (typeof b.source_text === "string" && b.source_text.length <= 30) ? b.source_text : "",
+      ChannelBooking: (() => {
+        if (typeof b.source_text === "string" && b.source_text.length <= 30) return b.source_text;
+        return "";
+      })(),
       Status: b.status || "",
       DateCancelled: b.canceled_at ? formatMMDDYYYY(new Date(`${b.canceled_at}Z`)) : "",
       DateArrival: formatMMDDYYYY(a),
       DateDeparture: formatMMDDYYYY(dep),
-      Nights: n,
+
+      // 👇 en OTC mensual normalmente interesa “noches dentro del mes”
+      Nights: nInRange,
+
       HouseName: houseName,
       HouseId: houseId || "",
       RoomTypeNames: houseName,
@@ -233,38 +274,37 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
     };
 
     const st = b.subtotals || {};
+
+    // ✅ prorratear por noches dentro del rango
+    const stay = prorate(st.stay, totalN, nInRange);
+    const fees = prorate(st.fees, totalN, nInRange);
+    const taxes = prorate(st.taxes, totalN, nInRange);
+    const addons = prorate(st.addons, totalN, nInRange);
+    const promos = prorate(st.promotions, totalN, nInRange);
+    const vat = prorate(st.vat, totalN, nInRange);
+
     const lineItems = [];
-
-    const stay = safeNum(st.stay);
     if (stay) lineItems.push({ LineItem: "RoomRate", LineItemDescription: "Tarifa diaria", GrossAmount: stay });
-
-    const fees = safeNum(st.fees);
     if (fees) lineItems.push({ LineItem: "Fee", LineItemDescription: "Fees", GrossAmount: fees });
-
-    const taxes = safeNum(st.taxes);
     if (taxes) lineItems.push({ LineItem: "Tax", LineItemDescription: "Taxes", GrossAmount: taxes });
-
-    const addons = safeNum(st.addons);
     if (addons) lineItems.push({ LineItem: "Addon", LineItemDescription: "Add-ons", GrossAmount: addons });
-
-    const promos = safeNum(st.promotions);
     if (promos) lineItems.push({ LineItem: "Promotion", LineItemDescription: "Promotions", GrossAmount: promos });
-
-    const vat = safeNum(st.vat);
     if (vat) lineItems.push({ LineItem: "VAT", LineItemDescription: "VAT", GrossAmount: vat });
 
+    // fallback si no hay subtotales
     if (!lineItems.length) {
-      const total = safeNum(b.total_amount);
+      const total = prorate(b.total_amount, totalN, nInRange);
       if (total) lineItems.push({ LineItem: "Total", LineItemDescription: "Total", GrossAmount: total });
     }
 
     for (const li of lineItems) {
+      const amt = Number(safeNum(li.GrossAmount).toFixed(2));
       rows.push({
         ...base,
         LineItem: li.LineItem,
         LineItemDescription: li.LineItemDescription,
-        GrossAmount: Number(li.GrossAmount.toFixed(2)),
-        NetAmount: Number(li.GrossAmount.toFixed(2)),
+        GrossAmount: amt,
+        NetAmount: amt,
         VatAmount: 0,
       });
     }
@@ -272,6 +312,7 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
 
   return rows;
 }
+
 
 function rowsToCSV(rows) {
   const cols = [
