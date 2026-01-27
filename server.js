@@ -187,72 +187,39 @@ function extractTotal(data) {
  *
  * Puedes forzar modo "filtered" con fetchMode=filtered para probar el filtro del API.
  */
-async function fetchAllBookings({ fromISO, toISO, limit = 200, fetchMode = "all" }) {
+async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
   const all = [];
   const seen = new Set();
-  let guard = 0;
-  let offset = 0;
 
-  while (guard++ < 5000) {
-    let data = null;
-    let lastErr = null;
+  let cursorFrom = new Date(`${fromISO}T00:00:00Z`);
+  const end = new Date(`${toISO}T23:59:59Z`);
 
-    // A) offset/limit
-    try {
-      const qs = new URLSearchParams();
-      qs.set("limit", String(limit));
-      qs.set("offset", String(offset));
+  while (cursorFrom < end) {
+    const cursorTo = new Date(cursorFrom);
+    cursorTo.setUTCDate(cursorTo.getUTCDate() + 14); // ventanas de 14 días
 
-      if (fetchMode === "filtered") {
-        qs.set("arrivalFrom", fromISO);
-        qs.set("arrivalTo", toISO);
-      }
+    const qs = new URLSearchParams();
+    qs.set("createdFrom", cursorFrom.toISOString());
+    qs.set("createdTo", cursorTo.toISOString());
+    qs.set("limit", String(limit));
 
-      data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
-    } catch (e) {
-      lastErr = e;
-    }
+    const data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
 
-    // B) page/pageSize (fallback)
-    if (!data) {
-      try {
-        const page = Math.floor(offset / limit) + 1;
-        const qs = new URLSearchParams();
-        qs.set("page", String(page));
-        qs.set("pageSize", String(limit));
-
-        if (fetchMode === "filtered") {
-          qs.set("arrivalFrom", fromISO);
-          qs.set("arrivalTo", toISO);
-        }
-
-        data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
-      } catch (e) {
-        lastErr = e;
-      }
-    }
-
-    if (!data) throw lastErr || new Error("Failed fetching bookings");
-
-    const batch = extractBatch(data);
+    const batch = data?.bookings || [];
     for (const b of batch) {
-      const id = b?.id ?? b?.booking_id;
-      const key = id != null ? String(id) : JSON.stringify(b);
-      if (!seen.has(key)) {
-        seen.add(key);
+      if (!seen.has(b.id)) {
+        seen.add(b.id);
         all.push(b);
       }
     }
 
-    const total = extractTotal(data);
-    if (total != null && seen.size >= total) break;
-
-    if (batch.length < limit) break;
-    offset += batch.length;
+    // avanzar ventana
+    cursorFrom = cursorTo;
   }
 
   return all;
 }
+
 
 // -------------------- OTC builder --------------------
 function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
