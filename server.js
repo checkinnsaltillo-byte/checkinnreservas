@@ -361,12 +361,27 @@ app.get("/api/otc", async (req, res) => {
 
     const limit = Math.min(200, Math.max(10, Number(req.query.limit || 50)));
 
-    const [propsMap, bookings] = await Promise.all([
-      fetchPropertiesMap(),
-      fetchAllBookings({ fromISO, toISO, limit }),
-    ]);
+    const bufferDays = Number(req.query.bufferDays || 45);
 
-    const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
+const fromD = parseISODate(fromISO);
+const toD = parseISODate(toISO);
+
+const fetchFrom = new Date(fromD);
+fetchFrom.setUTCDate(fetchFrom.getUTCDate() - bufferDays);
+
+const fetchTo = new Date(toD);
+fetchTo.setUTCDate(fetchTo.getUTCDate() + bufferDays);
+
+const fetchFromISO = fetchFrom.toISOString().slice(0, 10);
+const fetchToISO = fetchTo.toISOString().slice(0, 10);
+
+const [propsMap, bookings] = await Promise.all([
+  fetchPropertiesMap(),
+  fetchAllBookings({ fromISO: fetchFromISO, toISO: fetchToISO, limit }),
+]);
+
+const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
+
 
     res.json({ ok: true, from: fromISO, to: toISO, rowsCount: rows.length, bookingsCount: bookings.length, rows });
   } catch (e) {
