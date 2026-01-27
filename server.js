@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 
 const app = express();
 
@@ -32,6 +33,9 @@ app.use(
 );
 
 // -------------------- Static --------------------
+// ✅ Sirve estáticos desde RAÍZ (porque en tu repo tienes index.html y otc.html en raíz)
+app.use(express.static(__dirname));
+// ✅ Si existe /public también lo sirve (por compatibilidad)
 app.use(express.static(path.join(__dirname, "public")));
 
 // -------------------- ENV --------------------
@@ -134,7 +138,6 @@ function clampNightsWithinRange(arrivalISO, departureISO, fromISO, toISO) {
   const toExclusive = new Date(`${toISO}T00:00:00Z`);
   toExclusive.setUTCDate(toExclusive.getUTCDate() + 1); // fin inclusivo
 
-  // overlap: [a,d) con [from,toExclusive)
   const start = a > from ? a : from;
   const end = d < toExclusive ? d : toExclusive;
 
@@ -168,58 +171,128 @@ async function fetchPropertiesMap() {
   return new Map();
 }
 
-// -------------------- Bookings fetch (robusto) --------------------
+// -------------------- Bookings fetch (FIX REAL) --------------------
+// ✅ Endpoint preferido para histórico:
+const BOOKINGS_ENDPOINTS = ["/v2/bookings", "/v2/reservations/bookings"];
+
 function extractBatch(data) {
-  const batch = data?.bookings || data?.items || (Array.isArray(data) ? data : []);
+  const batch = data?.items || data?.bookings || (Array.isArray(data) ? data : []);
   if (!Array.isArray(batch)) throw new Error("Unexpected bookings payload shape");
   return batch;
 }
 
-function extractTotal(data) {
-  const total = safeNum(data?.total_bookings) || safeNum(data?.total) || safeNum(data?.count) || null;
-  return total && total > 0 ? total : null;
-}
-
 /**
- * Estrategia principal:
- * - Por default: NO confiar en arrivalFrom/arrivalTo (en tu caso está devolviendo sólo un subset).
- * - Pagina TODO (offset/limit y/o page/pageSize) y luego filtra localmente por rango (overlaps).
- *
- * Puedes forzar modo "filtered" con fetchMode=filtered para probar el filtro del API.
+ * Trae bookings por VENTANAS de arrivalFrom/arrivalTo.
+ * Esto evita límites raros del API y sí recupera todo el mes.
  */
-async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
+async function fetchBookingsWindowed({ fromISO, toISO, limit = 200, windowDays = 7 }) {
   const all = [];
   const seen = new Set();
 
-  let cursorFrom = new Date(`${fromISO}T00:00:00Z`);
+  let cursor = new Date(`${fromISO}T00:00:00Z`);
   const end = new Date(`${toISO}T23:59:59Z`);
 
-  while (cursorFrom < end) {
-    const cursorTo = new Date(cursorFrom);
-    cursorTo.setUTCDate(cursorTo.getUTCDate() + 14); // ventanas de 14 días
+  // Probamos endpoints (primero /v2/bookings, luego fallback)
+  let endpointOk = null;
+  let lastErr = null;
+
+  for (const endpoint of BOOKINGS_ENDPOINTS) {
+    try {
+      // Smoke test
+      const qs = new URLSearchParams({
+        arrivalFrom: fromISO,
+        arrivalTo: toISO,
+        limit: String(Math.min(50, limit)),
+      });
+      await lodgifyFetch(`${endpoint}?${qs.toString()}`);
+      endpointOk = endpoint;
+      break;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (!endpointOk) throw lastErr || new Error("No bookings endpoint available");
+
+  while (cursor < end) {
+    const windowEnd = new Date(cursor);
+    windowEnd.setUTCDate(windowEnd.getUTCDate() + windowDays);
+
+    const arrivalFrom = cursor.toISOString().slice(0, 10);
+    const arrivalTo = windowEnd.toISOString().slice(0, 10);
 
     const qs = new URLSearchParams();
-    qs.set("createdFrom", cursorFrom.toISOString());
-    qs.set("createdTo", cursorTo.toISOString());
+    qs.set("arrivalFrom", arrivalFrom);
+    qs.set("arrivalTo", arrivalTo);
     qs.set("limit", String(limit));
 
-    const data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
+    // Intentamos paginar dentro de la ventana (si el API lo soporta)
+    // Si lo ignora, al menos obtendremos lo que dé por ventana y avanzamos.
+    let offset = 0;
+    let guard = 0;
 
-    const batch = data?.bookings || [];
-    for (const b of batch) {
-      if (!seen.has(b.id)) {
-        seen.add(b.id);
-        all.push(b);
+    while (guard++ < 200) {
+      const qsPage = new URLSearchParams(qs.toString());
+      qsPage.set("offset", String(offset));
+
+      let data = null;
+      try {
+        data = await lodgifyFetch(`${endpointOk}?${qsPage.toString()}`);
+      } catch (e) {
+        // fallback page/pageSize
+        const page = Math.floor(offset / limit) + 1;
+        const qsAlt = new URLSearchParams(qs.toString());
+        qsAlt.set("page", String(page));
+        qsAlt.set("pageSize", String(limit));
+        data = await lodgifyFetch(`${endpointOk}?${qsAlt.toString()}`);
       }
+
+      const batch = extractBatch(data);
+      for (const b of batch) {
+        if (b?.id != null && !seen.has(b.id)) {
+          seen.add(b.id);
+          all.push(b);
+        }
+      }
+
+      if (batch.length < limit) break;
+      offset += batch.length;
     }
 
-    // avanzar ventana
-    cursorFrom = cursorTo;
+    cursor = windowEnd;
   }
 
-  return all;
+  return { endpointUsed: endpointOk, bookings: all };
 }
 
+/**
+ * Wrapper con fetchMode (por si lo usas en UI):
+ * - all (default): ventanas (recomendado)
+ * - filtered: una sola llamada (sirve solo para pruebas)
+ */
+async function fetchAllBookings({ fromISO, toISO, limit = 200, fetchMode = "all" }) {
+  if (String(fetchMode).toLowerCase() === "filtered") {
+    // Solo para probar (puede dar subset)
+    let lastErr = null;
+    for (const endpoint of BOOKINGS_ENDPOINTS) {
+      try {
+        const qs = new URLSearchParams({
+          arrivalFrom: fromISO,
+          arrivalTo: toISO,
+          limit: String(limit),
+          offset: "0",
+        });
+        const data = await lodgifyFetch(`${endpoint}?${qs.toString()}`);
+        return { endpointUsed: endpoint, bookings: extractBatch(data) };
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error("Filtered fetch failed");
+  }
+
+  // all
+  return await fetchBookingsWindowed({ fromISO, toISO, limit, windowDays: 7 });
+}
 
 // -------------------- OTC builder --------------------
 function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
@@ -227,8 +300,6 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
 
   for (const b of bookings) {
     if (!b?.arrival || !b?.departure) continue;
-
-    // ✅ incluir si toca el rango
     if (!overlaps(b.arrival, b.departure, fromISO, toISO)) continue;
 
     const totalN = nights(b.arrival, b.departure);
@@ -332,8 +403,8 @@ function rowsToCSV(rows) {
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 /**
- * ✅ Debug: ver qué trae Lodgify (primera página) en ambos modos
- * GET /api/debug/bookings?from=YYYY-MM-DD&to=YYYY-MM-DD&limit=200
+ * ✅ Debug: muestra qué endpoint se usó y min/max arrivals del muestreo
+ * GET /api/debug/bookings?from=YYYY-MM-DD&to=YYYY-MM-DD&limit=200&fetchMode=all|filtered
  */
 app.get("/api/debug/bookings", async (req, res) => {
   try {
@@ -344,33 +415,23 @@ app.get("/api/debug/bookings", async (req, res) => {
     }
 
     const limit = Math.min(200, Math.max(10, Number(req.query.limit || 200)));
+    const fetchMode = (String(req.query.fetchMode || "all").toLowerCase() === "filtered") ? "filtered" : "all";
 
-    // First page filtered
-    const qsF = new URLSearchParams({ limit: String(limit), offset: "0", arrivalFrom: fromISO, arrivalTo: toISO });
-    const filtered = await lodgifyFetch(`/v2/reservations/bookings?${qsF.toString()}`);
-    const batchF = extractBatch(filtered);
+    const out = await fetchAllBookings({ fromISO, toISO, limit, fetchMode });
+    const batch = out.bookings;
 
-    // First page all (no filters)
-    const qsA = new URLSearchParams({ limit: String(limit), offset: "0" });
-    const all = await lodgifyFetch(`/v2/reservations/bookings?${qsA.toString()}`);
-    const batchA = extractBatch(all);
-
-    const minMax = (batch) => {
-      const arr = batch.map(b => b?.arrival).filter(Boolean).sort();
-      return {
-        count: batch.length,
-        arrivalMin: arr[0] || null,
-        arrivalMax: arr[arr.length - 1] || null,
-        sample: batch.slice(0, 3).map(b => ({ id: b?.id, arrival: b?.arrival, departure: b?.departure, status: b?.status, property_id: b?.property_id })),
-      };
-    };
-
+    const arrivals = batch.map(b => b?.arrival).filter(Boolean).sort();
     res.json({
       ok: true,
-      requested: { fromISO, toISO, limit },
-      filtered: { total: extractTotal(filtered), ...minMax(batchF) },
-      all: { total: extractTotal(all), ...minMax(batchA) },
-      note: "Si 'filtered' NO respeta el rango, usa fetchMode=all (default) para traer todo y filtrar localmente."
+      requested: { fromISO, toISO, limit, fetchMode },
+      endpointUsed: out.endpointUsed,
+      bookingsFetched: batch.length,
+      arrivalMin: arrivals[0] || null,
+      arrivalMax: arrivals[arrivals.length - 1] || null,
+      sample: batch.slice(0, 10).map(b => ({
+        id: b?.id, arrival: b?.arrival, departure: b?.departure, status: b?.status, property_id: b?.property_id
+      })),
+      note: "Si aquí ya ves arrivalMin/Max correctos, OTC te saldrá completo."
     });
   } catch (e) {
     const code = e?.statusCode ? Number(e.statusCode) : 500;
@@ -392,19 +453,20 @@ app.get("/api/otc", async (req, res) => {
     const limit = Math.min(200, Math.max(10, Number(req.query.limit || 200)));
     const fetchMode = (String(req.query.fetchMode || "all").toLowerCase() === "filtered") ? "filtered" : "all";
 
-    const [propsMap, bookings] = await Promise.all([
+    const [propsMap, out] = await Promise.all([
       fetchPropertiesMap(),
       fetchAllBookings({ fromISO, toISO, limit, fetchMode }),
     ]);
 
-    const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
+    const rows = buildOTCRows({ bookings: out.bookings, propsMap, fromISO, toISO });
 
     res.json({
       ok: true,
       from: fromISO,
       to: toISO,
       fetchMode,
-      bookingsFetched: bookings.length,
+      endpointUsed: out.endpointUsed,
+      bookingsFetched: out.bookings.length,
       rowsCount: rows.length,
       rows,
     });
@@ -428,12 +490,12 @@ app.get("/api/otc.csv", async (req, res) => {
     const limit = Math.min(200, Math.max(10, Number(req.query.limit || 200)));
     const fetchMode = (String(req.query.fetchMode || "all").toLowerCase() === "filtered") ? "filtered" : "all";
 
-    const [propsMap, bookings] = await Promise.all([
+    const [propsMap, out] = await Promise.all([
       fetchPropertiesMap(),
       fetchAllBookings({ fromISO, toISO, limit, fetchMode }),
     ]);
 
-    const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
+    const rows = buildOTCRows({ bookings: out.bookings, propsMap, fromISO, toISO });
     const csv = rowsToCSV(rows);
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -447,7 +509,14 @@ app.get("/api/otc.csv", async (req, res) => {
 
 // -------------------- Home --------------------
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  // ✅ Busca index.html en raíz; si no existe, usa /public/index.html
+  const rootIndex = path.join(__dirname, "index.html");
+  const publicIndex = path.join(__dirname, "public", "index.html");
+
+  if (fs.existsSync(rootIndex)) return res.sendFile(rootIndex);
+  if (fs.existsSync(publicIndex)) return res.sendFile(publicIndex);
+
+  return res.status(404).send("index.html not found (root or /public).");
 });
 
 const PORT = Number(process.env.PORT || 8080);
