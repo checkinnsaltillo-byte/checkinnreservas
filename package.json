@@ -1,7 +1,8 @@
 {
-  "name": "lodgify-otc-report",
+  "name": "checkinnreservas-otc",
   "version": "1.0.0",
   "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
