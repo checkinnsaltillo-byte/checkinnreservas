@@ -63,6 +63,35 @@ app.get("/api/bookings", async (req, res) => {
   }
 });
 
+app.get("/api/otc", async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    // 1️⃣ Traer reservas (v2)
+    const data = await lodgifyFetch("/v2/reservations/bookings");
+
+    // Lodgify suele devolver { items: [...] }
+    const bookings = Array.isArray(data?.items) ? data.items : [];
+
+    // 2️⃣ Devolver muestra + conteo
+    res.json({
+      ok: true,
+      from,
+      to,
+      total_bookings: bookings.length,
+      sample_booking: bookings[0] || null,
+      bookings
+    });
+
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      error: String(e.message || e)
+    });
+  }
+});
+
+
 // ✅ Importante: escuchar en 0.0.0.0 y en PORT
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Listening on ${PORT}`);
