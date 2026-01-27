@@ -33,6 +33,15 @@ async function lodgifyFetch(path) {
   return res.json();
 }
 
+app.get("/", (req, res) => {
+  res.status(200).send("✅ checkinnreservas API running. Try /health or /api/otc");
+});
+
+app.get("/health", (req, res) => {
+  res.json({ ok: true });
+});
+
+
 // =======================
 // Endpoint OTC
 // =======================
