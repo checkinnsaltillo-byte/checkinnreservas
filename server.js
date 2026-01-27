@@ -391,6 +391,15 @@ app.get("/api/otc.csv", async (req, res) => {
   }
 });
 
+import path from "path";
+
+const __dirname = path.resolve();
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+
 const PORT = Number(process.env.PORT || 8080);
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ checkinnreservas API running on port ${PORT}`);
