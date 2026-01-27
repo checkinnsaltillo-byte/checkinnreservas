@@ -1,7 +1,13 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
 
 const app = express();
+
+// ✅ dirname (ESM)
+const __dirname = path.resolve();
+
+// Body
 app.use(express.json({ limit: "2mb" }));
 
 // -------------------- CORS --------------------
@@ -25,8 +31,8 @@ app.use(
   })
 );
 
-// -------------------- Static --------------------
-app.use(express.static("public"));
+// ✅ Sirve estáticos desde RAÍZ (porque ahí tienes index.html y otc.html)
+app.use(express.static(__dirname));
 
 // -------------------- ENV --------------------
 const LODGIFY_API_KEY =
@@ -35,7 +41,6 @@ const LODGIFY_API_KEY =
   process.env.LODGIFY_APIKEY ||
   "";
 
-// IMPORTANT: Lodgify uses header "X-ApiKey"
 const LODGIFY_BASE = (process.env.LODGIFY_BASE || "https://api.lodgify.com").replace(/\/+$/, "");
 
 function requireApiKey() {
@@ -47,13 +52,13 @@ function requireApiKey() {
   }
 }
 
-async function lodgifyFetch(path, { method = "GET", headers = {}, body } = {}) {
+async function lodgifyFetch(p, { method = "GET", headers = {}, body } = {}) {
   requireApiKey();
-  const url = `${LODGIFY_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+  const url = `${LODGIFY_BASE}${p.startsWith("/") ? "" : "/"}${p}`;
   const res = await fetch(url, {
     method,
     headers: {
-      "Accept": "application/json",
+      Accept: "application/json",
       "Content-Type": "application/json",
       "X-ApiKey": LODGIFY_API_KEY,
       ...headers,
@@ -70,7 +75,10 @@ async function lodgifyFetch(path, { method = "GET", headers = {}, body } = {}) {
   }
 
   if (!res.ok) {
-    const msg = typeof data === "object" && data ? (data.message || data.error || JSON.stringify(data)) : String(txt);
+    const msg =
+      typeof data === "object" && data
+        ? (data.message || data.error || JSON.stringify(data))
+        : String(txt);
     const err = new Error(`Lodgify ${res.status}: ${msg}`);
     // @ts-ignore
     err.statusCode = res.status;
@@ -82,7 +90,6 @@ async function lodgifyFetch(path, { method = "GET", headers = {}, body } = {}) {
 
 // -------------------- Helpers --------------------
 function parseISODate(s) {
-  // expects YYYY-MM-DD
   const d = new Date(`${s}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return null;
   return d;
@@ -99,7 +106,6 @@ function nights(arrivalISO, departureISO) {
   return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)));
 }
 function guessSourceLabel(b) {
-  // normalize to something close to your CSV
   const src = (b?.source || "").toLowerCase();
   if (src.includes("airbnb")) return "Airbnb";
   if (src.includes("booking")) return "Booking.com";
@@ -113,15 +119,10 @@ function safeNum(x) {
 }
 
 async function fetchPropertiesMap() {
-  // Try a couple of common endpoints; keep going if one fails
-  const attempts = [
-    "/v2/properties",
-    "/v1/properties",
-  ];
+  const attempts = ["/v2/properties", "/v1/properties"];
   for (const p of attempts) {
     try {
       const data = await lodgifyFetch(p);
-      // data can be array or {items:[]}
       const items = Array.isArray(data) ? data : (data?.items || data?.properties || []);
       const map = new Map();
       for (const it of items) {
@@ -130,38 +131,31 @@ async function fetchPropertiesMap() {
         if (id != null) map.set(Number(id), String(name ?? id));
       }
       if (map.size) return map;
-    } catch (e) {
-      // ignore and try next
-    }
+    } catch {}
   }
   return new Map();
 }
 
 async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
-  // We'll try offset/limit first. If the API ignores offset, we'll still stop when batch < limit.
   let offset = 0;
-  let all = [];
+  const all = [];
   let guard = 0;
 
   while (guard++ < 2000) {
     let data = null;
     let lastErr = null;
 
-    // Strategy A: offset/limit
     try {
       const qs = new URLSearchParams();
       qs.set("limit", String(limit));
       qs.set("offset", String(offset));
-      // Filter by dates (arrival/departure). Lodgify APIs vary; we pass a couple common params.
       qs.set("arrivalFrom", fromISO);
       qs.set("arrivalTo", toISO);
-
       data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
     } catch (e) {
       lastErr = e;
     }
 
-    // Strategy B: page/pageSize
     if (!data) {
       try {
         const page = Math.floor(offset / limit) + 1;
@@ -179,18 +173,11 @@ async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
     if (!data) throw lastErr || new Error("Failed fetching bookings");
 
     const batch = data?.bookings || data?.items || (Array.isArray(data) ? data : []);
-    if (!Array.isArray(batch)) {
-      throw new Error("Unexpected bookings payload shape");
-    }
+    if (!Array.isArray(batch)) throw new Error("Unexpected bookings payload shape");
 
     all.push(...batch);
 
-    const total =
-      safeNum(data?.total_bookings) ||
-      safeNum(data?.total) ||
-      safeNum(data?.count) ||
-      null;
-
+    const total = safeNum(data?.total_bookings) || safeNum(data?.total) || safeNum(data?.count) || null;
     if (total != null && all.length >= total) break;
     if (batch.length < limit) break;
 
@@ -201,10 +188,8 @@ async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
 }
 
 function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
-  // Filter by ARRIVAL within [from,to]
   const from = new Date(`${fromISO}T00:00:00Z`);
   const to = new Date(`${toISO}T23:59:59Z`);
-
   const rows = [];
 
   for (const b of bookings) {
@@ -227,11 +212,7 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
       Id: b.id,
       Source: guessSourceLabel(b),
       SourceText: b.source_text || "",
-      ChannelBooking: (() => {
-        // often Lodgify stores confirmation code in source_text for OTA integrations; keep best-effort
-        if (typeof b.source_text === "string" && b.source_text.length <= 30) return b.source_text;
-        return "";
-      })(),
+      ChannelBooking: (typeof b.source_text === "string" && b.source_text.length <= 30) ? b.source_text : "",
       Status: b.status || "",
       DateCancelled: b.canceled_at ? formatMMDDYYYY(new Date(`${b.canceled_at}Z`)) : "",
       DateArrival: formatMMDDYYYY(a),
@@ -239,7 +220,7 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
       Nights: n,
       HouseName: houseName,
       HouseId: houseId || "",
-      RoomTypeNames: houseName, // best-effort; can refine later with a roomType lookup
+      RoomTypeNames: houseName,
       RoomTypeIds: roomTypeIds.join(","),
       GuestName: guest.name || "",
       GuestEmail: guest.email || "",
@@ -251,7 +232,6 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
       Currency: b.currency_code || "",
     };
 
-    // Build line items (best-effort) from subtotals
     const st = b.subtotals || {};
     const lineItems = [];
 
@@ -273,7 +253,6 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
     const vat = safeNum(st.vat);
     if (vat) lineItems.push({ LineItem: "VAT", LineItemDescription: "VAT", GrossAmount: vat });
 
-    // Fallback: if no subtotals, create one line with total
     if (!lineItems.length) {
       const total = safeNum(b.total_amount);
       if (total) lineItems.push({ LineItem: "Total", LineItemDescription: "Total", GrossAmount: total });
@@ -307,18 +286,16 @@ function rowsToCSV(rows) {
     if (/[",\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
     return s;
   };
-  const lines = [];
-  lines.push(cols.join(","));
-  for (const r of rows) {
-    lines.push(cols.map((c) => esc(r[c])).join(","));
-  }
-  return lines.join("\n");
+  return [
+    cols.join(","),
+    ...rows.map((r) => cols.map((c) => esc(r[c])).join(",")),
+  ].join("\n");
 }
 
 // -------------------- Routes --------------------
 app.get("/health", (req, res) => res.json({ ok: true }));
+
 app.get("/api/_ping", async (req, res) => {
-  // quick smoke: fetch a small sample
   try {
     const today = new Date();
     const from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 2, 1));
@@ -350,14 +327,7 @@ app.get("/api/otc", async (req, res) => {
 
     const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
 
-    res.json({
-      ok: true,
-      from: fromISO,
-      to: toISO,
-      rowsCount: rows.length,
-      bookingsCount: bookings.length,
-      rows,
-    });
+    res.json({ ok: true, from: fromISO, to: toISO, rowsCount: rows.length, bookingsCount: bookings.length, rows });
   } catch (e) {
     const code = e?.statusCode ? Number(e.statusCode) : 500;
     res.status(code).json({ ok: false, error: String(e?.message || e) });
@@ -391,14 +361,10 @@ app.get("/api/otc.csv", async (req, res) => {
   }
 });
 
-import path from "path";
-
-const __dirname = path.resolve();
-
+// ✅ Home (sirve el index.html que está en la raíz)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
-
 
 const PORT = Number(process.env.PORT || 8080);
 app.listen(PORT, "0.0.0.0", () => {
