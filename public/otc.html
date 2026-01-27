@@ -1,39 +1,89 @@
-app.get("/api/otc.csv", async (req, res) => {
-  try {
-    const fromISO = String(req.query.from || "");
-    const toISO = String(req.query.to || "");
-    if (!parseISODate(fromISO) || !parseISODate(toISO)) {
-      return res.status(400).send("Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD");
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OTC Export (Lodgify)</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;max-width:980px}
+    .row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+    label{display:flex;flex-direction:column;font-size:14px;gap:6px}
+    input,select,button{font-size:14px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
+    button{cursor:pointer}
+    pre{background:#0b1020;color:#d7e2ff;padding:14px;border-radius:12px;overflow:auto}
+    .muted{color:#666;font-size:13px}
+  </style>
+</head>
+<body>
+  <h1>OTC Export (Lodgify)</h1>
+  <p class="muted">
+    Tip: usa <code>fetchMode=all</code> (default) para traer todas las reservas (paginadas) y filtrar localmente por mes.
+    Si quieres probar el filtro del API, cambia a <code>filtered</code>.
+  </p>
+
+  <div class="row">
+    <label>
+      Desde
+      <input id="from" type="date" value="2026-01-01">
+    </label>
+    <label>
+      Hasta
+      <input id="to" type="date" value="2026-01-31">
+    </label>
+    <label>
+      Límite por página
+      <input id="limit" type="number" value="200" min="10" max="200">
+    </label>
+    <label>
+      fetchMode
+      <select id="fetchMode">
+        <option value="all" selected>all (recomendado)</option>
+        <option value="filtered">filtered (prueba)</option>
+      </select>
+    </label>
+
+    <button id="btnJson">Probar JSON</button>
+    <button id="btnCsv">Descargar CSV</button>
+    <button id="btnDebug">Debug Lodgify</button>
+  </div>
+
+  <h3>Salida</h3>
+  <pre id="out">Listo.</pre>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const out = (x) => ($("out").textContent = typeof x === "string" ? x : JSON.stringify(x, null, 2));
+
+    function qs() {
+      const from = $("from").value;
+      const to = $("to").value;
+      const limit = $("limit").value;
+      const fetchMode = $("fetchMode").value;
+      const p = new URLSearchParams({ from, to, limit, fetchMode });
+      return p.toString();
     }
 
-    const limit = Math.min(200, Math.max(10, Number(req.query.limit || 50)));
+    $("btnJson").addEventListener("click", async () => {
+      try{
+        out("Cargando...");
+        const res = await fetch(`/api/otc?${qs()}`);
+        const data = await res.json();
+        out(data);
+      }catch(e){ out(String(e)); }
+    });
 
-    const bufferDays = Number(req.query.bufferDays || 45);
-    const fromD = parseISODate(fromISO);
-    const toD = parseISODate(toISO);
+    $("btnCsv").addEventListener("click", () => {
+      window.location.href = `/api/otc.csv?${qs()}`;
+    });
 
-    const fetchFrom = new Date(fromD);
-    fetchFrom.setUTCDate(fetchFrom.getUTCDate() - bufferDays);
-
-    const fetchTo = new Date(toD);
-    fetchTo.setUTCDate(fetchTo.getUTCDate() + bufferDays);
-
-    const fetchFromISO = fetchFrom.toISOString().slice(0, 10);
-    const fetchToISO = fetchTo.toISOString().slice(0, 10);
-
-    const [propsMap, bookings] = await Promise.all([
-      fetchPropertiesMap(),
-      fetchAllBookings({ fromISO: fetchFromISO, toISO: fetchToISO, limit }),
-    ]);
-
-    const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
-    const csv = rowsToCSV(rows);
-
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="OTCReport_${fromISO}_to_${toISO}.csv"`);
-    res.send(csv);
-  } catch (e) {
-    const code = e?.statusCode ? Number(e.statusCode) : 500;
-    res.status(code).send(String(e?.message || e));
-  }
-});
+    $("btnDebug").addEventListener("click", async () => {
+      try{
+        out("Cargando debug...");
+        const res = await fetch(`/api/debug/bookings?${qs()}`);
+        const data = await res.json();
+        out(data);
+      }catch(e){ out(String(e)); }
+    });
+  </script>
+</body>
+</html>
