@@ -4,7 +4,7 @@ import path from "path";
 
 const app = express();
 
-// ✅ dirname (ESM)
+// ✅ __dirname (ESM)
 const __dirname = path.resolve();
 
 // Body
@@ -31,7 +31,7 @@ app.use(
   })
 );
 
-// ✅ Sirve estáticos desde RAÍZ (porque ahí tienes index.html y otc.html)
+// ✅ Static desde raíz (index.html, otc.html, etc.)
 app.use(express.static(__dirname));
 
 // -------------------- ENV --------------------
@@ -118,6 +118,38 @@ function safeNum(x) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function overlaps(arrivalISO, departureISO, fromISO, toISO) {
+  const a = new Date(`${arrivalISO}T00:00:00Z`);
+  const d = new Date(`${departureISO}T00:00:00Z`);
+  const from = new Date(`${fromISO}T00:00:00Z`);
+  const to = new Date(`${toISO}T00:00:00Z`);
+  to.setUTCDate(to.getUTCDate() + 1); // inclusivo
+  return a < to && d > from;
+}
+
+function clampNightsWithinRange(arrivalISO, departureISO, fromISO, toISO) {
+  const a = new Date(`${arrivalISO}T00:00:00Z`);
+  const d = new Date(`${departureISO}T00:00:00Z`);
+  const from = new Date(`${fromISO}T00:00:00Z`);
+  const toExclusive = new Date(`${toISO}T00:00:00Z`);
+  toExclusive.setUTCDate(toExclusive.getUTCDate() + 1); // fin inclusivo
+
+  // overlap: [a,d) con [from,toExclusive)
+  const start = a > from ? a : from;
+  const end = d < toExclusive ? d : toExclusive;
+
+  const ms = end - start;
+  if (ms <= 0) return 0;
+  return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
+function prorate(amount, totalNights, nightsInRange) {
+  const x = safeNum(amount);
+  if (!x) return 0;
+  if (!totalNights || !nightsInRange) return 0;
+  return (x * nightsInRange) / totalNights;
+}
+
 async function fetchPropertiesMap() {
   const attempts = ["/v2/properties", "/v1/properties"];
   for (const p of attempts) {
@@ -136,14 +168,32 @@ async function fetchPropertiesMap() {
   return new Map();
 }
 
-async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
-  const seen = new Set();
-  const all = [];
-  let offset = 0;
-  let page = 1;
-  let guard = 0;
+// -------------------- Bookings fetch (robusto) --------------------
+function extractBatch(data) {
+  const batch = data?.bookings || data?.items || (Array.isArray(data) ? data : []);
+  if (!Array.isArray(batch)) throw new Error("Unexpected bookings payload shape");
+  return batch;
+}
 
-  while (guard++ < 500) {
+function extractTotal(data) {
+  const total = safeNum(data?.total_bookings) || safeNum(data?.total) || safeNum(data?.count) || null;
+  return total && total > 0 ? total : null;
+}
+
+/**
+ * Estrategia principal:
+ * - Por default: NO confiar en arrivalFrom/arrivalTo (en tu caso está devolviendo sólo un subset).
+ * - Pagina TODO (offset/limit y/o page/pageSize) y luego filtra localmente por rango (overlaps).
+ *
+ * Puedes forzar modo "filtered" con fetchMode=filtered para probar el filtro del API.
+ */
+async function fetchAllBookings({ fromISO, toISO, limit = 200, fetchMode = "all" }) {
+  const all = [];
+  const seen = new Set();
+  let guard = 0;
+  let offset = 0;
+
+  while (guard++ < 5000) {
     let data = null;
     let lastErr = null;
 
@@ -152,35 +202,30 @@ async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
       const qs = new URLSearchParams();
       qs.set("limit", String(limit));
       qs.set("offset", String(offset));
-      qs.set("arrivalFrom", fromISO);
-      qs.set("arrivalTo", toISO);
+
+      if (fetchMode === "filtered") {
+        qs.set("arrivalFrom", fromISO);
+        qs.set("arrivalTo", toISO);
+      }
+
       data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
     } catch (e) {
       lastErr = e;
     }
 
-    // B) page/pageSize
+    // B) page/pageSize (fallback)
     if (!data) {
       try {
+        const page = Math.floor(offset / limit) + 1;
         const qs = new URLSearchParams();
         qs.set("page", String(page));
         qs.set("pageSize", String(limit));
-        qs.set("arrivalFrom", fromISO);
-        qs.set("arrivalTo", toISO);
-        data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
-      } catch (e) {
-        lastErr = e;
-      }
-    }
 
-    // C) skip/take (otro patrón común)
-    if (!data) {
-      try {
-        const qs = new URLSearchParams();
-        qs.set("take", String(limit));
-        qs.set("skip", String(offset));
-        qs.set("arrivalFrom", fromISO);
-        qs.set("arrivalTo", toISO);
+        if (fetchMode === "filtered") {
+          qs.set("arrivalFrom", fromISO);
+          qs.set("arrivalTo", toISO);
+        }
+
         data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
       } catch (e) {
         lastErr = e;
@@ -189,71 +234,27 @@ async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
 
     if (!data) throw lastErr || new Error("Failed fetching bookings");
 
-    const batch = data?.bookings || data?.items || (Array.isArray(data) ? data : []);
-    if (!Array.isArray(batch)) throw new Error("Unexpected bookings payload shape");
-
-    // agrega sólo nuevos
-    let newCount = 0;
+    const batch = extractBatch(data);
     for (const b of batch) {
-      const id = b?.id;
-      if (!id) continue;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      all.push(b);
-      newCount++;
+      const id = b?.id ?? b?.booking_id;
+      const key = id != null ? String(id) : JSON.stringify(b);
+      if (!seen.has(key)) {
+        seen.add(key);
+        all.push(b);
+      }
     }
 
-    // si ya no trae nada, se acabó
-    if (batch.length === 0) break;
+    const total = extractTotal(data);
+    if (total != null && seen.size >= total) break;
 
-    // CLAVE: si no avanzó (0 nuevos) -> Lodgify ignoró paginación -> cortamos
-    if (newCount === 0) break;
-
-    // avanza contadores
-    offset += batch.length;
-    page += 1;
-
-    // si vino “menos que el límite”, probablemente ya es el final
     if (batch.length < limit) break;
+    offset += batch.length;
   }
 
   return all;
 }
 
-
-function clampNightsWithinRange(arrivalISO, departureISO, fromISO, toISO) {
-  const a = new Date(`${arrivalISO}T00:00:00Z`);
-  const d = new Date(`${departureISO}T00:00:00Z`);
-  const from = new Date(`${fromISO}T00:00:00Z`);
-  const toExclusive = new Date(`${toISO}T00:00:00Z`);
-  toExclusive.setUTCDate(toExclusive.getUTCDate() + 1); // fin inclusivo
-
-  // overlap: [a,d) con [from,toExclusive)
-  const start = a > from ? a : from;
-  const end = d < toExclusive ? d : toExclusive;
-
-  const ms = end - start;
-  if (ms <= 0) return 0;
-  return Math.round(ms / (1000 * 60 * 60 * 24));
-}
-
-function overlaps(arrivalISO, departureISO, fromISO, toISO) {
-  const a = new Date(`${arrivalISO}T00:00:00Z`);
-  const d = new Date(`${departureISO}T00:00:00Z`);
-  const from = new Date(`${fromISO}T00:00:00Z`);
-  const to = new Date(`${toISO}T00:00:00Z`);
-  to.setUTCDate(to.getUTCDate() + 1); // inclusivo
-
-  return a < to && d > from;
-}
-
-function prorate(amount, totalNights, nightsInRange) {
-  const x = safeNum(amount);
-  if (!x) return 0;
-  if (!totalNights || !nightsInRange) return 0;
-  return (x * nightsInRange) / totalNights;
-}
-
+// -------------------- OTC builder --------------------
 function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
   const rows = [];
 
@@ -289,10 +290,7 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
       DateCancelled: b.canceled_at ? formatMMDDYYYY(new Date(`${b.canceled_at}Z`)) : "",
       DateArrival: formatMMDDYYYY(a),
       DateDeparture: formatMMDDYYYY(dep),
-
-      // 👇 en OTC mensual normalmente interesa “noches dentro del mes”
       Nights: nInRange,
-
       HouseName: houseName,
       HouseId: houseId || "",
       RoomTypeNames: houseName,
@@ -308,8 +306,6 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
     };
 
     const st = b.subtotals || {};
-
-    // ✅ prorratear por noches dentro del rango
     const stay = prorate(st.stay, totalN, nInRange);
     const fees = prorate(st.fees, totalN, nInRange);
     const taxes = prorate(st.taxes, totalN, nInRange);
@@ -325,7 +321,6 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
     if (promos) lineItems.push({ LineItem: "Promotion", LineItemDescription: "Promotions", GrossAmount: promos });
     if (vat) lineItems.push({ LineItem: "VAT", LineItemDescription: "VAT", GrossAmount: vat });
 
-    // fallback si no hay subtotales
     if (!lineItems.length) {
       const total = prorate(b.total_amount, totalN, nInRange);
       if (total) lineItems.push({ LineItem: "Total", LineItemDescription: "Total", GrossAmount: total });
@@ -346,7 +341,6 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
 
   return rows;
 }
-
 
 function rowsToCSV(rows) {
   const cols = [
@@ -370,58 +364,56 @@ function rowsToCSV(rows) {
 // -------------------- Routes --------------------
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-app.get("/api/_ping", async (req, res) => {
-  try {
-    const today = new Date();
-    const from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 2, 1));
-    const to = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
-    const fromISO = from.toISOString().slice(0,10);
-    const toISO = to.toISOString().slice(0,10);
-
-    const bookings = await fetchAllBookings({ fromISO, toISO, limit: 50 });
-    res.json({ ok: true, sampleCount: bookings.length });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: String(e?.message || e) });
-  }
-});
-
-app.get("/api/_debug_bookings", async (req, res) => {
+/**
+ * ✅ Debug: ver qué trae Lodgify (primera página) en ambos modos
+ * GET /api/debug/bookings?from=YYYY-MM-DD&to=YYYY-MM-DD&limit=200
+ */
+app.get("/api/debug/bookings", async (req, res) => {
   try {
     const fromISO = String(req.query.from || "");
     const toISO = String(req.query.to || "");
-    const limit = Math.min(200, Math.max(10, Number(req.query.limit || 50)));
-
     if (!parseISODate(fromISO) || !parseISODate(toISO)) {
-      return res.status(400).json({
-        ok: false,
-        error: "Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD"
-      });
+      return res.status(400).json({ ok: false, error: "Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD" });
     }
 
-    const bookings = await fetchAllBookings({ fromISO, toISO, limit });
+    const limit = Math.min(200, Math.max(10, Number(req.query.limit || 200)));
 
-    const arrivals = bookings
-      .map(b => b.arrival)
-      .filter(Boolean)
-      .sort();
+    // First page filtered
+    const qsF = new URLSearchParams({ limit: String(limit), offset: "0", arrivalFrom: fromISO, arrivalTo: toISO });
+    const filtered = await lodgifyFetch(`/v2/reservations/bookings?${qsF.toString()}`);
+    const batchF = extractBatch(filtered);
+
+    // First page all (no filters)
+    const qsA = new URLSearchParams({ limit: String(limit), offset: "0" });
+    const all = await lodgifyFetch(`/v2/reservations/bookings?${qsA.toString()}`);
+    const batchA = extractBatch(all);
+
+    const minMax = (batch) => {
+      const arr = batch.map(b => b?.arrival).filter(Boolean).sort();
+      return {
+        count: batch.length,
+        arrivalMin: arr[0] || null,
+        arrivalMax: arr[arr.length - 1] || null,
+        sample: batch.slice(0, 3).map(b => ({ id: b?.id, arrival: b?.arrival, departure: b?.departure, status: b?.status, property_id: b?.property_id })),
+      };
+    };
 
     res.json({
       ok: true,
-      bookingsCount: bookings.length,
-      firstArrival: arrivals[0] || null,
-      lastArrival: arrivals[arrivals.length - 1] || null,
-      sampleIds: bookings.slice(0, 10).map(b => b.id),
-      uniqueIds: new Set(bookings.map(b => b.id)).size
+      requested: { fromISO, toISO, limit },
+      filtered: { total: extractTotal(filtered), ...minMax(batchF) },
+      all: { total: extractTotal(all), ...minMax(batchA) },
+      note: "Si 'filtered' NO respeta el rango, usa fetchMode=all (default) para traer todo y filtrar localmente."
     });
   } catch (e) {
-    res.status(500).json({
-      ok: false,
-      error: String(e?.message || e)
-    });
+    const code = e?.statusCode ? Number(e.statusCode) : 500;
+    res.status(code).json({ ok: false, error: String(e?.message || e) });
   }
 });
 
-
+/**
+ * GET /api/otc?from=YYYY-MM-DD&to=YYYY-MM-DD&limit=200&fetchMode=all|filtered
+ */
 app.get("/api/otc", async (req, res) => {
   try {
     const fromISO = String(req.query.from || "");
@@ -430,37 +422,34 @@ app.get("/api/otc", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD" });
     }
 
-    const limit = Math.min(200, Math.max(10, Number(req.query.limit || 50)));
+    const limit = Math.min(200, Math.max(10, Number(req.query.limit || 200)));
+    const fetchMode = (String(req.query.fetchMode || "all").toLowerCase() === "filtered") ? "filtered" : "all";
 
-    const bufferDays = Number(req.query.bufferDays || 45);
+    const [propsMap, bookings] = await Promise.all([
+      fetchPropertiesMap(),
+      fetchAllBookings({ fromISO, toISO, limit, fetchMode }),
+    ]);
 
-const fromD = parseISODate(fromISO);
-const toD = parseISODate(toISO);
+    const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
 
-const fetchFrom = new Date(fromD);
-fetchFrom.setUTCDate(fetchFrom.getUTCDate() - bufferDays);
-
-const fetchTo = new Date(toD);
-fetchTo.setUTCDate(fetchTo.getUTCDate() + bufferDays);
-
-const fetchFromISO = fetchFrom.toISOString().slice(0, 10);
-const fetchToISO = fetchTo.toISOString().slice(0, 10);
-
-const [propsMap, bookings] = await Promise.all([
-  fetchPropertiesMap(),
-  fetchAllBookings({ fromISO: fetchFromISO, toISO: fetchToISO, limit }),
-]);
-
-const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
-
-
-    res.json({ ok: true, from: fromISO, to: toISO, rowsCount: rows.length, bookingsCount: bookings.length, rows });
+    res.json({
+      ok: true,
+      from: fromISO,
+      to: toISO,
+      fetchMode,
+      bookingsFetched: bookings.length,
+      rowsCount: rows.length,
+      rows,
+    });
   } catch (e) {
     const code = e?.statusCode ? Number(e.statusCode) : 500;
     res.status(code).json({ ok: false, error: String(e?.message || e) });
   }
 });
 
+/**
+ * GET /api/otc.csv?from=YYYY-MM-DD&to=YYYY-MM-DD&limit=200&fetchMode=all|filtered
+ */
 app.get("/api/otc.csv", async (req, res) => {
   try {
     const fromISO = String(req.query.from || "");
@@ -469,12 +458,14 @@ app.get("/api/otc.csv", async (req, res) => {
       return res.status(400).send("Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD");
     }
 
-    const limit = Math.min(200, Math.max(10, Number(req.query.limit || 50)));
+    const limit = Math.min(200, Math.max(10, Number(req.query.limit || 200)));
+    const fetchMode = (String(req.query.fetchMode || "all").toLowerCase() === "filtered") ? "filtered" : "all";
 
     const [propsMap, bookings] = await Promise.all([
       fetchPropertiesMap(),
-      fetchAllBookings({ fromISO, toISO, limit }),
-    ]); 
+      fetchAllBookings({ fromISO, toISO, limit, fetchMode }),
+    ]);
+
     const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
     const csv = rowsToCSV(rows);
 
@@ -487,7 +478,7 @@ app.get("/api/otc.csv", async (req, res) => {
   }
 });
 
-// ✅ Home (sirve el index.html que está en la raíz)
+// ✅ Home
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
