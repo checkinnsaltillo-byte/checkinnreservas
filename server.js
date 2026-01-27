@@ -137,14 +137,17 @@ async function fetchPropertiesMap() {
 }
 
 async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
-  let offset = 0;
+  const seen = new Set();
   const all = [];
+  let offset = 0;
+  let page = 1;
   let guard = 0;
 
-  while (guard++ < 2000) {
+  while (guard++ < 500) {
     let data = null;
     let lastErr = null;
 
+    // A) offset/limit
     try {
       const qs = new URLSearchParams();
       qs.set("limit", String(limit));
@@ -156,12 +159,26 @@ async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
       lastErr = e;
     }
 
+    // B) page/pageSize
     if (!data) {
       try {
-        const page = Math.floor(offset / limit) + 1;
         const qs = new URLSearchParams();
         qs.set("page", String(page));
         qs.set("pageSize", String(limit));
+        qs.set("arrivalFrom", fromISO);
+        qs.set("arrivalTo", toISO);
+        data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+
+    // C) skip/take (otro patrón común)
+    if (!data) {
+      try {
+        const qs = new URLSearchParams();
+        qs.set("take", String(limit));
+        qs.set("skip", String(offset));
         qs.set("arrivalFrom", fromISO);
         qs.set("arrivalTo", toISO);
         data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
@@ -175,17 +192,34 @@ async function fetchAllBookings({ fromISO, toISO, limit = 50 }) {
     const batch = data?.bookings || data?.items || (Array.isArray(data) ? data : []);
     if (!Array.isArray(batch)) throw new Error("Unexpected bookings payload shape");
 
-    all.push(...batch);
+    // agrega sólo nuevos
+    let newCount = 0;
+    for (const b of batch) {
+      const id = b?.id;
+      if (!id) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      all.push(b);
+      newCount++;
+    }
 
-    const total = safeNum(data?.total_bookings) || safeNum(data?.total) || safeNum(data?.count) || null;
-    if (total != null && all.length >= total) break;
-    if (batch.length < limit) break;
+    // si ya no trae nada, se acabó
+    if (batch.length === 0) break;
 
+    // CLAVE: si no avanzó (0 nuevos) -> Lodgify ignoró paginación -> cortamos
+    if (newCount === 0) break;
+
+    // avanza contadores
     offset += batch.length;
+    page += 1;
+
+    // si vino “menos que el límite”, probablemente ya es el final
+    if (batch.length < limit) break;
   }
 
   return all;
 }
+
 
 function clampNightsWithinRange(arrivalISO, departureISO, fromISO, toISO) {
   const a = new Date(`${arrivalISO}T00:00:00Z`);
@@ -350,6 +384,43 @@ app.get("/api/_ping", async (req, res) => {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
+
+app.get("/api/_debug_bookings", async (req, res) => {
+  try {
+    const fromISO = String(req.query.from || "");
+    const toISO = String(req.query.to || "");
+    const limit = Math.min(200, Math.max(10, Number(req.query.limit || 50)));
+
+    if (!parseISODate(fromISO) || !parseISODate(toISO)) {
+      return res.status(400).json({
+        ok: false,
+        error: "Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD"
+      });
+    }
+
+    const bookings = await fetchAllBookings({ fromISO, toISO, limit });
+
+    const arrivals = bookings
+      .map(b => b.arrival)
+      .filter(Boolean)
+      .sort();
+
+    res.json({
+      ok: true,
+      bookingsCount: bookings.length,
+      firstArrival: arrivals[0] || null,
+      lastArrival: arrivals[arrivals.length - 1] || null,
+      sampleIds: bookings.slice(0, 10).map(b => b.id),
+      uniqueIds: new Set(bookings.map(b => b.id)).size
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      error: String(e?.message || e)
+    });
+  }
+});
+
 
 app.get("/api/otc", async (req, res) => {
   try {
