@@ -309,6 +309,8 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
       RoomTypeIds: roomTypeIds.join(","),
       GuestName: guest.name || "",
       GuestEmail: guest.email || "",
+      GuestPhone: guest.phone || "",
+      GuestCountryCode: guest.country_code || "",
       NumberOfGuests: safeNum((b.rooms && b.rooms[0] && b.rooms[0].people) || 0),
       Adults: safeNum(gb.adults),
       Children: safeNum(gb.children),
@@ -358,7 +360,7 @@ function rowsToCSV(rows) {
   const cols = [
     "Id","Source","SourceText","ChannelBooking","Status","DateCancelled",
     "DateArrival","DateDeparture","Nights","HouseName","HouseId",
-    "RoomTypeNames","RoomTypeIds","GuestName","GuestEmail",
+    "RoomTypeNames","RoomTypeIds","GuestName","GuestEmail","GuestPhone","GuestCountryCode",
     "NumberOfGuests","Adults","Children","Infants","Pets","Currency",
     "LineItem","LineItemDescription","GrossAmount","NetAmount","VatAmount"
   ];
