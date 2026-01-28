@@ -38,6 +38,7 @@
       border:1px solid var(--line); border-radius:12px; padding:10px 12px;
       font-size:13px; outline:none;
     }
+    select[multiple]{ padding:8px 10px; }
     button{cursor:pointer}
     button:hover{border-color:#2b3c63}
     button.primary{
@@ -74,7 +75,8 @@
 
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
     .row > *{flex:1}
-    .row .small{flex:.85}
+    .row .small{flex:.9}
+    .row .xsmall{flex:.75}
 
     .pill{
       display:inline-flex; align-items:center; gap:6px;
@@ -133,7 +135,7 @@
 
     /* ======= OCUPACIÓN: tabla sticky header + sticky first col ======= */
     .occScroll{
-      max-height: 520px; /* ajusta a gusto */
+      max-height: 520px;
       overflow: auto;
     }
     #occTable{
@@ -162,9 +164,7 @@
       border-right: 1px solid rgba(30,43,74,.75);
       font-weight: 800;
     }
-    #occTable thead th.houseCol{
-      z-index: 10; /* esquina superior izquierda */
-    }
+    #occTable thead th.houseCol{ z-index: 10; }
 
     .occCell{
       min-width: 210px;
@@ -251,19 +251,29 @@
           <input id="q" placeholder="Guest / House / Id / Source / LineItem..." />
         </label>
 
-        <label class="small">
+        <label class="xsmall">
+          <div class="hint">Propiedad</div>
+          <select id="selPropiedad" multiple size="4" title="Ctrl/Cmd para multiselección">
+          </select>
+        </label>
+
+        <label class="xsmall">
           <div class="hint">Source</div>
           <select id="selSource">
             <option value="">Todos</option>
           </select>
         </label>
 
-        <label class="small">
+        <label class="xsmall">
           <div class="hint">Status</div>
           <select id="selStatus">
             <option value="">Todos</option>
           </select>
         </label>
+      </div>
+
+      <div class="hint" style="margin-top:10px">
+        Tip: En <b>Propiedad</b> puedes seleccionar múltiples (Ctrl/Cmd). Si no seleccionas nada, se asume “todas”.
       </div>
     </div>
   </section>
@@ -316,10 +326,11 @@
           <div class="meta">LineItem = Tax</div>
         </div>
 
+        <!-- ✅ CAMBIO: Source ahora es BARRAS -->
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Monto por Source</div>
-          <div class="meta">Pie (sum GrossAmount, top 12)</div>
-          <div class="mini"><canvas id="chSourcePie"></canvas></div>
+          <div class="meta">Barras (sum GrossAmount, top 12)</div>
+          <div class="mini"><canvas id="chSourceBar"></canvas></div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
@@ -338,7 +349,7 @@
         <h2>Ocupación por alojamiento (por mes)</h2>
         <div class="hint">
           Se calcula con Arrival–Departure, deduplicando por <span class="mono">Id</span>.
-          Muestra: noches ocupadas, % y barra. Incluye opción de gráfica de líneas.
+          Muestra: noches ocupadas, % y barra. Incluye gráfica de líneas (%).
         </div>
       </div>
       <div class="hint" id="occMeta">—</div>
@@ -354,15 +365,21 @@
           </select>
         </label>
 
-        <label style="flex:2">
-          <div class="hint">Resaltar alojamiento (opcional)</div>
-          <select id="occHighlight">
-            <option value="">— ninguno —</option>
+        <!-- ✅ NUEVO: filtro Propiedad (ocupación) -->
+        <label style="flex:1.2">
+          <div class="hint">Propiedad</div>
+          <select id="occPropiedad" multiple size="4" title="Ctrl/Cmd para multiselección">
           </select>
         </label>
 
+        <!-- ✅ CAMBIO: filtro de alojamientos (multiselección) -->
+        <label style="flex:2">
+          <div class="hint">Alojamientos (HouseName)</div>
+          <select id="occHouses" multiple size="4" title="Ctrl/Cmd para multiselección"></select>
+        </label>
+
         <div class="hint" style="flex:2; align-self:end">
-          Tip: haz clic en la leyenda para ocultar/mostrar líneas.
+          Tip: si no seleccionas alojamientos, se muestran todos (según filtros).
         </div>
       </div>
 
@@ -405,6 +422,7 @@
             <thead>
               <tr>
                 <th>Id</th>
+                <th>Propiedad</th>
                 <th>Source</th>
                 <th>Status</th>
                 <th>Arrival</th>
@@ -431,8 +449,7 @@
 </main>
 
 <script>
-  // Recomendado: same-origin (porque Cloud Run sirve /public).
-  // Si lo abres desde GitHub Pages, define tu Cloud Run URL aquí:
+  // Si abres desde GitHub Pages, define aquí tu Cloud Run:
   // const API_BASE = "https://checkinnreservas-1044570371371.northamerica-south1.run.app";
   const API_BASE = "";
 
@@ -440,12 +457,12 @@
   let rowsFiltered = [];
 
   // Charts
-  let chSourcePie = null;
+  let chSourceBar = null;
   let chStatusBar = null;
   let chOccLines = null;
 
   // Ocupación series cache
-  let occSeries = null; // { months:[...], houses:[...], pctByHouse: Map(house -> [pct...]) }
+  let occSeries = null; // { months:[...], houses:[...], propertyByHouse: Map, pctByHouse: Map(house -> [pct...]) }
 
   const $ = (id) => document.getElementById(id);
 
@@ -466,6 +483,30 @@
 
   function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
   function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
+
+  // ===== Propiedad derivada de HouseName =====
+  // Ej: "José Cárdenas  #2 (..)" -> "José Cárdenas"
+  //     "José Cárdenas #5 (...)" -> "José Cárdenas"
+  function propertyFromHouse(house){
+    let s = safeStr(house).trim();
+    if(!s) return "—";
+
+    // quita paréntesis al final (descripción)
+    s = s.replace(/\s*\([^)]*\)\s*$/g, "").trim();
+
+    // corta en '#'
+    if (s.includes("#")) {
+      s = s.split("#")[0].trim();
+    }
+
+    // también corta en ' - ' o ' – ' si acaso
+    s = s.split(" - ")[0].split(" – ")[0].trim();
+
+    // limpia doble espacios
+    s = s.replace(/\s{2,}/g, " ").trim();
+
+    return s || "—";
+  }
 
   // Arrival/Departure vienen como "MM/DD/YYYY"
   function parseMMDDYYYY(s){
@@ -507,8 +548,11 @@
   }
 
   function normalizeRow(r){
+    const house = r.HouseName;
+    const prop = propertyFromHouse(house);
     return {
       Id: r.Id,
+      Property: prop,
       Source: r.Source,
       Status: r.Status,
       DateArrival: r.DateArrival,
@@ -575,8 +619,34 @@
     );
   }
 
+  function getSelectedValues(sel){
+    if(!sel) return [];
+    const vals = [];
+    for(const opt of sel.options){
+      if(opt.selected && opt.value !== "__ALL__" && opt.value !== "") vals.push(opt.value);
+    }
+    return vals;
+  }
+
+  function setMultiOptions(sel, items, keepSelectedValues = []){
+    if(!sel) return;
+    const selectedSet = new Set(keepSelectedValues);
+    sel.innerHTML = items.map(v => {
+      const esc = escapeHtml(v);
+      const isSel = selectedSet.has(v) ? " selected" : "";
+      return `<option value="${esc}"${isSel}>${esc}</option>`;
+    }).join("");
+  }
+
   function rebuildFilters(){
-    // Source
+    // Propiedad (multi)
+    const selP = $("selPropiedad");
+    const prevP = getSelectedValues(selP);
+    const props = [...new Set(rowsRaw.map(r => safeStr(r.Property).trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+    setMultiOptions(selP, props, prevP);
+
+    // Source (single)
     const selS = $("selSource");
     const curS = selS.value;
     const sources = [...new Set(rowsRaw.map(r => safeStr(r.Source).trim()).filter(Boolean))]
@@ -584,7 +654,7 @@
     selS.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     selS.value = sources.includes(curS) ? curS : "";
 
-    // Status
+    // Status (single)
     const selSt = $("selStatus");
     const curSt = selSt.value;
     const statuses = [...new Set(rowsRaw.map(r => safeStr(r.Status).trim()).filter(Boolean))]
@@ -600,15 +670,25 @@
     const fromISO = $("from").value;
     const toISO = $("to").value;
 
+    // global propiedad multiselect
+    const propsSelected = getSelectedValues($("selPropiedad")).map(s=>s.toLowerCase());
+    const hasPropFilter = propsSelected.length > 0;
+
     rowsFiltered = rowsRaw.filter(r=>{
       if(fromISO && toISO){
         if(!overlaps(r.DateArrival, r.DateDeparture, fromISO, toISO)) return false;
       }
+
+      if(hasPropFilter){
+        const rp = safeStr(r.Property).toLowerCase();
+        if(!propsSelected.includes(rp)) return false;
+      }
+
       if(src && safeStr(r.Source).toLowerCase() !== src) return false;
       if(st && safeStr(r.Status).toLowerCase() !== st) return false;
 
       if(!q) return true;
-      const hay = [r.Id,r.Source,r.Status,r.HouseName,r.GuestName,r.LineItem,r.Currency].join(" ").toLowerCase();
+      const hay = [r.Id,r.Property,r.Source,r.Status,r.HouseName,r.GuestName,r.LineItem,r.Currency].join(" ").toLowerCase();
       return hay.includes(q);
     });
 
@@ -652,6 +732,7 @@
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="mono">${escapeHtml(safeStr(r.Id) || "—")}</td>
+        <td>${escapeHtml(safeStr(r.Property) || "—")}</td>
         <td>${escapeHtml(safeStr(r.Source) || "—")}</td>
         <td>${escapeHtml(safeStr(r.Status) || "—")}</td>
         <td class="mono">${escapeHtml(safeStr(r.DateArrival) || "—")}</td>
@@ -690,32 +771,25 @@
     const stLabels = st.labels.slice(0,12);
     const stData   = st.data.slice(0,12);
 
-    if(chSourcePie) chSourcePie.destroy();
+    if(chSourceBar) chSourceBar.destroy();
     if(chStatusBar) chStatusBar.destroy();
 
-    chSourcePie = new Chart($("chSourcePie"), {
-      type: "pie",
-      data: { labels: srcLabels, datasets: [{ data: srcData }] },
+    // ✅ Source bar
+    chSourceBar = new Chart($("chSourceBar"), {
+      type: "bar",
+      data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
       options: {
         responsive:true,
         maintainAspectRatio:false,
         plugins:{
-          legend:{ display:true, position:"bottom", labels:{ boxWidth:10 } },
-          tooltip:{
-            enabled:true,
-            callbacks:{
-              label: (ctx)=>{
-                const total = srcData.reduce((a,b)=>a+b,0) || 1;
-                const v = Number(ctx.raw || 0);
-                const p = (v/total)*100;
-                return ` ${ctx.label}: ${moneyMXN(v)} (${p.toFixed(1)}%)`;
-              }
-            }
-          }
-        }
+          legend:{ display:false },
+          tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } }
+        },
+        scales:{ y:{ beginAtZero:true } }
       }
     });
 
+    // Status bar
     chStatusBar = new Chart($("chStatusBar"), {
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
@@ -765,6 +839,23 @@
     return out;
   }
 
+  function rebuildOccPropiedadOptionsFromFiltered(){
+    const sel = $("occPropiedad");
+    const prev = getSelectedValues(sel);
+
+    // Propiedades disponibles según rowsFiltered (filtros globales)
+    const props = [...new Set(rowsFiltered.map(r => safeStr(r.Property).trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+
+    setMultiOptions(sel, props, prev);
+  }
+
+  function rebuildOccHousesOptions(housesAvailable){
+    const sel = $("occHouses");
+    const prev = getSelectedValues(sel);
+    setMultiOptions(sel, housesAvailable, prev);
+  }
+
   // ===== Occupancy render (table + line data) =====
   function renderOccupancyByMonth(){
     const fromISO = $("from").value;
@@ -776,15 +867,18 @@
     thead.innerHTML = "";
     tbody.innerHTML = "";
 
+    // rebuild options for occupancy filters based on current global filtering
+    rebuildOccPropiedadOptionsFromFiltered();
+
     if(!months.length){
       $("occMeta").textContent = "Selecciona Desde/Hasta para calcular ocupación.";
       occSeries = null;
-      renderOccLineChart(); // limpia si hace falta
+      renderOccLineChart();
       return;
     }
 
-    // Deduplicar por Id para no contar multiple line items
-    const bookings = new Map(); // id -> {house, startUTC, endUTCEx}
+    // Deduplicar por Id para no contar múltiples line items
+    const bookings = new Map(); // id -> {house, property, startUTC, endUTCEx}
     for(const r of rowsFiltered){
       const id = safeStr(r.Id);
       if(!id) continue;
@@ -793,30 +887,56 @@
       const start = parseMMDDYYYY(r.DateArrival);
       const endEx = parseMMDDYYYY(r.DateDeparture);
       const house = safeStr(r.HouseName).trim() || "—";
-      if(!start || !endEx) continue;
+      const prop  = safeStr(r.Property).trim() || propertyFromHouse(house);
 
-      bookings.set(id, { house, start, endEx });
+      if(!start || !endEx) continue;
+      bookings.set(id, { house, property: prop, start, endEx });
     }
 
     // nights per house/month
     const map = new Map(); // house -> Map(monthKey -> nights)
+    const propertyByHouse = new Map();
     const houseSet = new Set();
+    const propSet = new Set();
 
-    for(const { house, start, endEx } of bookings.values()){
-      houseSet.add(house);
+    for(const b of bookings.values()){
+      houseSet.add(b.house);
+      propertyByHouse.set(b.house, b.property);
+      propSet.add(b.property);
+
       for(const mo of months){
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
-        const n = intersectNights(start, endEx, ms, me);
+        const n = intersectNights(b.start, b.endEx, ms, me);
         if(n <= 0) continue;
 
-        if(!map.has(house)) map.set(house, new Map());
-        const hm = map.get(house);
+        if(!map.has(b.house)) map.set(b.house, new Map());
+        const hm = map.get(b.house);
         hm.set(mo.key, (hm.get(mo.key) || 0) + n);
       }
     }
 
-    const houses = [...houseSet].sort((a,b)=>a.localeCompare(b));
+    // aplicar filtros locales (ocupación): Propiedad + Houses
+    const occProps = getSelectedValues($("occPropiedad")).map(s=>s.toLowerCase());
+    const occHasProp = occProps.length > 0;
+
+    // houses disponibles tras filtro de propiedad (para poblar dropdown)
+    let housesAvailable = [...houseSet].filter(h=>{
+      if(!occHasProp) return true;
+      const p = safeStr(propertyByHouse.get(h)).toLowerCase();
+      return occProps.includes(p);
+    }).sort((a,b)=>a.localeCompare(b));
+
+    // refrescar dropdown Houses con base en propiedad elegida
+    rebuildOccHousesOptions(housesAvailable);
+
+    // ahora leer selección de houses (ya con opciones actualizadas)
+    const occHouseSel = getSelectedValues($("occHouses"));
+    const occHasHouse = occHouseSel.length > 0;
+    const occHouseSet = new Set(occHouseSel);
+
+    // houses finales a mostrar
+    const housesToShow = housesAvailable.filter(h => !occHasHouse || occHouseSet.has(h));
 
     // Header
     const trh = document.createElement("tr");
@@ -829,7 +949,7 @@
     // Body
     const frag = document.createDocumentFragment();
 
-    for(const house of houses){
+    for(const house of housesToShow){
       const tr = document.createElement("tr");
       const hm = map.get(house) || new Map();
 
@@ -866,16 +986,15 @@
     tbody.appendChild(frag);
 
     $("occMeta").textContent =
-      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos: ${houses.length.toLocaleString("es-MX")} · Meses: ${months.length}`;
+      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length}`;
 
-    // Build series for line chart + dropdown
-    buildOccupancySeriesForChart(months, houses, map);
-    rebuildOccHighlightDropdown();
+    // Build series for line chart using housesToShow
+    buildOccupancySeriesForChart(months, housesToShow, map, propertyByHouse);
     renderOccLineChart();
     syncOccView();
   }
 
-  function buildOccupancySeriesForChart(months, houses, mapHouseMonth){
+  function buildOccupancySeriesForChart(months, houses, mapHouseMonth, propertyByHouse){
     const pctByHouse = new Map();
 
     for(const house of houses){
@@ -896,21 +1015,9 @@
     occSeries = {
       months: months.map(m=>m.key),
       houses: [...houses],
+      propertyByHouse: new Map(propertyByHouse || []),
       pctByHouse
     };
-  }
-
-  function rebuildOccHighlightDropdown(){
-    const sel = $("occHighlight");
-    if(!sel) return;
-
-    const cur = sel.value;
-    const houses = occSeries?.houses || [];
-    sel.innerHTML = `<option value="">— ninguno —</option>` + houses.map(h =>
-      `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`
-    ).join("");
-
-    sel.value = houses.includes(cur) ? cur : "";
   }
 
   function renderOccLineChart(){
@@ -925,17 +1032,16 @@
     }
 
     const labels = occSeries.months;
-    const highlight = $("occHighlight")?.value || "";
 
+    // datasets: una línea por house (ya filtradas por selección)
     const datasets = occSeries.houses.map(h=>{
       const data = occSeries.pctByHouse.get(h) || labels.map(()=>0);
-      const isHi = highlight && h === highlight;
       return {
         label: h,
         data,
         tension: 0.25,
-        pointRadius: isHi ? 3 : 0,
-        borderWidth: isHi ? 3 : 1,
+        pointRadius: 0,
+        borderWidth: 1,
       };
     });
 
@@ -952,6 +1058,7 @@
             display: true,
             position: "bottom",
             labels: { boxWidth: 10 }
+            // Chart.js permite click para ocultar/mostrar líneas
           },
           tooltip: {
             callbacks: { label: (ctx)=> ` ${ctx.dataset.label}: ${ctx.raw}%` }
@@ -1022,15 +1129,16 @@
     $("btnCsv").addEventListener("click", downloadCSV);
     $("btnDebug").addEventListener("click", loadDebug);
 
-    // filtros locales
-    ["q","selSource","selStatus","from","to"].forEach(id=>{
+    // filtros globales
+    ["q","selSource","selStatus","from","to","selPropiedad"].forEach(id=>{
       $(id).addEventListener("input", applyLocalFilters);
       $(id).addEventListener("change", applyLocalFilters);
     });
 
-    // ocupación: vista + resaltado
+    // ocupación: vista + filtros locales
     $("occView").addEventListener("change", syncOccView);
-    $("occHighlight").addEventListener("change", ()=> renderOccLineChart());
+    $("occPropiedad").addEventListener("change", renderOccupancyByMonth);
+    $("occHouses").addEventListener("change", renderOccupancyByMonth);
 
     // autoload
     $("btnLoad").click();
