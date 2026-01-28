@@ -18,7 +18,7 @@
       color:var(--text);
     }
     header{
-      position:sticky; top:0; z-index:20;
+      position:sticky; top:0; z-index:50;
       background:rgba(7,11,21,.75); backdrop-filter: blur(10px);
       border-bottom:1px solid var(--line);
     }
@@ -69,7 +69,7 @@
       display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
     }
     .hd h2{margin:0; font-size:14px; letter-spacing:.2px}
-    .hd .hint{margin:3px 0 0; font-size:12px; color:var(--muted)}
+    .hint{margin:3px 0 0; font-size:12px; color:var(--muted)}
     .bd{padding:14px}
 
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
@@ -129,10 +129,43 @@
     }
     tbody tr:hover{background:rgba(76,201,240,.06)}
     .scrollY{max-height: 560px; overflow:auto;}
-    .scrollX{overflow:auto;}
     .footer{padding:14px 18px; color:var(--muted); font-size:12px; border-top:1px solid var(--line);}
 
-    /* Occupancy table bars */
+    /* ======= OCUPACIÓN: tabla sticky header + sticky first col ======= */
+    .occScroll{
+      max-height: 520px; /* ajusta a gusto */
+      overflow: auto;
+    }
+    #occTable{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size:12.5px;
+    }
+    #occTable th, #occTable td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(30,43,74,.75);
+      white-space: nowrap;
+    }
+    #occTable thead th{
+      position: sticky;
+      top: 0;
+      z-index: 7;
+      background: rgba(11,18,32,.98);
+      border-bottom: 1px solid rgba(30,43,74,.75);
+    }
+    #occTable .houseCol{
+      position: sticky;
+      left: 0;
+      z-index: 6;
+      background: rgba(11,18,32,.98);
+      border-right: 1px solid rgba(30,43,74,.75);
+      font-weight: 800;
+    }
+    #occTable thead th.houseCol{
+      z-index: 10; /* esquina superior izquierda */
+    }
+
     .occCell{
       min-width: 210px;
       white-space: normal;
@@ -160,14 +193,9 @@
       width:0%;
       background:linear-gradient(90deg, rgba(76,201,240,.9), rgba(67,97,238,.9));
     }
-    .houseCol{
-      position:sticky;
-      left:0;
-      background:rgba(11,18,32,.98);
-      z-index:6;
-      border-right:1px solid rgba(30,43,74,.75);
-      font-weight:700;
-    }
+
+    /* Ocupación: línea */
+    #occLineWrap{ overflow:hidden; }
   </style>
 </head>
 
@@ -195,6 +223,7 @@
 
 <main class="wrap">
 
+  <!-- Parámetros -->
   <section class="card">
     <div class="hd">
       <div>
@@ -239,6 +268,7 @@
     </div>
   </section>
 
+  <!-- KPIs + mini charts por monto -->
   <section class="card">
     <div class="hd">
       <div>
@@ -301,34 +331,65 @@
     </div>
   </section>
 
-  <!-- ✅ NUEVA SECCIÓN: OCUPACIÓN POR MES -->
+  <!-- Ocupación -->
   <section class="card">
     <div class="hd">
       <div>
         <h2>Ocupación por alojamiento (por mes)</h2>
         <div class="hint">
-          Se calcula con el rango de la estancia (Arrival–Departure), deduplicando por <span class="mono">Id</span>.
-          Muestra: noches ocupadas del mes, % ocupación y barra.
+          Se calcula con Arrival–Departure, deduplicando por <span class="mono">Id</span>.
+          Muestra: noches ocupadas, % y barra. Incluye opción de gráfica de líneas.
         </div>
       </div>
       <div class="hint" id="occMeta">—</div>
     </div>
 
     <div class="bd">
-      <div class="tableWrap">
-        <div class="scrollX">
+      <div class="row" style="margin-bottom:10px">
+        <label class="small">
+          <div class="hint">Vista</div>
+          <select id="occView">
+            <option value="table">Tabla</option>
+            <option value="line">Gráfica de líneas (% ocupación)</option>
+          </select>
+        </label>
+
+        <label style="flex:2">
+          <div class="hint">Resaltar alojamiento (opcional)</div>
+          <select id="occHighlight">
+            <option value="">— ninguno —</option>
+          </select>
+        </label>
+
+        <div class="hint" style="flex:2; align-self:end">
+          Tip: haz clic en la leyenda para ocultar/mostrar líneas.
+        </div>
+      </div>
+
+      <!-- Line chart -->
+      <div id="occLineWrap" class="tableWrap" style="display:none;">
+        <div style="height:420px; padding:10px;">
+          <canvas id="occLineChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div id="occTableWrap" class="tableWrap">
+        <div class="occScroll">
           <table id="occTable">
             <thead id="occThead"></thead>
             <tbody id="occTbody"></tbody>
           </table>
         </div>
       </div>
+
       <div class="hint" style="margin-top:10px">
-        Nota: “% ocupación” = noches ocupadas / noches del mes (no usa ingresos, solo noches).
+        Nota: “% ocupación” = noches ocupadas / noches del mes (solo noches, no ingresos).
       </div>
     </div>
   </section>
 
+  <!-- Tabla OTC -->
   <section class="card">
     <div class="hd">
       <div>
@@ -370,6 +431,9 @@
 </main>
 
 <script>
+  // Recomendado: same-origin (porque Cloud Run sirve /public).
+  // Si lo abres desde GitHub Pages, define tu Cloud Run URL aquí:
+  // const API_BASE = "https://checkinnreservas-1044570371371.northamerica-south1.run.app";
   const API_BASE = "";
 
   let rowsRaw = [];
@@ -378,6 +442,10 @@
   // Charts
   let chSourcePie = null;
   let chStatusBar = null;
+  let chOccLines = null;
+
+  // Ocupación series cache
+  let occSeries = null; // { months:[...], houses:[...], pctByHouse: Map(house -> [pct...]) }
 
   const $ = (id) => document.getElementById(id);
 
@@ -399,7 +467,7 @@
   function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
   function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
 
-  // Date parsing: Arrival/Departure vienen como "MM/DD/YYYY"
+  // Arrival/Departure vienen como "MM/DD/YYYY"
   function parseMMDDYYYY(s){
     const t = safeStr(s).trim();
     if(!t) return null;
@@ -428,7 +496,7 @@
     if(!aStart || !aEnd || !bStart || !bEnd) return true;
 
     const bEndEx = new Date(bEnd.getTime());
-    bEndEx.setUTCDate(bEndEx.getUTCDate() + 1);
+    bEndEx.setUTCDate(bEndEx.getUTCDate() + 1); // end exclusivo (to inclusive)
     return (aStart < bEndEx) && (bStart < aEnd);
   }
 
@@ -508,18 +576,20 @@
   }
 
   function rebuildFilters(){
+    // Source
     const selS = $("selSource");
     const curS = selS.value;
     const sources = [...new Set(rowsRaw.map(r => safeStr(r.Source).trim()).filter(Boolean))]
       .sort((a,b)=>a.localeCompare(b));
-    selS.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${s}">${s}</option>`).join("");
+    selS.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     selS.value = sources.includes(curS) ? curS : "";
 
+    // Status
     const selSt = $("selStatus");
     const curSt = selSt.value;
     const statuses = [...new Set(rowsRaw.map(r => safeStr(r.Status).trim()).filter(Boolean))]
       .sort((a,b)=>a.localeCompare(b));
-    selSt.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join("");
+    selSt.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     selSt.value = statuses.includes(curSt) ? curSt : "";
   }
 
@@ -544,7 +614,7 @@
 
     renderKPIs();
     renderMiniChartsByAmount();
-    renderOccupancyByMonth();   // ✅ NUEVO
+    renderOccupancyByMonth();
     renderTable();
   }
 
@@ -581,24 +651,24 @@
     for(const r of rowsFiltered){
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="mono">${safeStr(r.Id) || "—"}</td>
-        <td>${safeStr(r.Source) || "—"}</td>
-        <td>${safeStr(r.Status) || "—"}</td>
-        <td class="mono">${safeStr(r.DateArrival) || "—"}</td>
-        <td class="mono">${safeStr(r.DateDeparture) || "—"}</td>
+        <td class="mono">${escapeHtml(safeStr(r.Id) || "—")}</td>
+        <td>${escapeHtml(safeStr(r.Source) || "—")}</td>
+        <td>${escapeHtml(safeStr(r.Status) || "—")}</td>
+        <td class="mono">${escapeHtml(safeStr(r.DateArrival) || "—")}</td>
+        <td class="mono">${escapeHtml(safeStr(r.DateDeparture) || "—")}</td>
         <td class="mono">${safeNum(r.Nights) || 0}</td>
-        <td title="${safeStr(r.HouseName)}">${safeStr(r.HouseName) || "—"}</td>
-        <td title="${safeStr(r.GuestName)}">${safeStr(r.GuestName) || "—"}</td>
-        <td>${safeStr(r.LineItem) || "—"}</td>
+        <td title="${escapeHtml(safeStr(r.HouseName))}">${escapeHtml(safeStr(r.HouseName) || "—")}</td>
+        <td title="${escapeHtml(safeStr(r.GuestName))}">${escapeHtml(safeStr(r.GuestName) || "—")}</td>
+        <td>${escapeHtml(safeStr(r.LineItem) || "—")}</td>
         <td class="mono">${moneyMXN(r.GrossAmount)}</td>
-        <td class="mono">${safeStr(r.Currency) || "—"}</td>
+        <td class="mono">${escapeHtml(safeStr(r.Currency) || "—")}</td>
       `;
       frag.appendChild(tr);
     }
     tb.appendChild(frag);
   }
 
-  // ---- mini charts by AMOUNT ----
+  // ===== mini charts by AMOUNT =====
   function buildSum(field){
     const m = new Map();
     for(const r of rowsFiltered){
@@ -623,7 +693,7 @@
     if(chSourcePie) chSourcePie.destroy();
     if(chStatusBar) chStatusBar.destroy();
 
-    chSourcePie = new Chart(document.getElementById("chSourcePie"), {
+    chSourcePie = new Chart($("chSourcePie"), {
       type: "pie",
       data: { labels: srcLabels, datasets: [{ data: srcData }] },
       options: {
@@ -646,7 +716,7 @@
       }
     });
 
-    chStatusBar = new Chart(document.getElementById("chStatusBar"), {
+    chStatusBar = new Chart($("chStatusBar"), {
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
@@ -661,28 +731,19 @@
     });
   }
 
-  // =========================
-  // ✅ OCCUPANCY BY HOUSE / MONTH
-  // =========================
-  function monthKey(d){ // d UTC
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth()+1).padStart(2,"0");
-    return `${y}-${m}`;
-  }
-
-  function monthStartUTC(y, m0){ // m0 0-based
-    return new Date(Date.UTC(y, m0, 1, 0, 0, 0));
-  }
-
-  function monthEndUTCExclusive(y, m0){
-    // start of next month
-    return new Date(Date.UTC(y, m0+1, 1, 0, 0, 0));
-  }
+  // ===== Occupancy helpers =====
+  function monthStartUTC(y, m0){ return new Date(Date.UTC(y, m0, 1, 0, 0, 0)); }
+  function monthEndUTCExclusive(y, m0){ return new Date(Date.UTC(y, m0+1, 1, 0, 0, 0)); }
 
   function daysBetweenUTC(a, b){
-    // assumes a,b are UTC midnight
     const ms = b.getTime() - a.getTime();
     return Math.max(0, Math.round(ms / 86400000));
+  }
+
+  function intersectNights(aStart, aEndEx, bStart, bEndEx){
+    const s = (aStart > bStart) ? aStart : bStart;
+    const e = (aEndEx < bEndEx) ? aEndEx : bEndEx;
+    return daysBetweenUTC(s, e);
   }
 
   function monthsBetween(fromISO, toISO){
@@ -690,7 +751,6 @@
     const b = parseISODateInput(toISO);
     if(!a || !b) return [];
 
-    // inclusive months (from month to to month)
     const out = [];
     let y = a.getUTCFullYear();
     let m = a.getUTCMonth();
@@ -705,12 +765,7 @@
     return out;
   }
 
-  function intersectNights(aStart, aEndEx, bStart, bEndEx){
-    const s = (aStart > bStart) ? aStart : bStart;
-    const e = (aEndEx < bEndEx) ? aEndEx : bEndEx;
-    return daysBetweenUTC(s, e);
-  }
-
+  // ===== Occupancy render (table + line data) =====
   function renderOccupancyByMonth(){
     const fromISO = $("from").value;
     const toISO = $("to").value;
@@ -718,17 +773,17 @@
     const months = monthsBetween(fromISO, toISO);
     const thead = $("occThead");
     const tbody = $("occTbody");
-
     thead.innerHTML = "";
     tbody.innerHTML = "";
 
     if(!months.length){
       $("occMeta").textContent = "Selecciona Desde/Hasta para calcular ocupación.";
+      occSeries = null;
+      renderOccLineChart(); // limpia si hace falta
       return;
     }
 
-    // 1) Deduplicar por reserva (Id) para no contar 3 veces (RoomRate/Fee/Tax)
-    //    Tomamos HouseName + Arrival + Departure por Id.
+    // Deduplicar por Id para no contar multiple line items
     const bookings = new Map(); // id -> {house, startUTC, endUTCEx}
     for(const r of rowsFiltered){
       const id = safeStr(r.Id);
@@ -738,20 +793,17 @@
       const start = parseMMDDYYYY(r.DateArrival);
       const endEx = parseMMDDYYYY(r.DateDeparture);
       const house = safeStr(r.HouseName).trim() || "—";
-
       if(!start || !endEx) continue;
+
       bookings.set(id, { house, start, endEx });
     }
 
-    // 2) Acumular noches por HouseName y mes
-    //    mapHouseMonth[houseKey][monthKey] = occupiedNights
+    // nights per house/month
     const map = new Map(); // house -> Map(monthKey -> nights)
     const houseSet = new Set();
 
     for(const { house, start, endEx } of bookings.values()){
       houseSet.add(house);
-
-      // para cada mes en el rango visible, calcula intersección
       for(const mo of months){
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
@@ -766,27 +818,27 @@
 
     const houses = [...houseSet].sort((a,b)=>a.localeCompare(b));
 
-    // 3) Header
+    // Header
     const trh = document.createElement("tr");
     trh.innerHTML = `
       <th class="houseCol">HouseName</th>
-      ${months.map(mo => `<th>${mo.key}</th>`).join("")}
+      ${months.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
     `;
     thead.appendChild(trh);
 
-    // 4) Body
+    // Body
     const frag = document.createDocumentFragment();
 
     for(const house of houses){
       const tr = document.createElement("tr");
+      const hm = map.get(house) || new Map();
 
-      // total nights per month
       const rowCells = months.map(mo=>{
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
 
-        const occ = map.get(house)?.get(mo.key) || 0;
+        const occ = hm.get(mo.key) || 0;
         const pct = totalNightsMonth > 0 ? (occ / totalNightsMonth) * 100 : 0;
 
         const pctTxt = `${pct.toFixed(0)}%`;
@@ -795,11 +847,11 @@
         return `
           <td class="occCell">
             <div class="occTop">
-              <span class="mono">${occTxt}</span>
-              <span class="mono">${pctTxt}</span>
+              <span class="mono">${escapeHtml(occTxt)}</span>
+              <span class="mono">${escapeHtml(pctTxt)}</span>
             </div>
             <div class="occMain">
-              <div class="bar" title="${pctTxt}">
+              <div class="bar" title="${escapeHtml(pctTxt)}">
                 <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></div>
               </div>
             </div>
@@ -807,15 +859,128 @@
         `;
       }).join("");
 
-      tr.innerHTML = `<td class="houseCol">${house}</td>${rowCells}`;
+      tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}`;
       frag.appendChild(tr);
     }
 
     tbody.appendChild(frag);
 
-    // Meta
     $("occMeta").textContent =
       `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos: ${houses.length.toLocaleString("es-MX")} · Meses: ${months.length}`;
+
+    // Build series for line chart + dropdown
+    buildOccupancySeriesForChart(months, houses, map);
+    rebuildOccHighlightDropdown();
+    renderOccLineChart();
+    syncOccView();
+  }
+
+  function buildOccupancySeriesForChart(months, houses, mapHouseMonth){
+    const pctByHouse = new Map();
+
+    for(const house of houses){
+      const arr = [];
+      const hm = mapHouseMonth.get(house) || new Map();
+      for(const mo of months){
+        const ms = monthStartUTC(mo.y, mo.m0);
+        const me = monthEndUTCExclusive(mo.y, mo.m0);
+        const totalNightsMonth = daysBetweenUTC(ms, me);
+
+        const occ = hm.get(mo.key) || 0;
+        const pct = totalNightsMonth > 0 ? (occ / totalNightsMonth) * 100 : 0;
+        arr.push(+pct.toFixed(2));
+      }
+      pctByHouse.set(house, arr);
+    }
+
+    occSeries = {
+      months: months.map(m=>m.key),
+      houses: [...houses],
+      pctByHouse
+    };
+  }
+
+  function rebuildOccHighlightDropdown(){
+    const sel = $("occHighlight");
+    if(!sel) return;
+
+    const cur = sel.value;
+    const houses = occSeries?.houses || [];
+    sel.innerHTML = `<option value="">— ninguno —</option>` + houses.map(h =>
+      `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`
+    ).join("");
+
+    sel.value = houses.includes(cur) ? cur : "";
+  }
+
+  function renderOccLineChart(){
+    const canvas = $("occLineChart");
+    if(!canvas){
+      if(chOccLines){ chOccLines.destroy(); chOccLines = null; }
+      return;
+    }
+    if(!occSeries){
+      if(chOccLines){ chOccLines.destroy(); chOccLines = null; }
+      return;
+    }
+
+    const labels = occSeries.months;
+    const highlight = $("occHighlight")?.value || "";
+
+    const datasets = occSeries.houses.map(h=>{
+      const data = occSeries.pctByHouse.get(h) || labels.map(()=>0);
+      const isHi = highlight && h === highlight;
+      return {
+        label: h,
+        data,
+        tension: 0.25,
+        pointRadius: isHi ? 3 : 0,
+        borderWidth: isHi ? 3 : 1,
+      };
+    });
+
+    if(chOccLines) chOccLines.destroy();
+    chOccLines = new Chart(canvas, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "nearest", intersect: false },
+        plugins: {
+          legend: {
+            display: true,
+            position: "bottom",
+            labels: { boxWidth: 10 }
+          },
+          tooltip: {
+            callbacks: { label: (ctx)=> ` ${ctx.dataset.label}: ${ctx.raw}%` }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { callback: (v)=> `${v}%` }
+          }
+        }
+      }
+    });
+  }
+
+  function syncOccView(){
+    const view = $("occView")?.value || "table";
+    const lineWrap = $("occLineWrap");
+    const tableWrap = $("occTableWrap");
+    if(!lineWrap || !tableWrap) return;
+
+    if(view === "line"){
+      lineWrap.style.display = "";
+      tableWrap.style.display = "none";
+    }else{
+      lineWrap.style.display = "none";
+      tableWrap.style.display = "";
+    }
   }
 
   function downloadCSV(){
@@ -837,21 +1002,37 @@
     $("to").value = ymd(last);
   }
 
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
   (function init(){
     $("baseUrl").textContent = API_BASE || "same-origin";
     setDefaultDates();
 
     $("btnLoad").addEventListener("click", async ()=>{
-      try{ await loadOTC(); }catch(e){ setStatus("err","Error"); alert(String(e.message || e)); }
+      try{ await loadOTC(); }
+      catch(e){ setStatus("err","Error"); alert(String(e.message || e)); }
     });
     $("btnCsv").addEventListener("click", downloadCSV);
     $("btnDebug").addEventListener("click", loadDebug);
 
+    // filtros locales
     ["q","selSource","selStatus","from","to"].forEach(id=>{
       $(id).addEventListener("input", applyLocalFilters);
       $(id).addEventListener("change", applyLocalFilters);
     });
 
+    // ocupación: vista + resaltado
+    $("occView").addEventListener("change", syncOccView);
+    $("occHighlight").addEventListener("change", ()=> renderOccLineChart());
+
+    // autoload
     $("btnLoad").click();
   })();
 </script>
