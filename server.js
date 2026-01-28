@@ -5,6 +5,7 @@ import path from "path";
 const app = express();
 const __dirname = path.resolve();
 
+// Body
 app.use(express.json({ limit: "2mb" }));
 
 // -------------------- CORS --------------------
@@ -28,7 +29,8 @@ app.use(
   })
 );
 
-// Static
+// -------------------- Static --------------------
+// Sirve /public como estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
 // -------------------- ENV --------------------
@@ -38,7 +40,10 @@ const LODGIFY_API_KEY =
   process.env.LODGIFY_APIKEY ||
   "";
 
-const LODGIFY_BASE = (process.env.LODGIFY_BASE || "https://api.lodgify.com").replace(/\/+$/, "");
+const LODGIFY_BASE = (process.env.LODGIFY_BASE || "https://api.lodgify.com").replace(
+  /\/+$/,
+  ""
+);
 
 function requireApiKey() {
   if (!LODGIFY_API_KEY) {
@@ -75,7 +80,7 @@ async function lodgifyFetch(p, { method = "GET", headers = {}, body } = {}) {
   if (!res.ok) {
     const msg =
       typeof data === "object" && data
-        ? (data.message || data.error || JSON.stringify(data))
+        ? data.message || data.error || JSON.stringify(data)
         : String(txt);
     const err = new Error(`Lodgify ${res.status}: ${msg}`);
     // @ts-ignore
@@ -152,42 +157,34 @@ async function fetchPropertiesMap() {
   for (const p of attempts) {
     try {
       const data = await lodgifyFetch(p);
-      const items = Array.isArray(data) ? data : (data?.items || data?.properties || []);
+      const items = Array.isArray(data)
+        ? data
+        : data?.items || data?.properties || [];
       const map = new Map();
       for (const it of items) {
         const id = it?.id ?? it?.property_id ?? it?.houseId;
-        const name = it?.name ?? it?.title ?? it?.internal_name ?? it?.propertyName;
+        const name =
+          it?.name ?? it?.title ?? it?.internal_name ?? it?.propertyName;
         if (id != null) map.set(Number(id), String(name ?? id));
       }
       if (map.size) return map;
-    } catch {}
+    } catch {
+      // try next
+    }
   }
   return new Map();
 }
 
-// -------------------- ✅ Bookings fetch con page/size --------------------
-function extractBatch(data) {
-  const batch = data?.items || data?.bookings || (Array.isArray(data) ? data : []);
-  if (!Array.isArray(batch)) throw new Error("Unexpected bookings payload shape");
-  return batch;
-}
-
-function extractCount(data) {
-  // con includeCount=true, Lodgify suele regresar algo tipo count/total
-  const c = safeNum(data?.count) || safeNum(data?.total) || safeNum(data?.total_count) || safeNum(data?.totalBookings);
-  return c > 0 ? c : null;
-}
-
+// -------------------- ✅ Bookings fetch con page/size (robusto) --------------------
 /**
  * Trae TODO con stayFilter=All paginado por page/size
- * y luego tú filtras por overlaps() para el mes.
+ * IMPORTANTE: includeQuoteDetails=true para tener subtotals/total_amount
  */
 async function fetchAllBookings({ size = 200, stayFilter = "All" } = {}) {
   const bookings = [];
   let page = 1;
   let pagesUsed = 0;
 
-  // Seguridad
   size = Math.min(200, Math.max(10, Number(size || 200)));
 
   let totalCount = null;
@@ -197,10 +194,10 @@ async function fetchAllBookings({ size = 200, stayFilter = "All" } = {}) {
       page: String(page),
       size: String(size),
       includeCount: "true",
-      stayFilter: stayFilter,              // All | Upcoming | Current | Historic | ArrivalDate | DepartureDate
-      includeQuoteDetails: "true",         // <<< CLAVE: montos/subtotals completos
-      // includeTransactions: "true",       // opcional (si quieres transacciones)
-      // includeExternal: "true",           // opcional
+      stayFilter: String(stayFilter),
+      includeQuoteDetails: "true",
+      // includeTransactions: "true", // opcional
+      // includeExternal: "true",     // opcional
     });
 
     const data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
@@ -211,7 +208,6 @@ async function fetchAllBookings({ size = 200, stayFilter = "All" } = {}) {
     bookings.push(...batch);
     pagesUsed++;
 
-    // count/total (depende del shape)
     const count =
       safeNum(data?.count) ||
       safeNum(data?.total) ||
@@ -221,7 +217,7 @@ async function fetchAllBookings({ size = 200, stayFilter = "All" } = {}) {
 
     if (count && !totalCount) totalCount = count;
 
-    // Stop conditions:
+    // Stop conditions
     if (batch.length < size) break; // última página
     if (totalCount && bookings.length >= totalCount) break;
 
@@ -231,8 +227,6 @@ async function fetchAllBookings({ size = 200, stayFilter = "All" } = {}) {
 
   return { bookings, totalCount: totalCount || bookings.length, pagesUsed };
 }
-
-
 
 // -------------------- OTC builder --------------------
 function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
@@ -260,7 +254,10 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
       Id: b.id,
       Source: guessSourceLabel(b),
       SourceText: b.source_text || "",
-      ChannelBooking: (typeof b.source_text === "string" && b.source_text.length <= 30) ? b.source_text : "",
+      ChannelBooking:
+        typeof b.source_text === "string" && b.source_text.length <= 30
+          ? b.source_text
+          : "",
       Status: b.status || "",
       DateCancelled: b.canceled_at ? formatMMDDYYYY(new Date(`${b.canceled_at}Z`)) : "",
       DateArrival: formatMMDDYYYY(a),
@@ -296,6 +293,7 @@ function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
     if (promos) lineItems.push({ LineItem: "Promotion", LineItemDescription: "Promotions", GrossAmount: promos });
     if (vat) lineItems.push({ LineItem: "VAT", LineItemDescription: "VAT", GrossAmount: vat });
 
+    // fallback
     if (!lineItems.length) {
       const total = prorate(b.total_amount, totalN, nInRange);
       if (total) lineItems.push({ LineItem: "Total", LineItemDescription: "Total", GrossAmount: total });
@@ -325,11 +323,13 @@ function rowsToCSV(rows) {
     "NumberOfGuests","Adults","Children","Infants","Pets","Currency",
     "LineItem","LineItemDescription","GrossAmount","NetAmount","VatAmount"
   ];
+
   const esc = (v) => {
     const s = (v ?? "").toString();
-    if (/[",\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
+    if (/[",\n]/.test(s)) return `"${s.replaceAll('"', '""')}"`;
     return s;
   };
+
   return [
     cols.join(","),
     ...rows.map((r) => cols.map((c) => esc(r[c])).join(",")),
@@ -339,29 +339,61 @@ function rowsToCSV(rows) {
 // -------------------- Routes --------------------
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-// ✅ Debug: te dice el rango real que está regresando Lodgify y cuántas páginas usó
+// ✅ Debug: compara sin/con includeQuoteDetails
 app.get("/api/debug/bookings", async (req, res) => {
   try {
     const size = Math.min(200, Math.max(10, Number(req.query.size || 50)));
-    const { bookings, totalCount, pagesUsed } = await fetchAllBookings({ size });
 
-    const arrivals = bookings.map(b => b?.arrival).filter(Boolean).sort();
+    const qsA = new URLSearchParams({
+      page: "1",
+      size: String(size),
+      includeCount: "true",
+      stayFilter: "All",
+    });
+    const a = await lodgifyFetch(`/v2/reservations/bookings?${qsA.toString()}`);
+    const batchA = a?.items || a?.bookings || [];
+    const totalA = safeNum(a?.count) || safeNum(a?.total) || null;
+
+    const qsB = new URLSearchParams({
+      page: "1",
+      size: String(size),
+      includeCount: "true",
+      stayFilter: "All",
+      includeQuoteDetails: "true",
+    });
+    const b = await lodgifyFetch(`/v2/reservations/bookings?${qsB.toString()}`);
+    const batchB = b?.items || b?.bookings || [];
+    const totalB = safeNum(b?.count) || safeNum(b?.total) || null;
+
+    const pick = (x) => ({
+      id: x?.id,
+      arrival: x?.arrival,
+      departure: x?.departure,
+      status: x?.status,
+      property_id: x?.property_id,
+      total_amount: x?.total_amount,
+      subtotals: x?.subtotals,
+      currency: x?.currency_code,
+    });
+
+    const arrivals = (arr) => arr.map((o) => o?.arrival).filter(Boolean).sort();
+
     res.json({
       ok: true,
-      endpointUsed: "/v2/reservations/bookings?page&size&stayFilter=All",
-      size,
-      totalCount,
-      pagesUsed,
-      bookingsFetched: bookings.length,
-      arrivalMin: arrivals[0] || null,
-      arrivalMax: arrivals[arrivals.length - 1] || null,
-      sample: bookings.slice(0, 5).map(b => ({
-        id: b?.id,
-        arrival: b?.arrival,
-        departure: b?.departure,
-        status: b?.status,
-        property_id: b?.property_id,
-      })),
+      noQuote: {
+        endpointUsed: `/v2/reservations/bookings?${qsA.toString()}`,
+        totalCount: totalA,
+        sample: batchA.slice(0, 5).map(pick),
+        arrivalMin: arrivals(batchA)[0] || null,
+        arrivalMax: arrivals(batchA).slice(-1)[0] || null,
+      },
+      withQuote: {
+        endpointUsed: `/v2/reservations/bookings?${qsB.toString()}`,
+        totalCount: totalB,
+        sample: batchB.slice(0, 5).map(pick),
+        arrivalMin: arrivals(batchB)[0] || null,
+        arrivalMax: arrivals(batchB).slice(-1)[0] || null,
+      },
     });
   } catch (e) {
     const code = e?.statusCode ? Number(e.statusCode) : 500;
@@ -390,7 +422,8 @@ app.get("/api/otc", async (req, res) => {
       ok: true,
       from: fromISO,
       to: toISO,
-      endpointUsed: "/v2/reservations/bookings?page&size&includeCount=true&stayFilter=All&includeQuoteDetails=true",
+      endpointUsed:
+        "/v2/reservations/bookings?page&size&includeCount=true&stayFilter=All&includeQuoteDetails=true",
       bookingsFetched: pulled.bookings.length,
       totalCount: pulled.totalCount,
       pagesUsed: pulled.pagesUsed,
@@ -402,7 +435,6 @@ app.get("/api/otc", async (req, res) => {
     res.status(code).json({ ok: false, error: String(e?.message || e) });
   }
 });
-
 
 app.get("/api/otc.csv", async (req, res) => {
   try {
@@ -423,7 +455,10 @@ app.get("/api/otc.csv", async (req, res) => {
     const csv = rowsToCSV(rows);
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="OTCReport_${fromISO}_to_${toISO}.csv"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="OTCReport_${fromISO}_to_${toISO}.csv"`
+    );
     res.send(csv);
   } catch (e) {
     const code = e?.statusCode ? Number(e.statusCode) : 500;
@@ -431,10 +466,8 @@ app.get("/api/otc.csv", async (req, res) => {
   }
 });
 
-
-
-
-// Home
+// -------------------- Home --------------------
+// Evita ENOENT: SIEMPRE sirve public/index.html
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
