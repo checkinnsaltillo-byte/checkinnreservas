@@ -182,44 +182,32 @@ function extractCount(data) {
  * Trae TODO con stayFilter=All paginado por page/size
  * y luego tú filtras por overlaps() para el mes.
  */
-async function fetchAllBookings({ size = 50, maxPages = 500 } = {}) {
+async function fetchAllBookings({ limit = 200 }) {
   const all = [];
-  const seen = new Set();
-
   let page = 1;
-  let totalCount = null;
+  let totalPages = 1;
 
-  while (page <= maxPages) {
-    const qs = new URLSearchParams();
-    qs.set("page", String(page));
-    qs.set("size", String(size));
-    qs.set("includeCount", "true");
-    qs.set("stayFilter", "All"); // ✅ CLAVE: incluye histórico
+  do {
+    const qs = new URLSearchParams({
+      page: String(page),
+      size: String(limit),
+      includeCount: "true"
+    });
 
     const data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
-    const batch = extractBatch(data);
 
-    // dedupe por si Lodgify repite
-    for (const b of batch) {
-      const id = b?.id ?? `${b?.property_id}-${b?.arrival}-${b?.departure}-${page}`;
-      if (!seen.has(id)) {
-        seen.add(id);
-        all.push(b);
-      }
-    }
+    const batch = data?.items || data?.bookings || [];
+    all.push(...batch);
 
-    if (totalCount == null) totalCount = extractCount(data);
+    const total = Number(data?.count || data?.total || batch.length);
+    totalPages = Math.ceil(total / limit);
 
-    // corte
-    if (batch.length === 0) break;
-    if (batch.length < size) break;
-    if (totalCount != null && all.length >= totalCount) break;
+    page++;
+  } while (page <= totalPages);
 
-    page += 1;
-  }
-
-  return { bookings: all, totalCount, pagesUsed: page };
+  return all;
 }
+
 
 // -------------------- OTC builder --------------------
 function buildOTCRows({ bookings, propsMap, fromISO, toISO }) {
