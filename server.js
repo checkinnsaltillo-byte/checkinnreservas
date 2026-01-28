@@ -382,28 +382,36 @@ app.get("/api/otc.csv", async (req, res) => {
   try {
     const fromISO = String(req.query.from || "");
     const toISO = String(req.query.to || "");
+
     if (!parseISODate(fromISO) || !parseISODate(toISO)) {
       return res.status(400).send("Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD");
     }
 
-    const size = Math.min(200, Math.max(10, Number(req.query.size || req.query.limit || 50)));
+    const size = Math.min(
+      200,
+      Math.max(10, Number(req.query.size || req.query.limit || 200))
+    );
 
-    const [propsMap, pulled] = await Promise.all([
+    const [propsMap, bookings] = await Promise.all([
       fetchPropertiesMap(),
-      fetchAllBookings({ size }),
+      fetchAllBookings({ size }), // <- debe regresar ARRAY
     ]);
 
-    const rows = buildOTCRows({ bookings: pulled.bookings, propsMap, fromISO, toISO });
+    const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
     const csv = rowsToCSV(rows);
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="OTCReport_${fromISO}_to_${toISO}.csv"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="OTCReport_${fromISO}_to_${toISO}.csv"`
+    );
     res.send(csv);
   } catch (e) {
     const code = e?.statusCode ? Number(e.statusCode) : 500;
     res.status(code).send(String(e?.message || e));
   }
 });
+
 
 // Home
 app.get("/", (req, res) => {
