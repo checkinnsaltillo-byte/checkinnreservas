@@ -455,6 +455,70 @@ app.get("/api/otc", async (req, res) => {
 });
 
 /**
+ * ✅ Bookings simplificados (para agregaciones como ocupación)
+ * GET /api/bookings?from=YYYY-MM-DD&to=YYYY-MM-DD&size=100
+ *
+ * Nota: este endpoint trae TODO (paginado) y filtra por traslape con el rango.
+ */
+app.get("/api/bookings", async (req, res) => {
+  try {
+    const fromISO = String(req.query.from || "");
+    const toISO = String(req.query.to || "");
+
+    if (!parseISODate(fromISO) || !parseISODate(toISO)) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Use ?from=YYYY-MM-DD&to=YYYY-MM-DD" });
+    }
+
+    const size = Math.min(200, Math.max(10, Number(req.query.size || req.query.limit || 100)));
+
+    const [propsMap, pulled] = await Promise.all([
+      fetchPropertiesMap(),
+      fetchAllBookings({ size, stayFilter: "All", includeQuoteDetails: true }),
+    ]);
+
+    const bookings = pulled.bookings
+      .filter((b) => b?.arrival && b?.departure)
+      .filter((b) => overlaps(b.arrival, b.departure, fromISO, toISO))
+      .map((b) => {
+        const houseId = Number(b.property_id);
+        const houseName = propsMap.get(houseId) || String(houseId || "");
+        const totalN = nights(b.arrival, b.departure);
+        const nInRange = clampNightsWithinRange(b.arrival, b.departure, fromISO, toISO);
+
+        return {
+          id: b?.id,
+          arrival: b?.arrival,
+          departure: b?.departure,
+          status: b?.status || "",
+          source: guessSourceLabel(b),
+          property_id: houseId || "",
+          houseName,
+          nights_total: totalN,
+          nights_in_range: nInRange,
+        };
+      });
+
+    res.json({
+      ok: true,
+      from: fromISO,
+      to: toISO,
+      requestedSize: size,
+      effectivePageSize: pulled.effectivePageSize,
+      totalCount: pulled.totalCount,
+      pagesUsed: pulled.pagesUsed,
+      bookingsFetched: pulled.bookings.length,
+      bookingsInRange: bookings.length,
+      bookings,
+    });
+  } catch (e) {
+    const code = e?.statusCode ? Number(e.statusCode) : 500;
+    res.status(code).json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+/**
  * CSV OTC
  * GET /api/otc.csv?from=YYYY-MM-DD&to=YYYY-MM-DD&size=100
  */
