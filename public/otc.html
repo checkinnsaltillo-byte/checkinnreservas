@@ -7,9 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root{
-      --bg:#0b1220; --panel:#0f1a30; --panel2:#121f3a;
-      --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
-      --accent:#4cc9f0; --good:#4ade80; --warn:#fbbf24; --bad:#fb7185;
+      --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
       --shadow: 0 12px 28px rgba(0,0,0,.35);
       --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
@@ -46,7 +44,6 @@
       background:linear-gradient(180deg, rgba(76,201,240,.18), rgba(67,97,238,.10));
       border-color:rgba(76,201,240,.35);
     }
-    button.primary:hover{border-color:rgba(76,201,240,.6)}
     button.ghost{background:transparent}
     .status{
       display:inline-flex; align-items:center; gap:8px;
@@ -55,9 +52,10 @@
       font-size:12px; color:var(--muted);
     }
     .dot{width:8px; height:8px; border-radius:999px; background:#64748b}
-    .dot.ok{background:var(--good)}
-    .dot.err{background:var(--bad)}
-    .dot.busy{background:var(--warn)}
+    .dot.ok{background:#4ade80}
+    .dot.err{background:#fb7185}
+    .dot.busy{background:#fbbf24}
+
     .card{
       background:linear-gradient(180deg, rgba(15,26,48,.98), rgba(11,18,32,.98));
       border:1px solid var(--line);
@@ -73,9 +71,21 @@
     .hd h2{margin:0; font-size:14px; letter-spacing:.2px}
     .hd .hint{margin:3px 0 0; font-size:12px; color:var(--muted)}
     .bd{padding:14px}
+
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
     .row > *{flex:1}
     .row .small{flex:.85}
+
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      background:rgba(76,201,240,.10);
+      border:1px solid rgba(76,201,240,.22);
+      color:var(--text);
+      font-size:12px;
+      white-space:nowrap;
+    }
+
     .kpis{
       display:grid; gap:10px;
       grid-template-columns: repeat(6, 1fr);
@@ -94,21 +104,10 @@
     .kpi .lbl{font-size:12px; color:var(--muted)}
     .kpi .val{margin-top:6px; font-size:18px; font-weight:900; letter-spacing:.3px}
     .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
-    .kpi .mini{
-      margin-top:8px;
-      height:90px;
-      width:100%;
-    }
-    .pill{
-      display:inline-flex; align-items:center; gap:6px;
-      padding:4px 8px; border-radius:999px;
-      background:rgba(76,201,240,.10);
-      border:1px solid rgba(76,201,240,.22);
-      color:var(--text);
-      font-size:12px;
-      white-space:nowrap;
-    }
+    .kpi .mini{margin-top:8px; height:90px; width:100%}
+
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
+
     .tableWrap{
       border:1px solid var(--line);
       border-radius:14px;
@@ -158,14 +157,12 @@
 
 <main class="wrap">
 
-  <!-- Parámetros -->
   <section class="card">
     <div class="hd">
       <div>
         <h2>Parámetros</h2>
         <div class="hint">
-          API: <span class="mono">/api/otc</span> y <span class="mono">/api/otc.csv</span>
-          · Fechas incluyen reservas que <b>toquen</b> el rango (overlap).
+          API: <span class="mono">/api/otc</span> y <span class="mono">/api/otc.csv</span> · Fechas incluyen overlap.
         </div>
       </div>
       <div class="hint" id="metaLine">—</div>
@@ -204,16 +201,13 @@
     </div>
   </section>
 
-  <!-- KPIs + Mini gráficas -->
   <section class="card">
     <div class="hd">
       <div>
         <h2>KPIs</h2>
-        <div class="hint">Incluye montos por LineItem: RoomRate, Fee, Tax</div>
+        <div class="hint">Montos por LineItem + mini gráficas por <b>monto</b> (sum GrossAmount)</div>
       </div>
-      <div class="hint">
-        <span class="pill" id="pillFiltered">0 filas</span>
-      </div>
+      <div class="hint"><span class="pill" id="pillFiltered">0 filas</span></div>
     </div>
 
     <div class="bd">
@@ -227,7 +221,7 @@
         <div class="kpi">
           <div class="lbl">Noches (sum)</div>
           <div class="val" id="kpiNights">—</div>
-          <div class="meta">Suma Nights (en rango)</div>
+          <div class="meta">Suma Nights</div>
         </div>
 
         <div class="kpi">
@@ -254,30 +248,26 @@
           <div class="meta">LineItem = Tax</div>
         </div>
 
-        <!-- Mini gráficas como KPIs -->
         <div class="kpi" style="grid-column: span 3;">
-          <div class="lbl">Distribución por Source</div>
-          <div class="meta">Pie (count de filas)</div>
+          <div class="lbl">Monto por Source</div>
+          <div class="meta">Pie (sum GrossAmount, top 12)</div>
           <div class="mini"><canvas id="chSourcePie"></canvas></div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
-          <div class="lbl">Distribución por Status</div>
-          <div class="meta">Barras (count de filas)</div>
+          <div class="lbl">Monto por Status</div>
+          <div class="meta">Barras (sum GrossAmount, top 12)</div>
           <div class="mini"><canvas id="chStatusBar"></canvas></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Tabla -->
   <section class="card">
     <div class="hd">
       <div>
         <h2>Tabla OTC</h2>
-        <div class="hint">
-          Tabla completa + filtros locales (Source/Status/Buscar) + overlap por fechas.
-        </div>
+        <div class="hint">Tabla + filtros locales + overlap por fechas</div>
       </div>
     </div>
 
@@ -314,22 +304,13 @@
 </main>
 
 <script>
-  // =========================
-  // Base URL
-  // =========================
   const API_BASE = "";
 
-  // =========================
-  // State
-  // =========================
   let rowsRaw = [];
   let rowsFiltered = [];
   let chSourcePie = null;
   let chStatusBar = null;
 
-  // =========================
-  // Helpers
-  // =========================
   const $ = (id) => document.getElementById(id);
 
   function setStatus(kind, text){
@@ -343,17 +324,13 @@
   function moneyMXN(v){
     const n = Number(v);
     if(!Number.isFinite(n)) return "—";
-    try{
-      return new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(n);
-    }catch{
-      return "$" + n.toFixed(2);
-    }
+    try{ return new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(n); }
+    catch{ return "$" + n.toFixed(2); }
   }
 
   function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
   function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
 
-  // Arrival/Departure vienen como "MM/DD/YYYY"
   function parseMMDDYYYY(s){
     const t = safeStr(s).trim();
     if(!t) return null;
@@ -373,16 +350,13 @@
     return new Date(Date.UTC(yyyy, mm-1, dd, 0, 0, 0));
   }
 
-  // overlap: [aStart, aEnd) toca [bStart, bEnd) si aStart < bEnd && bStart < aEnd
   function overlaps(arrivalMMDD, departureMMDD, fromISO, toISO){
     const aStart = parseMMDDYYYY(arrivalMMDD);
     const aEnd   = parseMMDDYYYY(departureMMDD);
     const bStart = parseISODateInput(fromISO);
     const bEnd   = parseISODateInput(toISO);
-
     if(!aStart || !aEnd || !bStart || !bEnd) return true;
 
-    // to inclusive -> end exclusivo sumando 1 día
     const bEndEx = new Date(bEnd.getTime());
     bEndEx.setUTCDate(bEndEx.getUTCDate() + 1);
 
@@ -412,9 +386,6 @@
     };
   }
 
-  // =========================
-  // Load
-  // =========================
   async function loadOTC(){
     setStatus("busy", "Cargando...");
     $("metaLine").textContent = "—";
@@ -467,11 +438,7 @@
     );
   }
 
-  // =========================
-  // Filters
-  // =========================
   function rebuildFilters(){
-    // Source
     const selS = $("selSource");
     const curS = selS.value;
     const sources = [...new Set(rowsRaw.map(r => safeStr(r.Source).trim()).filter(Boolean))]
@@ -479,7 +446,6 @@
     selS.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${s}">${s}</option>`).join("");
     selS.value = sources.includes(curS) ? curS : "";
 
-    // Status
     const selSt = $("selStatus");
     const curSt = selSt.value;
     const statuses = [...new Set(rowsRaw.map(r => safeStr(r.Status).trim()).filter(Boolean))]
@@ -488,9 +454,6 @@
     selSt.value = statuses.includes(curSt) ? curSt : "";
   }
 
-  // =========================
-  // Local filters + render
-  // =========================
   function applyLocalFilters(){
     const q = $("q").value.trim().toLowerCase();
     const src = $("selSource").value.trim().toLowerCase();
@@ -499,7 +462,6 @@
     const toISO = $("to").value;
 
     rowsFiltered = rowsRaw.filter(r=>{
-      // overlap por fechas
       if(fromISO && toISO){
         if(!overlaps(r.DateArrival, r.DateDeparture, fromISO, toISO)) return false;
       }
@@ -507,22 +469,19 @@
       if(st && safeStr(r.Status).toLowerCase() !== st) return false;
 
       if(!q) return true;
-      const hay = [
-        r.Id, r.Source, r.Status, r.HouseName, r.GuestName, r.LineItem, r.Currency
-      ].join(" ").toLowerCase();
+      const hay = [r.Id,r.Source,r.Status,r.HouseName,r.GuestName,r.LineItem,r.Currency].join(" ").toLowerCase();
       return hay.includes(q);
     });
 
     renderKPIs();
-    renderMiniCharts();
+    renderMiniChartsByAmount();
     renderTable();
   }
 
   function sumByLineItem(name){
     const key = String(name || "").toLowerCase();
     return rowsFiltered.reduce((acc, r)=>{
-      const li = safeStr(r.LineItem).toLowerCase();
-      if(li === key) return acc + safeNum(r.GrossAmount);
+      if(safeStr(r.LineItem).toLowerCase() === key) return acc + safeNum(r.GrossAmount);
       return acc;
     }, 0);
   }
@@ -539,13 +498,9 @@
     const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
     $("kpiGross").textContent = moneyMXN(gross);
 
-    const room = sumByLineItem("RoomRate");
-    const fee  = sumByLineItem("Fee");
-    const tax  = sumByLineItem("Tax");
-
-    $("kpiRoomRate").textContent = moneyMXN(room);
-    $("kpiFee").textContent      = moneyMXN(fee);
-    $("kpiTax").textContent      = moneyMXN(tax);
+    $("kpiRoomRate").textContent = moneyMXN(sumByLineItem("RoomRate"));
+    $("kpiFee").textContent      = moneyMXN(sumByLineItem("Fee"));
+    $("kpiTax").textContent      = moneyMXN(sumByLineItem("Tax"));
   }
 
   function renderTable(){
@@ -573,63 +528,80 @@
     tb.appendChild(frag);
   }
 
-  // =========================
-  // Mini charts
-  // =========================
-  function buildCounts(field){
+  // ---- charts by AMOUNT ----
+  function buildSum(field){
     const m = new Map();
     for(const r of rowsFiltered){
       const k = safeStr(r[field]).trim() || "—";
-      m.set(k, (m.get(k) || 0) + 1);
+      m.set(k, (m.get(k) || 0) + safeNum(r.GrossAmount));
     }
     const labels = [...m.keys()].sort((a,b)=> (m.get(b)-m.get(a)));
     const data = labels.map(k => m.get(k));
     return { labels, data };
   }
 
-  function renderMiniCharts(){
-    const src = buildCounts("Source");
-    const st  = buildCounts("Status");
+  function renderMiniChartsByAmount(){
+    const src = buildSum("Source");
+    const st  = buildSum("Status");
+
+    // Top 12
+    const srcLabels = src.labels.slice(0,12);
+    const srcData   = src.data.slice(0,12);
+
+    const stLabels = st.labels.slice(0,12);
+    const stData   = st.data.slice(0,12);
 
     if(chSourcePie) chSourcePie.destroy();
     if(chStatusBar) chStatusBar.destroy();
 
-    chSourcePie = new Chart($("chSourcePie"), {
+    chSourcePie = new Chart(document.getElementById("chSourcePie"), {
       type: "pie",
-      data: { labels: src.labels.slice(0, 12), datasets: [{ data: src.data.slice(0, 12) }] },
+      data: { labels: srcLabels, datasets: [{ data: srcData }] },
       options: {
         responsive:true,
         maintainAspectRatio:false,
         plugins:{
           legend:{ display:true, position:"bottom", labels:{ boxWidth:10 } },
-          tooltip:{ enabled:true }
+          tooltip:{
+            enabled:true,
+            callbacks:{
+              label: (ctx)=>{
+                const total = srcData.reduce((a,b)=>a+b,0) || 1;
+                const v = Number(ctx.raw || 0);
+                const p = (v/total)*100;
+                return ` ${ctx.label}: ${moneyMXN(v)} (${p.toFixed(1)}%)`;
+              }
+            }
+          }
         }
       }
     });
 
-    chStatusBar = new Chart($("chStatusBar"), {
+    chStatusBar = new Chart(document.getElementById("chStatusBar"), {
       type: "bar",
-      data: { labels: st.labels.slice(0, 12), datasets: [{ label:"Filas", data: st.data.slice(0, 12) }] },
+      data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
         responsive:true,
         maintainAspectRatio:false,
-        plugins:{ legend:{ display:false }, tooltip:{ enabled:true } },
-        scales:{ y:{ beginAtZero:true } }
+        plugins:{
+          legend:{ display:false },
+          tooltip:{
+            enabled:true,
+            callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` }
+          }
+        },
+        scales:{
+          y:{ beginAtZero:true, ticks:{ callback:(v)=> v } }
+        }
       }
     });
   }
 
-  // =========================
-  // CSV
-  // =========================
   function downloadCSV(){
     const url = `${API_BASE}/api/otc.csv?${qs()}`;
     window.location.href = url;
   }
 
-  // =========================
-  // Init
-  // =========================
   function setDefaultDates(){
     const now = new Date();
     const y = now.getFullYear();
@@ -648,18 +620,18 @@
     $("baseUrl").textContent = API_BASE || "same-origin";
     setDefaultDates();
 
-    $("btnLoad").addEventListener("click", async ()=>{
+    document.getElementById("btnLoad").addEventListener("click", async ()=>{
       try{ await loadOTC(); }catch(e){ setStatus("err","Error"); alert(String(e.message || e)); }
     });
-    $("btnCsv").addEventListener("click", downloadCSV);
-    $("btnDebug").addEventListener("click", loadDebug);
+    document.getElementById("btnCsv").addEventListener("click", downloadCSV);
+    document.getElementById("btnDebug").addEventListener("click", loadDebug);
 
     ["q","selSource","selStatus","from","to"].forEach(id=>{
-      $(id).addEventListener("input", applyLocalFilters);
-      $(id).addEventListener("change", applyLocalFilters);
+      document.getElementById(id).addEventListener("input", applyLocalFilters);
+      document.getElementById(id).addEventListener("change", applyLocalFilters);
     });
 
-    $("btnLoad").click();
+    document.getElementById("btnLoad").click();
   })();
 </script>
 </body>
