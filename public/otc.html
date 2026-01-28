@@ -903,7 +903,25 @@
       .replaceAll('"',"&quot;")
       .replaceAll("'","&#039;");
   }
-  function unescapeHtml(s){
+  
+
+  function normalizePhoneDigits(phone){
+    const raw = safeStr(phone).trim();
+    if(!raw) return "";
+    // Keep digits only for wa.me
+    return raw.replace(/\D/g, "");
+  }
+
+  function renderWhatsAppPhone(phone){
+    const raw = safeStr(phone).trim();
+    if(!raw) return "—";
+    const digits = normalizePhoneDigits(raw);
+    if(!digits) return escapeHtml(raw);
+    const href = `https://wa.me/${digits}`;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(raw)}</a>`;
+  }
+
+function unescapeHtml(s){
     // solo para nuestros values
     return String(s ?? "")
       .replaceAll("&amp;","&")
@@ -997,7 +1015,7 @@
         <td title="${escapeHtml(safeStr(r.HouseName))}">${escapeHtml(safeStr(r.HouseName) || "—")}</td>
         <td title="${escapeHtml(safeStr(r.GuestName))}">${escapeHtml(safeStr(r.GuestName) || "—")}</td>
         <td title="${escapeHtml(safeStr(r.GuestEmail))}">${escapeHtml(safeStr(r.GuestEmail) || "—")}</td>
-        <td class="mono" title="${escapeHtml(safeStr(r.GuestPhone))}">${escapeHtml(safeStr(r.GuestPhone) || "—")}</td>
+        <td class="mono" title="${escapeHtml(safeStr(r.GuestPhone))}">${renderWhatsAppPhone(r.GuestPhone)}</td>
         <td class="mono" title="${escapeHtml(safeStr(r.GuestCountryCode))}">${escapeHtml(safeStr(r.GuestCountryCode) || "—")}</td>
         <td>${escapeHtml(safeStr(r.LineItem) || "—")}</td>
         <td class="mono">${moneyMXN(r.GrossAmount)}</td>
