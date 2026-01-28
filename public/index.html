@@ -3,39 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>checkinnreservas · Home</title>
+  <title>Checkinnreservas · API</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:40px; line-height:1.4}
     code{background:#f3f3f3; padding:2px 6px; border-radius:6px}
     a{color:#0b5fff}
-    .card{border:1px solid #e6e6e6; border-radius:14px; padding:18px; max-width:980px}
-    .btn{
-      display:inline-block; padding:10px 14px; border-radius:12px;
-      border:1px solid #dcdcdc; text-decoration:none; margin-right:8px;
-    }
-    .btn.primary{border-color:#b7d2ff; background:#eef5ff}
+    .card{border:1px solid #e6e6e6; border-radius:14px; padding:18px; max-width:900px}
   </style>
 </head>
 <body>
   <div class="card">
     <h1>✅ checkinnreservas API running</h1>
-
-    <p>
-      <a class="btn primary" href="/otc.html">Abrir Dashboard OTC</a>
-      <a class="btn" href="/health">/health</a>
-      <a class="btn" href="/api/_ping">/api/_ping</a>
-    </p>
-
-    <h3>Endpoints</h3>
+    <p>Prueba rápida:</p>
     <ul>
-      <li><code>/api/otc?from=YYYY-MM-DD&to=YYYY-MM-DD&size=200</code></li>
-      <li><code>/api/otc.csv?from=YYYY-MM-DD&to=YYYY-MM-DD&size=200</code></li>
-      <li><code>/api/debug/bookings?size=200</code></li>
+      <li><a href="/health">/health</a></li>
+      <li><a href="/api/_ping">/api/_ping</a></li>
     </ul>
-
-    <p style="color:#666;font-size:13px">
-      Nota: El dashboard consume la API por same-origin (Cloud Run sirve HTML + API).
-    </p>
+    <p>Reporte OTC:</p>
+    <ul>
+      <li><a href="/otc.html">Abrir tabla OTC</a></li>
+      <li><code>/api/otc?from=YYYY-MM-DD&to=YYYY-MM-DD</code></li>
+      <li><code>/api/otc.csv?from=YYYY-MM-DD&to=YYYY-MM-DD</code></li>
+    </ul>
   </div>
 </body>
 </html>
