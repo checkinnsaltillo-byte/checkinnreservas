@@ -563,6 +563,9 @@
                 <th>Nights</th>
                 <th>HouseName</th>
                 <th>GuestName</th>
+                <th>GuestEmail</th>
+                <th>GuestPhone</th>
+                <th>GuestCountryCode</th>
                 <th>LineItem</th>
                 <th>GrossAmount</th>
                 <th>Currency</th>
@@ -682,6 +685,9 @@
       Nights: safeNum(r.Nights),
       HouseName: r.HouseName,
       GuestName: r.GuestName,
+      GuestEmail: r.GuestEmail,
+      GuestPhone: r.GuestPhone,
+      GuestCountryCode: r.GuestCountryCode,
       LineItem: r.LineItem,
       GrossAmount: safeNum(r.GrossAmount),
       Currency: r.Currency,
@@ -990,6 +996,9 @@
         <td class="mono">${safeNum(r.Nights) || 0}</td>
         <td title="${escapeHtml(safeStr(r.HouseName))}">${escapeHtml(safeStr(r.HouseName) || "—")}</td>
         <td title="${escapeHtml(safeStr(r.GuestName))}">${escapeHtml(safeStr(r.GuestName) || "—")}</td>
+        <td title="${escapeHtml(safeStr(r.GuestEmail))}">${escapeHtml(safeStr(r.GuestEmail) || "—")}</td>
+        <td class="mono" title="${escapeHtml(safeStr(r.GuestPhone))}">${escapeHtml(safeStr(r.GuestPhone) || "—")}</td>
+        <td class="mono" title="${escapeHtml(safeStr(r.GuestCountryCode))}">${escapeHtml(safeStr(r.GuestCountryCode) || "—")}</td>
         <td>${escapeHtml(safeStr(r.LineItem) || "—")}</td>
         <td class="mono">${moneyMXN(r.GrossAmount)}</td>
         <td class="mono">${escapeHtml(safeStr(r.Currency) || "—")}</td>
