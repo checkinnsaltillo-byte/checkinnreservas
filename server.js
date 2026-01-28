@@ -182,7 +182,7 @@ function extractCount(data) {
  * Trae TODO con stayFilter=All paginado por page/size
  * y luego tú filtras por overlaps() para el mes.
  */
-async function fetchAllBookings({ limit = 200 }) {
+async function fetchAllBookings({ limit }) {
   const all = [];
   let page = 1;
   let totalPages = 1;
@@ -411,6 +411,7 @@ app.get("/api/otc.csv", async (req, res) => {
     res.status(code).send(String(e?.message || e));
   }
 });
+
 
 
 // Home
