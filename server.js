@@ -182,31 +182,56 @@ function extractCount(data) {
  * Trae TODO con stayFilter=All paginado por page/size
  * y luego tú filtras por overlaps() para el mes.
  */
-async function fetchAllBookings({ limit }) {
-  const all = [];
+async function fetchAllBookings({ size = 200, stayFilter = "All" } = {}) {
+  const bookings = [];
   let page = 1;
-  let totalPages = 1;
+  let pagesUsed = 0;
 
-  do {
+  // Seguridad
+  size = Math.min(200, Math.max(10, Number(size || 200)));
+
+  let totalCount = null;
+
+  while (true) {
     const qs = new URLSearchParams({
       page: String(page),
-      size: String(limit),
-      includeCount: "true"
+      size: String(size),
+      includeCount: "true",
+      stayFilter: stayFilter,              // All | Upcoming | Current | Historic | ArrivalDate | DepartureDate
+      includeQuoteDetails: "true",         // <<< CLAVE: montos/subtotals completos
+      // includeTransactions: "true",       // opcional (si quieres transacciones)
+      // includeExternal: "true",           // opcional
     });
 
     const data = await lodgifyFetch(`/v2/reservations/bookings?${qs.toString()}`);
 
     const batch = data?.items || data?.bookings || [];
-    all.push(...batch);
+    if (!Array.isArray(batch)) throw new Error("Unexpected bookings payload shape");
 
-    const total = Number(data?.count || data?.total || batch.length);
-    totalPages = Math.ceil(total / limit);
+    bookings.push(...batch);
+    pagesUsed++;
+
+    // count/total (depende del shape)
+    const count =
+      safeNum(data?.count) ||
+      safeNum(data?.total) ||
+      safeNum(data?.total_count) ||
+      safeNum(data?.totalBookings) ||
+      null;
+
+    if (count && !totalCount) totalCount = count;
+
+    // Stop conditions:
+    if (batch.length < size) break; // última página
+    if (totalCount && bookings.length >= totalCount) break;
 
     page++;
-  } while (page <= totalPages);
+    if (page > 10000) break; // guard anti-loop
+  }
 
-  return all;
+  return { bookings, totalCount: totalCount || bookings.length, pagesUsed };
 }
+
 
 
 // -------------------- OTC builder --------------------
@@ -349,14 +374,14 @@ app.get("/api/otc", async (req, res) => {
     const fromISO = String(req.query.from || "");
     const toISO = String(req.query.to || "");
     if (!parseISODate(fromISO) || !parseISODate(toISO)) {
-      return res.status(400).json({ ok: false, error: "Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD" });
+      return res.status(400).json({ ok: false, error: "Use ?from=YYYY-MM-DD&to=YYYY-MM-DD" });
     }
 
-    const size = Math.min(200, Math.max(10, Number(req.query.size || req.query.limit || 50)));
+    const size = Math.min(200, Math.max(10, Number(req.query.size || req.query.limit || 200)));
 
     const [propsMap, pulled] = await Promise.all([
       fetchPropertiesMap(),
-      fetchAllBookings({ size }),
+      fetchAllBookings({ size, stayFilter: "All" }),
     ]);
 
     const rows = buildOTCRows({ bookings: pulled.bookings, propsMap, fromISO, toISO });
@@ -365,7 +390,7 @@ app.get("/api/otc", async (req, res) => {
       ok: true,
       from: fromISO,
       to: toISO,
-      endpointUsed: "/v2/reservations/bookings?page&size&stayFilter=All",
+      endpointUsed: "/v2/reservations/bookings?page&size&includeCount=true&stayFilter=All&includeQuoteDetails=true",
       bookingsFetched: pulled.bookings.length,
       totalCount: pulled.totalCount,
       pagesUsed: pulled.pagesUsed,
@@ -378,39 +403,34 @@ app.get("/api/otc", async (req, res) => {
   }
 });
 
+
 app.get("/api/otc.csv", async (req, res) => {
   try {
     const fromISO = String(req.query.from || "");
     const toISO = String(req.query.to || "");
-
     if (!parseISODate(fromISO) || !parseISODate(toISO)) {
-      return res.status(400).send("Use query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD");
+      return res.status(400).send("Use ?from=YYYY-MM-DD&to=YYYY-MM-DD");
     }
 
-    const size = Math.min(
-      200,
-      Math.max(10, Number(req.query.size || req.query.limit || 200))
-    );
+    const size = Math.min(200, Math.max(10, Number(req.query.size || req.query.limit || 200)));
 
-    const [propsMap, bookings] = await Promise.all([
+    const [propsMap, pulled] = await Promise.all([
       fetchPropertiesMap(),
-      fetchAllBookings({ size }), // <- debe regresar ARRAY
+      fetchAllBookings({ size, stayFilter: "All" }),
     ]);
 
-    const rows = buildOTCRows({ bookings, propsMap, fromISO, toISO });
+    const rows = buildOTCRows({ bookings: pulled.bookings, propsMap, fromISO, toISO });
     const csv = rowsToCSV(rows);
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="OTCReport_${fromISO}_to_${toISO}.csv"`
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="OTCReport_${fromISO}_to_${toISO}.csv"`);
     res.send(csv);
   } catch (e) {
     const code = e?.statusCode ? Number(e.statusCode) : 500;
     res.status(code).send(String(e?.message || e));
   }
 });
+
 
 
 
