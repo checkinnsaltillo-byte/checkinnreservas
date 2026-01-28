@@ -3,87 +3,546 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>OTC Export (Lodgify)</title>
+  <title>Checkinnreservas · Dashboard OTC</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;max-width:980px}
-    .row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
-    label{display:flex;flex-direction:column;font-size:14px;gap:6px}
-    input,select,button{font-size:14px;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
+    :root{
+      --bg:#0b1220; --panel:#0f1a30; --panel2:#121f3a;
+      --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
+      --accent:#4cc9f0; --good:#4ade80; --warn:#fbbf24; --bad:#fb7185;
+      --shadow: 0 12px 28px rgba(0,0,0,.35);
+      --r:16px; --r2:12px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:var(--font);
+      background:linear-gradient(180deg,#070b15 0%, #0b1220 40%, #070b15 100%);
+      color:var(--text);
+    }
+    header{
+      position:sticky; top:0; z-index:20;
+      background:rgba(7,11,21,.75); backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--line);
+    }
+    .wrap{max-width:1280px; margin:0 auto; padding:16px 18px;}
+    .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+    .brand{display:flex; align-items:center; gap:10px;}
+    .logo{
+      width:36px; height:36px; border-radius:12px;
+      background: radial-gradient(circle at 30% 30%, #4cc9f0 0%, #4361ee 55%, #3a0ca3 100%);
+      box-shadow: 0 10px 20px rgba(67,97,238,.35);
+    }
+    h1{font-size:16px; margin:0; font-weight:800; letter-spacing:.2px}
+    .sub{margin:2px 0 0; color:var(--muted); font-size:12px}
+    .actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+    button, select, input{
+      background:var(--panel); color:var(--text);
+      border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+      font-size:13px; outline:none;
+    }
     button{cursor:pointer}
-    pre{background:#0b1020;color:#d7e2ff;padding:14px;border-radius:12px;overflow:auto}
-    .muted{color:#666;font-size:13px}
+    button:hover{border-color:#2b3c63}
+    button.primary{
+      background:linear-gradient(180deg, rgba(76,201,240,.18), rgba(67,97,238,.10));
+      border-color:rgba(76,201,240,.35);
+    }
+    button.primary:hover{border-color:rgba(76,201,240,.6)}
+    button.ghost{background:transparent}
+    .status{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:999px;
+      background:rgba(11,18,32,.65); border:1px solid var(--line);
+      font-size:12px; color:var(--muted);
+    }
+    .dot{width:8px; height:8px; border-radius:999px; background:#64748b}
+    .dot.ok{background:var(--good)}
+    .dot.err{background:var(--bad)}
+    .dot.busy{background:var(--warn)}
+    .grid{
+      display:grid; gap:14px;
+      grid-template-columns: 1.2fr 0.8fr;
+      margin-top:14px;
+    }
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
+    .card{
+      background:linear-gradient(180deg, rgba(15,26,48,.98), rgba(11,18,32,.98));
+      border:1px solid var(--line);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .hd{
+      padding:14px 14px 10px; border-bottom:1px solid var(--line);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .hd h2{margin:0; font-size:14px; letter-spacing:.2px}
+    .hd .hint{margin:3px 0 0; font-size:12px; color:var(--muted)}
+    .bd{padding:14px}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
+    .row > *{flex:1}
+    .row .tiny{flex:.5}
+    .row .small{flex:.7}
+    .kpis{
+      display:grid; gap:10px;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    @media (max-width: 980px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width: 520px){ .kpis{grid-template-columns:1fr} }
+    .kpi{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(18,31,58,.7), rgba(15,26,48,.55));
+      border-radius:16px;
+      padding:12px;
+    }
+    .kpi .lbl{font-size:12px; color:var(--muted)}
+    .kpi .val{margin-top:6px; font-size:20px; font-weight:900; letter-spacing:.3px}
+    .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
+    .pill{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      background:rgba(76,201,240,.10);
+      border:1px solid rgba(76,201,240,.22);
+      color:var(--text);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .pill.good{background:rgba(74,222,128,.10); border-color:rgba(74,222,128,.22)}
+    .pill.warn{background:rgba(251,191,36,.10); border-color:rgba(251,191,36,.22)}
+    .pill.bad{background:rgba(251,113,133,.10); border-color:rgba(251,113,133,.22)}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
+    .tableWrap{
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+      background:rgba(18,31,58,.35);
+    }
+    table{width:100%; border-collapse:collapse; font-size:12.5px}
+    thead{
+      position:sticky; top:0;
+      background:rgba(11,18,32,.95);
+      z-index:5;
+    }
+    th, td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(30,43,74,.75);
+      vertical-align:top;
+      text-align:left;
+      white-space:nowrap;
+    }
+    tbody tr:hover{background:rgba(76,201,240,.06)}
+    .scrollY{max-height: 560px; overflow:auto;}
+    .footer{padding:14px 18px; color:var(--muted); font-size:12px; border-top:1px solid var(--line);}
   </style>
 </head>
+
 <body>
-  <h1>OTC Export (Lodgify)</h1>
-  <p class="muted">
-    Tip: usa <code>fetchMode=all</code> (default) para traer todas las reservas (paginadas) y filtrar localmente por mes.
-    Si quieres probar el filtro del API, cambia a <code>filtered</code>.
-  </p>
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>Checkinnreservas · Dashboard OTC</h1>
+          <div class="sub">Backend: Cloud Run · <span class="mono" id="baseUrl">same-origin</span></div>
+        </div>
+      </div>
 
-  <div class="row">
-    <label>
-      Desde
-      <input id="from" type="date" value="2026-01-01">
-    </label>
-    <label>
-      Hasta
-      <input id="to" type="date" value="2026-01-31">
-    </label>
-    <label>
-      Límite por página
-      <input id="limit" type="number" value="200" min="10" max="200">
-    </label>
-    <label>
-      fetchMode
-      <select id="fetchMode">
-        <option value="all" selected>all (recomendado)</option>
-        <option value="filtered">filtered (prueba)</option>
-      </select>
-    </label>
-
-    <button id="btnJson">Probar JSON</button>
-    <button id="btnCsv">Descargar CSV</button>
-    <button id="btnDebug">Debug Lodgify</button>
+      <div class="actions">
+        <span id="apiStatus" class="status"><span class="dot busy"></span><span>Listo</span></span>
+        <button id="btnLoad" class="primary">Cargar</button>
+        <button id="btnCsv">Descargar CSV</button>
+        <button id="btnDebug" class="ghost">Debug</button>
+      </div>
+    </div>
   </div>
+</header>
 
-  <h3>Salida</h3>
-  <pre id="out">Listo.</pre>
+<main class="wrap">
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>Parámetros</h2>
+        <div class="hint">Consume tu API: <span class="mono">/api/otc</span> y <span class="mono">/api/otc.csv</span></div>
+      </div>
+      <div class="hint" id="metaLine">—</div>
+    </div>
+    <div class="bd">
+      <div class="row">
+        <label style="flex:1">
+          <div class="hint">Desde</div>
+          <input id="from" type="date" />
+        </label>
+        <label style="flex:1">
+          <div class="hint">Hasta</div>
+          <input id="to" type="date" />
+        </label>
+        <label class="small">
+          <div class="hint">Size (page)</div>
+          <input id="size" type="number" min="10" max="200" value="200" />
+        </label>
+        <label class="small">
+          <div class="hint">Buscar</div>
+          <input id="q" placeholder="Guest / House / Id / Source..." />
+        </label>
+        <label class="small">
+          <div class="hint">Source</div>
+          <select id="selSource">
+            <option value="">Todos</option>
+          </select>
+        </label>
+      </div>
 
-  <script>
-    const $ = (id) => document.getElementById(id);
-    const out = (x) => ($("out").textContent = typeof x === "string" ? x : JSON.stringify(x, null, 2));
+      <div style="height:12px"></div>
 
-    function qs() {
-      const from = $("from").value;
-      const to = $("to").value;
-      const limit = $("limit").value;
-      const fetchMode = $("fetchMode").value;
-      const p = new URLSearchParams({ from, to, limit, fetchMode });
-      return p.toString();
+      <div class="kpis">
+        <div class="kpi">
+          <div class="lbl">Line items</div>
+          <div class="val" id="kpiRows">—</div>
+          <div class="meta" id="kpiRowsMeta">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Reservas únicas</div>
+          <div class="val" id="kpiBookings">—</div>
+          <div class="meta">IDs distintos</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Noches (sum)</div>
+          <div class="val" id="kpiNights">—</div>
+          <div class="meta">Suma por line item</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Gross (sum)</div>
+          <div class="val" id="kpiGross">—</div>
+          <div class="meta">Suma GrossAmount</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <div class="hd">
+        <div>
+          <h2>Tabla OTC</h2>
+          <div class="hint">Scroll + filtro local (sin recargar API)</div>
+        </div>
+        <div class="hint">
+          <span class="pill" id="pillFiltered">0 filas</span>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="tableWrap">
+          <div class="scrollY">
+            <table>
+              <thead>
+                <tr>
+                  <th>Id</th>
+                  <th>Source</th>
+                  <th>Status</th>
+                  <th>Arrival</th>
+                  <th>Departure</th>
+                  <th>Nights</th>
+                  <th>HouseName</th>
+                  <th>GuestName</th>
+                  <th>LineItem</th>
+                  <th>GrossAmount</th>
+                  <th>Currency</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        Tip: Export CSV usa tu endpoint: <span class="mono">/api/otc.csv</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd">
+        <div>
+          <h2>Gráficas</h2>
+          <div class="hint">Distribución por Source</div>
+        </div>
+      </div>
+      <div class="bd">
+        <canvas id="chSource"></canvas>
+        <div style="height:10px"></div>
+        <div class="hint">
+          Si quieres otra gráfica (por HouseName / Status / LineItem), dímelo y la agrego.
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+  // =========================
+  // Base URL
+  // =========================
+  // Recomendado: same-origin (porque el HTML lo sirve Cloud Run también).
+  // Si algún día lo abres desde GitHub Pages, pon aquí:
+  // const API_BASE = "https://checkinnreservas-1044570371371.northamerica-south1.run.app";
+  const API_BASE = "";
+
+  // =========================
+  // State
+  // =========================
+  let rowsRaw = [];
+  let rowsFiltered = [];
+  let chSource = null;
+  let lastMeta = null;
+
+  // =========================
+  // Helpers
+  // =========================
+  const $ = (id) => document.getElementById(id);
+
+  function setStatus(kind, text){
+    const el = $("apiStatus");
+    const dot = el.querySelector(".dot");
+    dot.classList.remove("ok","err","busy");
+    dot.classList.add(kind);
+    el.lastElementChild.textContent = text;
+  }
+
+  function moneyMXN(v){
+    const n = Number(v);
+    if(!Number.isFinite(n)) return "—";
+    try{
+      return new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(n);
+    }catch{
+      return "$" + n.toFixed(2);
+    }
+  }
+
+  function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
+  function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
+
+  function qs(){
+    const from = $("from").value;
+    const to = $("to").value;
+    const size = $("size").value;
+    return new URLSearchParams({ from, to, size }).toString();
+  }
+
+  function normalizeRow(r){
+    // Tus columnas vienen de buildOTCRows en server.js
+    return {
+      Id: r.Id,
+      Source: r.Source,
+      Status: r.Status,
+      DateArrival: r.DateArrival,
+      DateDeparture: r.DateDeparture,
+      Nights: safeNum(r.Nights),
+      HouseName: r.HouseName,
+      GuestName: r.GuestName,
+      LineItem: r.LineItem,
+      GrossAmount: safeNum(r.GrossAmount),
+      Currency: r.Currency,
+      _raw: r
+    };
+  }
+
+  // =========================
+  // Load
+  // =========================
+  async function loadOTC(){
+    setStatus("busy", "Cargando...");
+    $("metaLine").textContent = "—";
+    lastMeta = null;
+
+    const url = `${API_BASE}/api/otc?${qs()}`;
+    const res = await fetch(url, { headers: { "Accept":"application/json" } });
+    const data = await res.json();
+
+    if(!res.ok || !data?.ok){
+      setStatus("err", "Error");
+      throw new Error(data?.error || `HTTP ${res.status}`);
     }
 
-    $("btnJson").addEventListener("click", async () => {
-      try{
-        out("Cargando...");
-        const res = await fetch(`/api/otc?${qs()}`);
-        const data = await res.json();
-        out(data);
-      }catch(e){ out(String(e)); }
+    lastMeta = data;
+    rowsRaw = (data.rows || []).map(normalizeRow);
+    setStatus("ok", `OK · ${rowsRaw.length} filas`);
+
+    const metaBits = [
+      `bookingsFetched=${data.bookingsFetched ?? "?"}`,
+      `pagesUsed=${data.pagesUsed ?? "?"}`,
+      `effectivePageSize=${data.effectivePageSize ?? "?"}`,
+      `totalCount=${data.totalCount ?? "?"}`
+    ];
+    $("metaLine").textContent = metaBits.join(" · ");
+
+    rebuildSourceFilter();
+    applyLocalFilters();
+  }
+
+  async function loadDebug(){
+    setStatus("busy", "Debug...");
+    const size = Math.min(200, Math.max(10, Number($("size").value || 200)));
+    const url = `${API_BASE}/api/debug/bookings?size=${size}`;
+    const res = await fetch(url, { headers: { "Accept":"application/json" } });
+    const data = await res.json();
+    if(!res.ok || !data?.ok){
+      setStatus("err","Debug error");
+      alert(data?.error || `HTTP ${res.status}`);
+      return;
+    }
+    setStatus("ok","Debug OK");
+    alert(
+      [
+        "Debug paginación Lodgify",
+        `requestedSize: ${data.requestedSize}`,
+        `effectivePageSize: ${data.effectivePageSize}`,
+        `pagesUsed: ${data.pagesUsed}`,
+        `totalCount: ${data.totalCount}`,
+        `bookingsFetched: ${data.bookingsFetched}`,
+        `arrivalMin: ${data.arrivalMin}`,
+        `arrivalMax: ${data.arrivalMax}`,
+      ].join("\n")
+    );
+  }
+
+  // =========================
+  // Local filters + render
+  // =========================
+  function rebuildSourceFilter(){
+    const sel = $("selSource");
+    const cur = sel.value;
+    const sources = [...new Set(rowsRaw.map(r => safeStr(r.Source).trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${s}">${s}</option>`).join("");
+    sel.value = sources.includes(cur) ? cur : "";
+  }
+
+  function applyLocalFilters(){
+    const q = $("q").value.trim().toLowerCase();
+    const src = $("selSource").value.trim().toLowerCase();
+
+    rowsFiltered = rowsRaw.filter(r=>{
+      if(src && safeStr(r.Source).toLowerCase() !== src) return false;
+      if(!q) return true;
+      const hay = [
+        r.Id, r.Source, r.Status, r.HouseName, r.GuestName, r.LineItem, r.Currency
+      ].join(" ").toLowerCase();
+      return hay.includes(q);
     });
 
-    $("btnCsv").addEventListener("click", () => {
-      window.location.href = `/api/otc.csv?${qs()}`;
+    renderKPIs();
+    renderTable();
+    renderChart();
+  }
+
+  function renderKPIs(){
+    $("kpiRows").textContent = rowsFiltered.length.toLocaleString("es-MX");
+    $("pillFiltered").textContent = `${rowsFiltered.length.toLocaleString("es-MX")} filas`;
+
+    const uniq = new Set(rowsFiltered.map(r => safeStr(r.Id))).size;
+    $("kpiBookings").textContent = uniq.toLocaleString("es-MX");
+
+    const nights = rowsFiltered.reduce((a,r)=>a + safeNum(r.Nights), 0);
+    $("kpiNights").textContent = nights.toLocaleString("es-MX");
+
+    const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
+    $("kpiGross").textContent = moneyMXN(gross);
+
+    const totalRaw = rowsRaw.length ? rowsRaw.length.toLocaleString("es-MX") : "0";
+    $("kpiRowsMeta").textContent = `${rowsFiltered.length.toLocaleString("es-MX")} filtradas de ${totalRaw}`;
+  }
+
+  function renderTable(){
+    const tb = $("tbody");
+    tb.innerHTML = "";
+    const frag = document.createDocumentFragment();
+
+    for(const r of rowsFiltered){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="mono">${safeStr(r.Id) || "—"}</td>
+        <td>${safeStr(r.Source) || "—"}</td>
+        <td>${safeStr(r.Status) || "—"}</td>
+        <td class="mono">${safeStr(r.DateArrival) || "—"}</td>
+        <td class="mono">${safeStr(r.DateDeparture) || "—"}</td>
+        <td class="mono">${safeNum(r.Nights) || 0}</td>
+        <td title="${safeStr(r.HouseName)}">${safeStr(r.HouseName) || "—"}</td>
+        <td title="${safeStr(r.GuestName)}">${safeStr(r.GuestName) || "—"}</td>
+        <td>${safeStr(r.LineItem) || "—"}</td>
+        <td class="mono">${moneyMXN(r.GrossAmount)}</td>
+        <td class="mono">${safeStr(r.Currency) || "—"}</td>
+      `;
+      frag.appendChild(tr);
+    }
+    tb.appendChild(frag);
+  }
+
+  function renderChart(){
+    const m = new Map();
+    for(const r of rowsFiltered){
+      const k = safeStr(r.Source).trim() || "—";
+      m.set(k, (m.get(k) || 0) + 1);
+    }
+    const labels = [...m.keys()].sort((a,b)=> (m.get(b)-m.get(a)));
+    const data = labels.map(k => m.get(k));
+
+    if(chSource) chSource.destroy();
+    chSource = new Chart($("chSource"), {
+      type: "bar",
+      data: { labels, datasets: [{ label: "Line items por Source", data }] },
+      options: {
+        responsive:true,
+        plugins:{ legend:{ display:true } },
+        scales:{ y:{ beginAtZero:true } }
+      }
+    });
+  }
+
+  // =========================
+  // CSV
+  // =========================
+  function downloadCSV(){
+    // Reusar el endpoint existente (server.js) para que sea el “OTC oficial”
+    const url = `${API_BASE}/api/otc.csv?${qs()}`;
+    window.location.href = url;
+  }
+
+  // =========================
+  // Init
+  // =========================
+  function setDefaultDates(){
+    // Default: mes actual (UTC/local no importa para date input)
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth(); // 0-based
+    const first = new Date(y, m, 1);
+    const last = new Date(y, m + 1, 0);
+
+    const pad = (x)=>String(x).padStart(2,"0");
+    const ymd = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+    $("from").value = ymd(first);
+    $("to").value = ymd(last);
+  }
+
+  (function init(){
+    $("baseUrl").textContent = API_BASE || "same-origin";
+    setDefaultDates();
+
+    $("btnLoad").addEventListener("click", async ()=>{
+      try{ await loadOTC(); }catch(e){ setStatus("err","Error"); alert(String(e.message || e)); }
+    });
+    $("btnCsv").addEventListener("click", downloadCSV);
+    $("btnDebug").addEventListener("click", loadDebug);
+
+    ["q","selSource"].forEach(id=>{
+      $(id).addEventListener("input", applyLocalFilters);
+      $(id).addEventListener("change", applyLocalFilters);
     });
 
-    $("btnDebug").addEventListener("click", async () => {
-      try{
-        out("Cargando debug...");
-        const res = await fetch(`/api/debug/bookings?${qs()}`);
-        const data = await res.json();
-        out(data);
-      }catch(e){ out(String(e)); }
-    });
-  </script>
+    // Autoload
+    $("btnLoad").click();
+  })();
+</script>
 </body>
 </html>
