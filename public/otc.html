@@ -59,18 +59,13 @@
     .dot.ok{background:var(--good)}
     .dot.err{background:var(--bad)}
     .dot.busy{background:var(--warn)}
-    .grid{
-      display:grid; gap:14px;
-      grid-template-columns: 1.2fr 0.8fr;
-      margin-top:14px;
-    }
-    @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
     .card{
       background:linear-gradient(180deg, rgba(15,26,48,.98), rgba(11,18,32,.98));
       border:1px solid var(--line);
       border-radius:var(--r);
       box-shadow:var(--shadow);
       overflow:hidden;
+      margin-top:14px;
     }
     .hd{
       padding:14px 14px 10px; border-bottom:1px solid var(--line);
@@ -81,11 +76,10 @@
     .bd{padding:14px}
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
     .row > *{flex:1}
-    .row .tiny{flex:.5}
-    .row .small{flex:.7}
+    .row .small{flex:.8}
     .kpis{
       display:grid; gap:10px;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
     }
     @media (max-width: 980px){ .kpis{grid-template-columns:repeat(2,1fr)} }
     @media (max-width: 520px){ .kpis{grid-template-columns:1fr} }
@@ -107,9 +101,6 @@
       font-size:12px;
       white-space:nowrap;
     }
-    .pill.good{background:rgba(74,222,128,.10); border-color:rgba(74,222,128,.22)}
-    .pill.warn{background:rgba(251,191,36,.10); border-color:rgba(251,191,36,.22)}
-    .pill.bad{background:rgba(251,113,133,.10); border-color:rgba(251,113,133,.22)}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
     .tableWrap{
       border:1px solid var(--line);
@@ -159,14 +150,20 @@
 </header>
 
 <main class="wrap">
+
+  <!-- Parámetros + KPIs -->
   <section class="card">
     <div class="hd">
       <div>
         <h2>Parámetros</h2>
-        <div class="hint">Consume tu API: <span class="mono">/api/otc</span> y <span class="mono">/api/otc.csv</span></div>
+        <div class="hint">
+          API: <span class="mono">/api/otc</span> y <span class="mono">/api/otc.csv</span>
+          · La selección por fechas incluye reservas que <b>toquen</b> el rango (overlap).
+        </div>
       </div>
       <div class="hint" id="metaLine">—</div>
     </div>
+
     <div class="bd">
       <div class="row">
         <label style="flex:1">
@@ -176,10 +173,6 @@
         <label style="flex:1">
           <div class="hint">Hasta</div>
           <input id="to" type="date" />
-        </label>
-        <label class="small">
-          <div class="hint">Size (page)</div>
-          <input id="size" type="number" min="10" max="200" value="200" />
         </label>
         <label class="small">
           <div class="hint">Buscar</div>
@@ -197,11 +190,6 @@
 
       <div class="kpis">
         <div class="kpi">
-          <div class="lbl">Line items</div>
-          <div class="val" id="kpiRows">—</div>
-          <div class="meta" id="kpiRowsMeta">—</div>
-        </div>
-        <div class="kpi">
           <div class="lbl">Reservas únicas</div>
           <div class="val" id="kpiBookings">—</div>
           <div class="meta">IDs distintos</div>
@@ -209,73 +197,76 @@
         <div class="kpi">
           <div class="lbl">Noches (sum)</div>
           <div class="val" id="kpiNights">—</div>
-          <div class="meta">Suma por line item</div>
+          <div class="meta">Suma Nights (en rango)</div>
         </div>
         <div class="kpi">
           <div class="lbl">Gross (sum)</div>
           <div class="val" id="kpiGross">—</div>
-          <div class="meta">Suma GrossAmount</div>
+          <div class="meta">Suma GrossAmount (prorrateado)</div>
         </div>
       </div>
     </div>
   </section>
 
-  <div class="grid">
-    <section class="card">
-      <div class="hd">
-        <div>
-          <h2>Tabla OTC</h2>
-          <div class="hint">Scroll + filtro local (sin recargar API)</div>
-        </div>
-        <div class="hint">
-          <span class="pill" id="pillFiltered">0 filas</span>
-        </div>
+  <!-- Gráficas ARRIBA -->
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>Gráficas</h2>
+        <div class="hint">Distribución por Source (filtrado local)</div>
       </div>
-      <div class="bd">
-        <div class="tableWrap">
-          <div class="scrollY">
-            <table>
-              <thead>
-                <tr>
-                  <th>Id</th>
-                  <th>Source</th>
-                  <th>Status</th>
-                  <th>Arrival</th>
-                  <th>Departure</th>
-                  <th>Nights</th>
-                  <th>HouseName</th>
-                  <th>GuestName</th>
-                  <th>LineItem</th>
-                  <th>GrossAmount</th>
-                  <th>Currency</th>
-                </tr>
-              </thead>
-              <tbody id="tbody"></tbody>
-            </table>
-          </div>
-        </div>
+    </div>
+    <div class="bd">
+      <canvas id="chSource"></canvas>
+      <div style="height:10px"></div>
+      <div class="hint">
+        Si quieres otras gráficas (HouseName / Status / LineItem), dímelo y las agrego.
       </div>
-      <div class="footer">
-        Tip: Export CSV usa tu endpoint: <span class="mono">/api/otc.csv</span>
-      </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="card">
-      <div class="hd">
-        <div>
-          <h2>Gráficas</h2>
-          <div class="hint">Distribución por Source</div>
-        </div>
-      </div>
-      <div class="bd">
-        <canvas id="chSource"></canvas>
-        <div style="height:10px"></div>
+  <!-- Tabla ABAJO -->
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>Tabla OTC</h2>
         <div class="hint">
-          Si quieres otra gráfica (por HouseName / Status / LineItem), dímelo y la agrego.
+          La tabla ya viene completa de la API; además aplicamos filtro local (search/source) y overlap por fechas.
         </div>
       </div>
-    </section>
-  </div>
+      <div class="hint">
+        <span class="pill" id="pillFiltered">0 filas</span>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="tableWrap">
+        <div class="scrollY">
+          <table>
+            <thead>
+              <tr>
+                <th>Id</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th>Nights</th>
+                <th>HouseName</th>
+                <th>GuestName</th>
+                <th>LineItem</th>
+                <th>GrossAmount</th>
+                <th>Currency</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      Export CSV usa: <span class="mono">/api/otc.csv</span>
+    </div>
+  </section>
+
 </main>
 
 <script>
@@ -321,15 +312,53 @@
   function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
   function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
 
+  // --- Date parsing for overlap ---
+  // Arrival/Departure vienen como "MM/DD/YYYY" por tu server (formatMMDDYYYY).
+  function parseMMDDYYYY(s){
+    const t = safeStr(s).trim();
+    if(!t) return null;
+    const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(!m) return null;
+    const mm = Number(m[1]), dd = Number(m[2]), yyyy = Number(m[3]);
+    if(!mm || !dd || !yyyy) return null;
+    // Usar UTC para evitar shifts
+    return new Date(Date.UTC(yyyy, mm-1, dd, 0, 0, 0));
+  }
+
+  function parseISODateInput(s){
+    const t = safeStr(s).trim();
+    if(!t) return null;
+    const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!m) return null;
+    const yyyy = Number(m[1]), mm = Number(m[2]), dd = Number(m[3]);
+    return new Date(Date.UTC(yyyy, mm-1, dd, 0, 0, 0));
+  }
+
+  // overlap: [aStart, aEnd) toca [bStart, bEnd) si aStart < bEnd && bStart < aEnd
+  // (Departure se trata como end exclusivo)
+  function overlaps(arrivalMMDD, departureMMDD, fromISO, toISO){
+    const aStart = parseMMDDYYYY(arrivalMMDD);
+    const aEnd   = parseMMDDYYYY(departureMMDD);
+    const bStart = parseISODateInput(fromISO);
+    const bEnd   = parseISODateInput(toISO);
+
+    if(!aStart || !aEnd || !bStart || !bEnd) return true;
+
+    // Convertir bEnd a "día siguiente" para que sea inclusivo en UI (si eliges 2026-01-31, incluye ese día).
+    const bEndEx = new Date(bEnd.getTime());
+    bEndEx.setUTCDate(bEndEx.getUTCDate() + 1);
+
+    return (aStart < bEndEx) && (bStart < aEnd);
+  }
+
   function qs(){
+    // Ya NO mandamos size.
     const from = $("from").value;
     const to = $("to").value;
-    const size = $("size").value;
-    return new URLSearchParams({ from, to, size }).toString();
+    return new URLSearchParams({ from, to }).toString();
   }
 
   function normalizeRow(r){
-    // Tus columnas vienen de buildOTCRows en server.js
     return {
       Id: r.Id,
       Source: r.Source,
@@ -365,8 +394,8 @@
 
     lastMeta = data;
     rowsRaw = (data.rows || []).map(normalizeRow);
-    setStatus("ok", `OK · ${rowsRaw.length} filas`);
 
+    setStatus("ok", `OK · ${rowsRaw.length} filas`);
     const metaBits = [
       `bookingsFetched=${data.bookingsFetched ?? "?"}`,
       `pagesUsed=${data.pagesUsed ?? "?"}`,
@@ -381,8 +410,7 @@
 
   async function loadDebug(){
     setStatus("busy", "Debug...");
-    const size = Math.min(200, Math.max(10, Number($("size").value || 200)));
-    const url = `${API_BASE}/api/debug/bookings?size=${size}`;
+    const url = `${API_BASE}/api/debug/bookings`; // el endpoint soporta ?size, pero ya no lo necesitamos aquí
     const res = await fetch(url, { headers: { "Accept":"application/json" } });
     const data = await res.json();
     if(!res.ok || !data?.ok){
@@ -394,7 +422,6 @@
     alert(
       [
         "Debug paginación Lodgify",
-        `requestedSize: ${data.requestedSize}`,
         `effectivePageSize: ${data.effectivePageSize}`,
         `pagesUsed: ${data.pagesUsed}`,
         `totalCount: ${data.totalCount}`,
@@ -420,9 +447,17 @@
   function applyLocalFilters(){
     const q = $("q").value.trim().toLowerCase();
     const src = $("selSource").value.trim().toLowerCase();
+    const fromISO = $("from").value;
+    const toISO = $("to").value;
 
     rowsFiltered = rowsRaw.filter(r=>{
+      // (3) Overlap por fechas (incluye cualquier reserva que toque el rango)
+      if(fromISO && toISO){
+        if(!overlaps(r.DateArrival, r.DateDeparture, fromISO, toISO)) return false;
+      }
+
       if(src && safeStr(r.Source).toLowerCase() !== src) return false;
+
       if(!q) return true;
       const hay = [
         r.Id, r.Source, r.Status, r.HouseName, r.GuestName, r.LineItem, r.Currency
@@ -436,7 +471,6 @@
   }
 
   function renderKPIs(){
-    $("kpiRows").textContent = rowsFiltered.length.toLocaleString("es-MX");
     $("pillFiltered").textContent = `${rowsFiltered.length.toLocaleString("es-MX")} filas`;
 
     const uniq = new Set(rowsFiltered.map(r => safeStr(r.Id))).size;
@@ -447,9 +481,6 @@
 
     const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
     $("kpiGross").textContent = moneyMXN(gross);
-
-    const totalRaw = rowsRaw.length ? rowsRaw.length.toLocaleString("es-MX") : "0";
-    $("kpiRowsMeta").textContent = `${rowsFiltered.length.toLocaleString("es-MX")} filtradas de ${totalRaw}`;
   }
 
   function renderTable(){
@@ -502,7 +533,6 @@
   // CSV
   // =========================
   function downloadCSV(){
-    // Reusar el endpoint existente (server.js) para que sea el “OTC oficial”
     const url = `${API_BASE}/api/otc.csv?${qs()}`;
     window.location.href = url;
   }
@@ -511,15 +541,14 @@
   // Init
   // =========================
   function setDefaultDates(){
-    // Default: mes actual (UTC/local no importa para date input)
     const now = new Date();
     const y = now.getFullYear();
-    const m = now.getMonth(); // 0-based
-    const first = new Date(y, m, 1);
-    const last = new Date(y, m + 1, 0);
+    const m = now.getMonth();
+    const first = new Date(Date.UTC(y, m, 1));
+    const last = new Date(Date.UTC(y, m + 1, 0));
 
     const pad = (x)=>String(x).padStart(2,"0");
-    const ymd = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const ymd = (d)=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
 
     $("from").value = ymd(first);
     $("to").value = ymd(last);
@@ -535,7 +564,8 @@
     $("btnCsv").addEventListener("click", downloadCSV);
     $("btnDebug").addEventListener("click", loadDebug);
 
-    ["q","selSource"].forEach(id=>{
+    // Filtrado local inmediato (sin recargar) para q/source/fechas
+    ["q","selSource","from","to"].forEach(id=>{
       $(id).addEventListener("input", applyLocalFilters);
       $(id).addEventListener("change", applyLocalFilters);
     });
