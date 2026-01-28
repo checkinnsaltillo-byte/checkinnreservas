@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Checkinnreservas · Dashboard OTC</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <style>
     :root{
       --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
@@ -18,7 +19,7 @@
       color:var(--text);
     }
     header{
-      position:sticky; top:0; z-index:50;
+      position:sticky; top:0; z-index:60;
       background:rgba(7,11,21,.75); backdrop-filter: blur(10px);
       border-bottom:1px solid var(--line);
     }
@@ -38,7 +39,6 @@
       border:1px solid var(--line); border-radius:12px; padding:10px 12px;
       font-size:13px; outline:none;
     }
-    select[multiple]{ padding:8px 10px; }
     button{cursor:pointer}
     button:hover{border-color:#2b3c63}
     button.primary{
@@ -106,7 +106,7 @@
     .kpi .lbl{font-size:12px; color:var(--muted)}
     .kpi .val{margin-top:6px; font-size:18px; font-weight:900; letter-spacing:.3px}
     .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
-    .kpi .mini{margin-top:8px; height:90px; width:100%}
+    .kpi .mini{margin-top:8px; height:110px; width:100%}
 
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
 
@@ -134,10 +134,7 @@
     .footer{padding:14px 18px; color:var(--muted); font-size:12px; border-top:1px solid var(--line);}
 
     /* ======= OCUPACIÓN: tabla sticky header + sticky first col ======= */
-    .occScroll{
-      max-height: 520px;
-      overflow: auto;
-    }
+    .occScroll{ max-height: 520px; overflow: auto; }
     #occTable{
       width:100%;
       border-collapse: separate;
@@ -150,40 +147,23 @@
       white-space: nowrap;
     }
     #occTable thead th{
-      position: sticky;
-      top: 0;
-      z-index: 7;
+      position: sticky; top: 0; z-index: 7;
       background: rgba(11,18,32,.98);
       border-bottom: 1px solid rgba(30,43,74,.75);
     }
     #occTable .houseCol{
-      position: sticky;
-      left: 0;
-      z-index: 6;
+      position: sticky; left: 0; z-index: 6;
       background: rgba(11,18,32,.98);
       border-right: 1px solid rgba(30,43,74,.75);
       font-weight: 800;
     }
     #occTable thead th.houseCol{ z-index: 10; }
 
-    .occCell{
-      min-width: 210px;
-      white-space: normal;
-      line-height: 1.25;
-    }
-    .occTop{
-      display:flex; justify-content:space-between; gap:10px;
-      font-size:12px; color:var(--muted);
-    }
-    .occMain{
-      margin-top:6px;
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      font-size:12.5px;
-    }
+    .occCell{ min-width: 210px; white-space: normal; line-height: 1.25; }
+    .occTop{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--muted); }
+    .occMain{ margin-top:6px; display:flex; align-items:center; gap:10px; }
     .bar{
-      flex:1;
-      height:10px;
-      border-radius:999px;
+      flex:1; height:10px; border-radius:999px;
       background:rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.10);
       overflow:hidden;
@@ -193,9 +173,99 @@
       width:0%;
       background:linear-gradient(90deg, rgba(76,201,240,.9), rgba(67,97,238,.9));
     }
-
-    /* Ocupación: línea */
     #occLineWrap{ overflow:hidden; }
+
+    /* ======= Multi-combobox (dropdown con checks) ======= */
+    .mcb{
+      position:relative;
+      min-width: 220px;
+    }
+    .mcbBtn{
+      width:100%;
+      text-align:left;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .mcbBtn span{
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      color: var(--text);
+    }
+    .mcbBtn .caret{
+      opacity:.8;
+      font-size:12px;
+      margin-left:8px;
+    }
+    .mcbPanel{
+      position:absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      z-index: 80;
+      background: rgba(11,18,32,.98);
+      border:1px solid var(--line);
+      border-radius:14px;
+      box-shadow: var(--shadow);
+      padding:10px;
+      display:none;
+    }
+    .mcb.open .mcbPanel{ display:block; }
+    .mcbSearch{
+      width:100%;
+      margin-bottom:10px;
+      padding:10px 12px;
+      border-radius:12px;
+    }
+    .mcbTools{
+      display:flex;
+      gap:8px;
+      margin-bottom:10px;
+      flex-wrap:wrap;
+    }
+    .mcbTools button{
+      padding:8px 10px;
+      border-radius:12px;
+      font-size:12px;
+    }
+    .mcbList{
+      max-height: 240px;
+      overflow:auto;
+      border:1px solid rgba(30,43,74,.75);
+      border-radius:12px;
+      background: rgba(18,31,58,.25);
+    }
+    .mcbItem{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:9px 10px;
+      border-bottom:1px solid rgba(30,43,74,.55);
+    }
+    .mcbItem:last-child{ border-bottom:none; }
+    .mcbItem:hover{ background: rgba(76,201,240,.06); }
+    .mcbItem label{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      width:100%;
+      cursor:pointer;
+      white-space:normal;
+      line-height:1.2;
+      font-size:12.5px;
+    }
+    .mcbItem input{ margin-top:2px; }
+    .mcbFooter{
+      margin-top:10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      color:var(--muted);
+      font-size:12px;
+    }
   </style>
 </head>
 
@@ -213,7 +283,8 @@
 
       <div class="actions">
         <span id="apiStatus" class="status"><span class="dot busy"></span><span>Listo</span></span>
-        <button id="btnLoad" class="primary">Cargar</button>
+        <!-- Cargar ya no es necesario, lo dejamos como "Recargar" por si quieres forzar fetch -->
+        <button id="btnReload" class="primary">Recargar datos</button>
         <button id="btnCsv">Descargar CSV</button>
         <button id="btnDebug" class="ghost">Debug</button>
       </div>
@@ -230,6 +301,7 @@
         <h2>Parámetros</h2>
         <div class="hint">
           API: <span class="mono">/api/otc</span> y <span class="mono">/api/otc.csv</span> · Fechas incluyen overlap.
+          Los filtros aplican al instante.
         </div>
       </div>
       <div class="hint" id="metaLine">—</div>
@@ -251,11 +323,26 @@
           <input id="q" placeholder="Guest / House / Id / Source / LineItem..." />
         </label>
 
-        <label class="xsmall">
+        <!-- ✅ combobox multi: Propiedad -->
+        <div class="mcb" id="mcbPropiedad" style="flex:1.2">
           <div class="hint">Propiedad</div>
-          <select id="selPropiedad" multiple size="4" title="Ctrl/Cmd para multiselección">
-          </select>
-        </label>
+          <button class="mcbBtn" type="button">
+            <span class="mcbLabel">Todas</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="mcbPanel">
+            <input class="mcbSearch" type="text" placeholder="Buscar propiedad..." />
+            <div class="mcbTools">
+              <button type="button" class="mcbAll">Seleccionar todo</button>
+              <button type="button" class="mcbNone">Limpiar</button>
+            </div>
+            <div class="mcbList"></div>
+            <div class="mcbFooter">
+              <span class="mcbCount">0 seleccionados</span>
+              <button type="button" class="mcbClose">Cerrar</button>
+            </div>
+          </div>
+        </div>
 
         <label class="xsmall">
           <div class="hint">Source</div>
@@ -273,7 +360,7 @@
       </div>
 
       <div class="hint" style="margin-top:10px">
-        Tip: En <b>Propiedad</b> puedes seleccionar múltiples (Ctrl/Cmd). Si no seleccionas nada, se asume “todas”.
+        Tip: “Propiedad” es multiselección con checks. Si no seleccionas nada, se asume “todas”.
       </div>
     </div>
   </section>
@@ -283,7 +370,7 @@
     <div class="hd">
       <div>
         <h2>KPIs</h2>
-        <div class="hint">Montos por LineItem + mini gráficas por <b>monto</b> (sum GrossAmount)</div>
+        <div class="hint">Montos por LineItem + gráficas por <b>monto</b> (sum GrossAmount). Incluye etiquetas en barras.</div>
       </div>
       <div class="hint"><span class="pill" id="pillFiltered">0 filas</span></div>
     </div>
@@ -326,16 +413,15 @@
           <div class="meta">LineItem = Tax</div>
         </div>
 
-        <!-- ✅ CAMBIO: Source ahora es BARRAS -->
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Monto por Source</div>
-          <div class="meta">Barras (sum GrossAmount, top 12)</div>
+          <div class="meta">Barras (sum GrossAmount, top 12) + etiquetas</div>
           <div class="mini"><canvas id="chSourceBar"></canvas></div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Monto por Status</div>
-          <div class="meta">Barras (sum GrossAmount, top 12)</div>
+          <div class="meta">Barras (sum GrossAmount, top 12) + etiquetas</div>
           <div class="mini"><canvas id="chStatusBar"></canvas></div>
         </div>
       </div>
@@ -349,7 +435,7 @@
         <h2>Ocupación por alojamiento (por mes)</h2>
         <div class="hint">
           Se calcula con Arrival–Departure, deduplicando por <span class="mono">Id</span>.
-          Muestra: noches ocupadas, % y barra. Incluye gráfica de líneas (%).
+          Vista tabla o líneas. Los filtros son combobox multiselección con checks.
         </div>
       </div>
       <div class="hint" id="occMeta">—</div>
@@ -365,21 +451,50 @@
           </select>
         </label>
 
-        <!-- ✅ NUEVO: filtro Propiedad (ocupación) -->
-        <label style="flex:1.2">
+        <!-- ✅ combobox multi: Propiedad (ocupación) -->
+        <div class="mcb" id="mcbOccPropiedad" style="flex:1.2">
           <div class="hint">Propiedad</div>
-          <select id="occPropiedad" multiple size="4" title="Ctrl/Cmd para multiselección">
-          </select>
-        </label>
+          <button class="mcbBtn" type="button">
+            <span class="mcbLabel">Todas</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="mcbPanel">
+            <input class="mcbSearch" type="text" placeholder="Buscar propiedad..." />
+            <div class="mcbTools">
+              <button type="button" class="mcbAll">Seleccionar todo</button>
+              <button type="button" class="mcbNone">Limpiar</button>
+            </div>
+            <div class="mcbList"></div>
+            <div class="mcbFooter">
+              <span class="mcbCount">0 seleccionados</span>
+              <button type="button" class="mcbClose">Cerrar</button>
+            </div>
+          </div>
+        </div>
 
-        <!-- ✅ CAMBIO: filtro de alojamientos (multiselección) -->
-        <label style="flex:2">
+        <!-- ✅ combobox multi: Alojamientos -->
+        <div class="mcb" id="mcbOccHouses" style="flex:2">
           <div class="hint">Alojamientos (HouseName)</div>
-          <select id="occHouses" multiple size="4" title="Ctrl/Cmd para multiselección"></select>
-        </label>
+          <button class="mcbBtn" type="button">
+            <span class="mcbLabel">Todos</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="mcbPanel">
+            <input class="mcbSearch" type="text" placeholder="Buscar alojamiento..." />
+            <div class="mcbTools">
+              <button type="button" class="mcbAll">Seleccionar todo</button>
+              <button type="button" class="mcbNone">Limpiar</button>
+            </div>
+            <div class="mcbList"></div>
+            <div class="mcbFooter">
+              <span class="mcbCount">0 seleccionados</span>
+              <button type="button" class="mcbClose">Cerrar</button>
+            </div>
+          </div>
+        </div>
 
         <div class="hint" style="flex:2; align-self:end">
-          Tip: si no seleccionas alojamientos, se muestran todos (según filtros).
+          Tip: si no seleccionas nada, se asume “todos”.
         </div>
       </div>
 
@@ -399,10 +514,6 @@
           </table>
         </div>
       </div>
-
-      <div class="hint" style="margin-top:10px">
-        Nota: “% ocupación” = noches ocupadas / noches del mes (solo noches, no ingresos).
-      </div>
     </div>
   </section>
 
@@ -411,7 +522,7 @@
     <div class="hd">
       <div>
         <h2>Tabla OTC</h2>
-        <div class="hint">Tabla + filtros locales + overlap por fechas</div>
+        <div class="hint">Tabla + filtros instantáneos + overlap por fechas</div>
       </div>
     </div>
 
@@ -462,7 +573,10 @@
   let chOccLines = null;
 
   // Ocupación series cache
-  let occSeries = null; // { months:[...], houses:[...], propertyByHouse: Map, pctByHouse: Map(house -> [pct...]) }
+  let occSeries = null; // { months:[...], houses:[...], pctByHouse: Map(house -> [pct...]) }
+
+  // Multi-combobox state: id -> {items:[...], selected:Set, onChange(fn), labelEl, listEl, searchEl, countEl}
+  const mcb = new Map();
 
   const $ = (id) => document.getElementById(id);
 
@@ -485,26 +599,13 @@
   function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
 
   // ===== Propiedad derivada de HouseName =====
-  // Ej: "José Cárdenas  #2 (..)" -> "José Cárdenas"
-  //     "José Cárdenas #5 (...)" -> "José Cárdenas"
   function propertyFromHouse(house){
     let s = safeStr(house).trim();
     if(!s) return "—";
-
-    // quita paréntesis al final (descripción)
-    s = s.replace(/\s*\([^)]*\)\s*$/g, "").trim();
-
-    // corta en '#'
-    if (s.includes("#")) {
-      s = s.split("#")[0].trim();
-    }
-
-    // también corta en ' - ' o ' – ' si acaso
-    s = s.split(" - ")[0].split(" – ")[0].trim();
-
-    // limpia doble espacios
+    s = s.replace(/\s*\([^)]*\)\s*$/g, "").trim();        // quita paréntesis final
+    if (s.includes("#")) s = s.split("#")[0].trim();      // corta en #
+    s = s.split(" - ")[0].split(" – ")[0].trim();         // cortes extra
     s = s.replace(/\s{2,}/g, " ").trim();
-
     return s || "—";
   }
 
@@ -518,7 +619,6 @@
     if(!mm || !dd || !yyyy) return null;
     return new Date(Date.UTC(yyyy, mm-1, dd, 0, 0, 0));
   }
-
   function parseISODateInput(s){
     const t = safeStr(s).trim();
     if(!t) return null;
@@ -567,7 +667,7 @@
     };
   }
 
-  async function loadOTC(){
+  async function fetchOTC(){
     setStatus("busy", "Cargando...");
     $("metaLine").textContent = "—";
 
@@ -591,8 +691,9 @@
     ];
     $("metaLine").textContent = metaBits.join(" · ");
 
-    rebuildFilters();
-    applyLocalFilters();
+    rebuildSingleSelects();
+    rebuildPropiedadMCBFromRowsRaw();
+    applyLocalFilters(); // instant
   }
 
   async function loadDebug(){
@@ -619,34 +720,8 @@
     );
   }
 
-  function getSelectedValues(sel){
-    if(!sel) return [];
-    const vals = [];
-    for(const opt of sel.options){
-      if(opt.selected && opt.value !== "__ALL__" && opt.value !== "") vals.push(opt.value);
-    }
-    return vals;
-  }
-
-  function setMultiOptions(sel, items, keepSelectedValues = []){
-    if(!sel) return;
-    const selectedSet = new Set(keepSelectedValues);
-    sel.innerHTML = items.map(v => {
-      const esc = escapeHtml(v);
-      const isSel = selectedSet.has(v) ? " selected" : "";
-      return `<option value="${esc}"${isSel}>${esc}</option>`;
-    }).join("");
-  }
-
-  function rebuildFilters(){
-    // Propiedad (multi)
-    const selP = $("selPropiedad");
-    const prevP = getSelectedValues(selP);
-    const props = [...new Set(rowsRaw.map(r => safeStr(r.Property).trim()).filter(Boolean))]
-      .sort((a,b)=>a.localeCompare(b));
-    setMultiOptions(selP, props, prevP);
-
-    // Source (single)
+  function rebuildSingleSelects(){
+    // Source
     const selS = $("selSource");
     const curS = selS.value;
     const sources = [...new Set(rowsRaw.map(r => safeStr(r.Source).trim()).filter(Boolean))]
@@ -654,7 +729,7 @@
     selS.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     selS.value = sources.includes(curS) ? curS : "";
 
-    // Status (single)
+    // Status
     const selSt = $("selStatus");
     const curSt = selSt.value;
     const statuses = [...new Set(rowsRaw.map(r => safeStr(r.Status).trim()).filter(Boolean))]
@@ -663,6 +738,160 @@
     selSt.value = statuses.includes(curSt) ? curSt : "";
   }
 
+  // ===== Multi-combobox implementation =====
+  function initMCB(containerId, { emptyLabel="Todas", onChange=()=>{} }={}){
+    const root = $(containerId);
+    const btn = root.querySelector(".mcbBtn");
+    const labelEl = root.querySelector(".mcbLabel");
+    const panel = root.querySelector(".mcbPanel");
+    const listEl = root.querySelector(".mcbList");
+    const searchEl = root.querySelector(".mcbSearch");
+    const countEl = root.querySelector(".mcbCount");
+    const btnAll = root.querySelector(".mcbAll");
+    const btnNone = root.querySelector(".mcbNone");
+    const btnClose = root.querySelector(".mcbClose");
+
+    const state = {
+      items: [],
+      selected: new Set(),
+      emptyLabel,
+      onChange,
+      root, btn, labelEl, panel, listEl, searchEl, countEl
+    };
+    mcb.set(containerId, state);
+
+    function open(){ root.classList.add("open"); searchEl.focus(); }
+    function close(){ root.classList.remove("open"); }
+
+    btn.addEventListener("click", (e)=>{
+      e.preventDefault();
+      root.classList.contains("open") ? close() : open();
+    });
+
+    btnClose.addEventListener("click", (e)=>{ e.preventDefault(); close(); });
+
+    document.addEventListener("click", (e)=>{
+      if(!root.contains(e.target)) close();
+    });
+
+    searchEl.addEventListener("input", ()=> renderMCB(containerId));
+
+    btnAll.addEventListener("click", (e)=>{
+      e.preventDefault();
+      state.selected = new Set(state.items);
+      updateMCBLabel(containerId);
+      renderMCB(containerId);
+      state.onChange(getMCBSelected(containerId));
+    });
+
+    btnNone.addEventListener("click", (e)=>{
+      e.preventDefault();
+      state.selected = new Set();
+      updateMCBLabel(containerId);
+      renderMCB(containerId);
+      state.onChange(getMCBSelected(containerId));
+    });
+  }
+
+  function setMCBItems(containerId, items, keepSelected=true){
+    const state = mcb.get(containerId);
+    state.items = [...items];
+    if(!keepSelected){
+      state.selected = new Set();
+    } else {
+      // limpia selecciones inexistentes
+      const next = new Set();
+      for(const v of state.selected){
+        if(state.items.includes(v)) next.add(v);
+      }
+      state.selected = next;
+    }
+    updateMCBLabel(containerId);
+    renderMCB(containerId);
+  }
+
+  function getMCBSelected(containerId){
+    return [...(mcb.get(containerId)?.selected || [])];
+  }
+
+  function updateMCBLabel(containerId){
+    const state = mcb.get(containerId);
+    const n = state.selected.size;
+    if(n === 0){
+      state.labelEl.textContent = state.emptyLabel;
+    } else if (n === 1){
+      state.labelEl.textContent = [...state.selected][0];
+    } else {
+      state.labelEl.textContent = `${n} seleccionados`;
+    }
+    state.countEl.textContent = `${n} seleccionados`;
+  }
+
+  function renderMCB(containerId){
+    const state = mcb.get(containerId);
+    const q = state.searchEl.value.trim().toLowerCase();
+
+    const filtered = state.items.filter(v => v.toLowerCase().includes(q));
+    state.listEl.innerHTML = filtered.map(v=>{
+      const checked = state.selected.has(v) ? "checked" : "";
+      const id = `${containerId}__${hashId(v)}`;
+      return `
+        <div class="mcbItem">
+          <label for="${id}">
+            <input id="${id}" type="checkbox" ${checked} data-value="${escapeHtml(v)}" />
+            <span>${escapeHtml(v)}</span>
+          </label>
+        </div>
+      `;
+    }).join("") || `<div class="mcbItem"><span class="hint">Sin resultados</span></div>`;
+
+    // listeners a los checks
+    state.listEl.querySelectorAll('input[type="checkbox"]').forEach(chk=>{
+      chk.addEventListener("change", ()=>{
+        const v = chk.getAttribute("data-value");
+        const val = unescapeHtml(v);
+        if(chk.checked) state.selected.add(val);
+        else state.selected.delete(val);
+        updateMCBLabel(containerId);
+        state.onChange(getMCBSelected(containerId));
+      });
+    });
+
+    updateMCBLabel(containerId);
+  }
+
+  function hashId(s){
+    // hash simple para ids
+    let h = 0;
+    for (let i=0; i<s.length; i++) h = ((h<<5)-h) + s.charCodeAt(i) | 0;
+    return String(Math.abs(h));
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+  function unescapeHtml(s){
+    // solo para nuestros values
+    return String(s ?? "")
+      .replaceAll("&amp;","&")
+      .replaceAll("&lt;","<")
+      .replaceAll("&gt;",">")
+      .replaceAll("&quot;",'"')
+      .replaceAll("&#039;","'");
+  }
+
+  function rebuildPropiedadMCBFromRowsRaw(){
+    const props = [...new Set(rowsRaw.map(r => safeStr(r.Property).trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+    setMCBItems("mcbPropiedad", props, true);
+  }
+
+  // ===== Filters =====
   function applyLocalFilters(){
     const q = $("q").value.trim().toLowerCase();
     const src = $("selSource").value.trim().toLowerCase();
@@ -670,20 +899,17 @@
     const fromISO = $("from").value;
     const toISO = $("to").value;
 
-    // global propiedad multiselect
-    const propsSelected = getSelectedValues($("selPropiedad")).map(s=>s.toLowerCase());
+    const propsSelected = getMCBSelected("mcbPropiedad").map(x=>x.toLowerCase());
     const hasPropFilter = propsSelected.length > 0;
 
     rowsFiltered = rowsRaw.filter(r=>{
       if(fromISO && toISO){
         if(!overlaps(r.DateArrival, r.DateDeparture, fromISO, toISO)) return false;
       }
-
       if(hasPropFilter){
         const rp = safeStr(r.Property).toLowerCase();
         if(!propsSelected.includes(rp)) return false;
       }
-
       if(src && safeStr(r.Source).toLowerCase() !== src) return false;
       if(st && safeStr(r.Status).toLowerCase() !== st) return false;
 
@@ -698,6 +924,7 @@
     renderTable();
   }
 
+  // ===== KPIs =====
   function sumByLineItem(name){
     const key = String(name || "").toLowerCase();
     return rowsFiltered.reduce((acc, r)=>{
@@ -723,6 +950,7 @@
     $("kpiTax").textContent      = moneyMXN(sumByLineItem("Tax"));
   }
 
+  // ===== Table OTC =====
   function renderTable(){
     const tb = $("tbody");
     tb.innerHTML = "";
@@ -749,7 +977,7 @@
     tb.appendChild(frag);
   }
 
-  // ===== mini charts by AMOUNT =====
+  // ===== Mini charts with bar labels =====
   function buildSum(field){
     const m = new Map();
     for(const r of rowsFiltered){
@@ -760,6 +988,36 @@
     const data = labels.map(k => m.get(k));
     return { labels, data };
   }
+
+  // Plugin: etiquetas encima de cada barra (sin librerías extra)
+  const barValueLabels = {
+    id: "barValueLabels",
+    afterDatasetsDraw(chart, args, pluginOptions){
+      const { ctx } = chart;
+      const fmt = pluginOptions?.format || ((v)=>String(v));
+      const offset = pluginOptions?.offset ?? 6;
+      const color = pluginOptions?.color || "rgba(232,238,252,.9)";
+      const fontSize = pluginOptions?.fontSize || 11;
+
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.font = `${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+
+      chart.data.datasets.forEach((dataset, di)=>{
+        const meta = chart.getDatasetMeta(di);
+        meta.data.forEach((el, i)=>{
+          const v = dataset.data[i];
+          if(v === null || v === undefined) return;
+          const p = el.tooltipPosition();
+          ctx.fillText(fmt(v), p.x, p.y - offset);
+        });
+      });
+
+      ctx.restore();
+    }
+  };
 
   function renderMiniChartsByAmount(){
     const src = buildSum("Source");
@@ -774,7 +1032,15 @@
     if(chSourceBar) chSourceBar.destroy();
     if(chStatusBar) chStatusBar.destroy();
 
-    // ✅ Source bar
+    const fmtMoneyShort = (v)=>{
+      const n = Number(v)||0;
+      // abreviación simple (K/M)
+      const abs = Math.abs(n);
+      if(abs >= 1_000_000) return (n/1_000_000).toFixed(1) + "M";
+      if(abs >= 1_000) return (n/1_000).toFixed(1) + "K";
+      return String(Math.round(n));
+    };
+
     chSourceBar = new Chart($("chSourceBar"), {
       type: "bar",
       data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
@@ -783,13 +1049,14 @@
         maintainAspectRatio:false,
         plugins:{
           legend:{ display:false },
-          tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } }
+          tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
+          barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
         scales:{ y:{ beginAtZero:true } }
-      }
+      },
+      plugins: [barValueLabels]
     });
 
-    // Status bar
     chStatusBar = new Chart($("chStatusBar"), {
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
@@ -798,28 +1065,27 @@
         maintainAspectRatio:false,
         plugins:{
           legend:{ display:false },
-          tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } }
+          tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
+          barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
         scales:{ y:{ beginAtZero:true } }
-      }
+      },
+      plugins: [barValueLabels]
     });
   }
 
   // ===== Occupancy helpers =====
   function monthStartUTC(y, m0){ return new Date(Date.UTC(y, m0, 1, 0, 0, 0)); }
   function monthEndUTCExclusive(y, m0){ return new Date(Date.UTC(y, m0+1, 1, 0, 0, 0)); }
-
   function daysBetweenUTC(a, b){
     const ms = b.getTime() - a.getTime();
     return Math.max(0, Math.round(ms / 86400000));
   }
-
   function intersectNights(aStart, aEndEx, bStart, bEndEx){
     const s = (aStart > bStart) ? aStart : bStart;
     const e = (aEndEx < bEndEx) ? aEndEx : bEndEx;
     return daysBetweenUTC(s, e);
   }
-
   function monthsBetween(fromISO, toISO){
     const a = parseISODateInput(fromISO);
     const b = parseISODateInput(toISO);
@@ -839,36 +1105,23 @@
     return out;
   }
 
-  function rebuildOccPropiedadOptionsFromFiltered(){
-    const sel = $("occPropiedad");
-    const prev = getSelectedValues(sel);
+  function rebuildOccMCBsFromContext(availableProps, availableHouses){
+    // Propiedad (ocupación)
+    setMCBItems("mcbOccPropiedad", availableProps, true);
 
-    // Propiedades disponibles según rowsFiltered (filtros globales)
-    const props = [...new Set(rowsFiltered.map(r => safeStr(r.Property).trim()).filter(Boolean))]
-      .sort((a,b)=>a.localeCompare(b));
-
-    setMultiOptions(sel, props, prev);
+    // Alojamientos
+    setMCBItems("mcbOccHouses", availableHouses, true);
   }
 
-  function rebuildOccHousesOptions(housesAvailable){
-    const sel = $("occHouses");
-    const prev = getSelectedValues(sel);
-    setMultiOptions(sel, housesAvailable, prev);
-  }
-
-  // ===== Occupancy render (table + line data) =====
   function renderOccupancyByMonth(){
     const fromISO = $("from").value;
     const toISO = $("to").value;
-
     const months = monthsBetween(fromISO, toISO);
+
     const thead = $("occThead");
     const tbody = $("occTbody");
     thead.innerHTML = "";
     tbody.innerHTML = "";
-
-    // rebuild options for occupancy filters based on current global filtering
-    rebuildOccPropiedadOptionsFromFiltered();
 
     if(!months.length){
       $("occMeta").textContent = "Selecciona Desde/Hasta para calcular ocupación.";
@@ -916,26 +1169,31 @@
       }
     }
 
-    // aplicar filtros locales (ocupación): Propiedad + Houses
-    const occProps = getSelectedValues($("occPropiedad")).map(s=>s.toLowerCase());
+    // Available props/houses for occupancy filters (según rowsFiltered)
+    const availableProps = [...propSet].sort((a,b)=>a.localeCompare(b));
+    const availableHousesAll = [...houseSet].sort((a,b)=>a.localeCompare(b));
+
+    // Rebuild occupancy MCBs with available items (keep selected if possible)
+    rebuildOccMCBsFromContext(availableProps, availableHousesAll);
+
+    // Apply occupancy-local property filter
+    const occProps = getMCBSelected("mcbOccPropiedad").map(s=>s.toLowerCase());
     const occHasProp = occProps.length > 0;
 
-    // houses disponibles tras filtro de propiedad (para poblar dropdown)
-    let housesAvailable = [...houseSet].filter(h=>{
+    let housesAvailable = availableHousesAll.filter(h=>{
       if(!occHasProp) return true;
       const p = safeStr(propertyByHouse.get(h)).toLowerCase();
       return occProps.includes(p);
     }).sort((a,b)=>a.localeCompare(b));
 
-    // refrescar dropdown Houses con base en propiedad elegida
-    rebuildOccHousesOptions(housesAvailable);
+    // Update houses list to only those matching property selection (keeping selection)
+    setMCBItems("mcbOccHouses", housesAvailable, true);
 
-    // ahora leer selección de houses (ya con opciones actualizadas)
-    const occHouseSel = getSelectedValues($("occHouses"));
-    const occHasHouse = occHouseSel.length > 0;
-    const occHouseSet = new Set(occHouseSel);
+    // Apply occupancy-local house filter
+    const occHousesSel = getMCBSelected("mcbOccHouses");
+    const occHasHouse = occHousesSel.length > 0;
+    const occHouseSet = new Set(occHousesSel);
 
-    // houses finales a mostrar
     const housesToShow = housesAvailable.filter(h => !occHasHouse || occHouseSet.has(h));
 
     // Header
@@ -948,7 +1206,6 @@
 
     // Body
     const frag = document.createDocumentFragment();
-
     for(const house of housesToShow){
       const tr = document.createElement("tr");
       const hm = map.get(house) || new Map();
@@ -982,21 +1239,19 @@
       tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}`;
       frag.appendChild(tr);
     }
-
     tbody.appendChild(frag);
 
     $("occMeta").textContent =
       `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length}`;
 
     // Build series for line chart using housesToShow
-    buildOccupancySeriesForChart(months, housesToShow, map, propertyByHouse);
+    buildOccupancySeriesForChart(months, housesToShow, map);
     renderOccLineChart();
     syncOccView();
   }
 
-  function buildOccupancySeriesForChart(months, houses, mapHouseMonth, propertyByHouse){
+  function buildOccupancySeriesForChart(months, houses, mapHouseMonth){
     const pctByHouse = new Map();
-
     for(const house of houses){
       const arr = [];
       const hm = mapHouseMonth.get(house) || new Map();
@@ -1004,20 +1259,13 @@
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
-
         const occ = hm.get(mo.key) || 0;
         const pct = totalNightsMonth > 0 ? (occ / totalNightsMonth) * 100 : 0;
         arr.push(+pct.toFixed(2));
       }
       pctByHouse.set(house, arr);
     }
-
-    occSeries = {
-      months: months.map(m=>m.key),
-      houses: [...houses],
-      propertyByHouse: new Map(propertyByHouse || []),
-      pctByHouse
-    };
+    occSeries = { months: months.map(m=>m.key), houses:[...houses], pctByHouse };
   }
 
   function renderOccLineChart(){
@@ -1032,17 +1280,9 @@
     }
 
     const labels = occSeries.months;
-
-    // datasets: una línea por house (ya filtradas por selección)
     const datasets = occSeries.houses.map(h=>{
       const data = occSeries.pctByHouse.get(h) || labels.map(()=>0);
-      return {
-        label: h,
-        data,
-        tension: 0.25,
-        pointRadius: 0,
-        borderWidth: 1,
-      };
+      return { label:h, data, tension:0.25, pointRadius:0, borderWidth:1 };
     });
 
     if(chOccLines) chOccLines.destroy();
@@ -1050,26 +1290,15 @@
       type: "line",
       data: { labels, datasets },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "nearest", intersect: false },
-        plugins: {
-          legend: {
-            display: true,
-            position: "bottom",
-            labels: { boxWidth: 10 }
-            // Chart.js permite click para ocultar/mostrar líneas
-          },
-          tooltip: {
-            callbacks: { label: (ctx)=> ` ${ctx.dataset.label}: ${ctx.raw}%` }
-          }
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{ mode:"nearest", intersect:false },
+        plugins:{
+          legend:{ display:true, position:"bottom", labels:{ boxWidth:10 } },
+          tooltip:{ callbacks:{ label:(ctx)=>` ${ctx.dataset.label}: ${ctx.raw}%` } }
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            ticks: { callback: (v)=> `${v}%` }
-          }
+        scales:{
+          y:{ beginAtZero:true, max:100, ticks:{ callback:(v)=>`${v}%` } }
         }
       }
     });
@@ -1096,52 +1325,62 @@
   }
 
   function setDefaultDates(){
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const first = new Date(Date.UTC(y, m, 1));
-    const last = new Date(Date.UTC(y, m + 1, 0));
-
+    // ✅ 1 de enero de 2025 → hoy
+    const today = new Date();
     const pad = (x)=>String(x).padStart(2,"0");
-    const ymd = (d)=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+    const ymdLocal = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 
-    $("from").value = ymd(first);
-    $("to").value = ymd(last);
-  }
-
-  function escapeHtml(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+    const d1 = new Date(2025, 0, 1); // local
+    $("from").value = ymdLocal(d1);
+    $("to").value = ymdLocal(today);
   }
 
   (function init(){
     $("baseUrl").textContent = API_BASE || "same-origin";
     setDefaultDates();
 
-    $("btnLoad").addEventListener("click", async ()=>{
-      try{ await loadOTC(); }
+    // init multi-comboboxes
+    initMCB("mcbPropiedad", { emptyLabel:"Todas", onChange: ()=> applyLocalFilters() });
+    initMCB("mcbOccPropiedad", { emptyLabel:"Todas", onChange: ()=> renderOccupancyByMonth() });
+    initMCB("mcbOccHouses", { emptyLabel:"Todos", onChange: ()=> renderOccupancyByMonth() });
+
+    // botones header
+    $("btnReload").addEventListener("click", async ()=>{
+      try{ await fetchOTC(); }
       catch(e){ setStatus("err","Error"); alert(String(e.message || e)); }
     });
     $("btnCsv").addEventListener("click", downloadCSV);
     $("btnDebug").addEventListener("click", loadDebug);
 
-    // filtros globales
-    ["q","selSource","selStatus","from","to","selPropiedad"].forEach(id=>{
+    // filtros instantáneos: cuando cambias fechas, se hace fetch inmediato (porque cambia el universo)
+    // debounce para no spamear el backend
+    let tFetch = null;
+    function scheduleFetch(){
+      clearTimeout(tFetch);
+      tFetch = setTimeout(()=>{
+        fetchOTC().catch(e=>{ setStatus("err","Error"); alert(String(e.message || e)); });
+      }, 250);
+    }
+
+    ["from","to"].forEach(id=>{
+      $(id).addEventListener("change", scheduleFetch);
+      $(id).addEventListener("input", scheduleFetch);
+    });
+
+    // filtros locales (no requieren fetch)
+    ["q","selSource","selStatus"].forEach(id=>{
       $(id).addEventListener("input", applyLocalFilters);
       $(id).addEventListener("change", applyLocalFilters);
     });
 
-    // ocupación: vista + filtros locales
+    // vista ocupación
     $("occView").addEventListener("change", syncOccView);
-    $("occPropiedad").addEventListener("change", renderOccupancyByMonth);
-    $("occHouses").addEventListener("change", renderOccupancyByMonth);
 
-    // autoload
-    $("btnLoad").click();
+    // ✅ carga inicial automática (ya no necesitas "Cargar")
+    fetchOTC().catch(e=>{
+      setStatus("err","Error");
+      alert(String(e.message || e));
+    });
   })();
 </script>
 </body>
