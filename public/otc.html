@@ -11,8 +11,7 @@
       --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
       --accent:#4cc9f0; --good:#4ade80; --warn:#fbbf24; --bad:#fb7185;
       --shadow: 0 12px 28px rgba(0,0,0,.35);
-      --r:16px; --r2:12px;
-      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
     *{box-sizing:border-box}
     body{
@@ -76,22 +75,30 @@
     .bd{padding:14px}
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
     .row > *{flex:1}
-    .row .small{flex:.8}
+    .row .small{flex:.85}
     .kpis{
       display:grid; gap:10px;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(6, 1fr);
     }
-    @media (max-width: 980px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width: 1100px){ .kpis{grid-template-columns:repeat(3,1fr)} }
+    @media (max-width: 720px){ .kpis{grid-template-columns:repeat(2,1fr)} }
     @media (max-width: 520px){ .kpis{grid-template-columns:1fr} }
+
     .kpi{
       border:1px solid var(--line);
       background:linear-gradient(180deg, rgba(18,31,58,.7), rgba(15,26,48,.55));
       border-radius:16px;
       padding:12px;
+      min-height: 88px;
     }
     .kpi .lbl{font-size:12px; color:var(--muted)}
-    .kpi .val{margin-top:6px; font-size:20px; font-weight:900; letter-spacing:.3px}
+    .kpi .val{margin-top:6px; font-size:18px; font-weight:900; letter-spacing:.3px}
     .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
+    .kpi .mini{
+      margin-top:8px;
+      height:90px;
+      width:100%;
+    }
     .pill{
       display:inline-flex; align-items:center; gap:6px;
       padding:4px 8px; border-radius:999px;
@@ -151,14 +158,14 @@
 
 <main class="wrap">
 
-  <!-- Parámetros + KPIs -->
+  <!-- Parámetros -->
   <section class="card">
     <div class="hd">
       <div>
         <h2>Parámetros</h2>
         <div class="hint">
           API: <span class="mono">/api/otc</span> y <span class="mono">/api/otc.csv</span>
-          · La selección por fechas incluye reservas que <b>toquen</b> el rango (overlap).
+          · Fechas incluyen reservas que <b>toquen</b> el rango (overlap).
         </div>
       </div>
       <div class="hint" id="metaLine">—</div>
@@ -174,70 +181,106 @@
           <div class="hint">Hasta</div>
           <input id="to" type="date" />
         </label>
+
         <label class="small">
           <div class="hint">Buscar</div>
-          <input id="q" placeholder="Guest / House / Id / Source..." />
+          <input id="q" placeholder="Guest / House / Id / Source / LineItem..." />
         </label>
+
         <label class="small">
           <div class="hint">Source</div>
           <select id="selSource">
             <option value="">Todos</option>
           </select>
         </label>
+
+        <label class="small">
+          <div class="hint">Status</div>
+          <select id="selStatus">
+            <option value="">Todos</option>
+          </select>
+        </label>
       </div>
+    </div>
+  </section>
 
-      <div style="height:12px"></div>
+  <!-- KPIs + Mini gráficas -->
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>KPIs</h2>
+        <div class="hint">Incluye montos por LineItem: RoomRate, Fee, Tax</div>
+      </div>
+      <div class="hint">
+        <span class="pill" id="pillFiltered">0 filas</span>
+      </div>
+    </div>
 
+    <div class="bd">
       <div class="kpis">
         <div class="kpi">
           <div class="lbl">Reservas únicas</div>
           <div class="val" id="kpiBookings">—</div>
           <div class="meta">IDs distintos</div>
         </div>
+
         <div class="kpi">
           <div class="lbl">Noches (sum)</div>
           <div class="val" id="kpiNights">—</div>
           <div class="meta">Suma Nights (en rango)</div>
         </div>
+
         <div class="kpi">
           <div class="lbl">Gross (sum)</div>
           <div class="val" id="kpiGross">—</div>
-          <div class="meta">Suma GrossAmount (prorrateado)</div>
+          <div class="meta">Suma GrossAmount</div>
+        </div>
+
+        <div class="kpi">
+          <div class="lbl">RoomRate (sum)</div>
+          <div class="val" id="kpiRoomRate">—</div>
+          <div class="meta">LineItem = RoomRate</div>
+        </div>
+
+        <div class="kpi">
+          <div class="lbl">Fee (sum)</div>
+          <div class="val" id="kpiFee">—</div>
+          <div class="meta">LineItem = Fee</div>
+        </div>
+
+        <div class="kpi">
+          <div class="lbl">Tax (sum)</div>
+          <div class="val" id="kpiTax">—</div>
+          <div class="meta">LineItem = Tax</div>
+        </div>
+
+        <!-- Mini gráficas como KPIs -->
+        <div class="kpi" style="grid-column: span 3;">
+          <div class="lbl">Distribución por Source</div>
+          <div class="meta">Pie (count de filas)</div>
+          <div class="mini"><canvas id="chSourcePie"></canvas></div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 3;">
+          <div class="lbl">Distribución por Status</div>
+          <div class="meta">Barras (count de filas)</div>
+          <div class="mini"><canvas id="chStatusBar"></canvas></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Gráficas ARRIBA -->
-  <section class="card">
-    <div class="hd">
-      <div>
-        <h2>Gráficas</h2>
-        <div class="hint">Distribución por Source (filtrado local)</div>
-      </div>
-    </div>
-    <div class="bd">
-      <canvas id="chSource"></canvas>
-      <div style="height:10px"></div>
-      <div class="hint">
-        Si quieres otras gráficas (HouseName / Status / LineItem), dímelo y las agrego.
-      </div>
-    </div>
-  </section>
-
-  <!-- Tabla ABAJO -->
+  <!-- Tabla -->
   <section class="card">
     <div class="hd">
       <div>
         <h2>Tabla OTC</h2>
         <div class="hint">
-          La tabla ya viene completa de la API; además aplicamos filtro local (search/source) y overlap por fechas.
+          Tabla completa + filtros locales (Source/Status/Buscar) + overlap por fechas.
         </div>
       </div>
-      <div class="hint">
-        <span class="pill" id="pillFiltered">0 filas</span>
-      </div>
     </div>
+
     <div class="bd">
       <div class="tableWrap">
         <div class="scrollY">
@@ -262,6 +305,7 @@
         </div>
       </div>
     </div>
+
     <div class="footer">
       Export CSV usa: <span class="mono">/api/otc.csv</span>
     </div>
@@ -273,9 +317,6 @@
   // =========================
   // Base URL
   // =========================
-  // Recomendado: same-origin (porque el HTML lo sirve Cloud Run también).
-  // Si algún día lo abres desde GitHub Pages, pon aquí:
-  // const API_BASE = "https://checkinnreservas-1044570371371.northamerica-south1.run.app";
   const API_BASE = "";
 
   // =========================
@@ -283,8 +324,8 @@
   // =========================
   let rowsRaw = [];
   let rowsFiltered = [];
-  let chSource = null;
-  let lastMeta = null;
+  let chSourcePie = null;
+  let chStatusBar = null;
 
   // =========================
   // Helpers
@@ -312,8 +353,7 @@
   function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
   function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
 
-  // --- Date parsing for overlap ---
-  // Arrival/Departure vienen como "MM/DD/YYYY" por tu server (formatMMDDYYYY).
+  // Arrival/Departure vienen como "MM/DD/YYYY"
   function parseMMDDYYYY(s){
     const t = safeStr(s).trim();
     if(!t) return null;
@@ -321,7 +361,6 @@
     if(!m) return null;
     const mm = Number(m[1]), dd = Number(m[2]), yyyy = Number(m[3]);
     if(!mm || !dd || !yyyy) return null;
-    // Usar UTC para evitar shifts
     return new Date(Date.UTC(yyyy, mm-1, dd, 0, 0, 0));
   }
 
@@ -335,7 +374,6 @@
   }
 
   // overlap: [aStart, aEnd) toca [bStart, bEnd) si aStart < bEnd && bStart < aEnd
-  // (Departure se trata como end exclusivo)
   function overlaps(arrivalMMDD, departureMMDD, fromISO, toISO){
     const aStart = parseMMDDYYYY(arrivalMMDD);
     const aEnd   = parseMMDDYYYY(departureMMDD);
@@ -344,7 +382,7 @@
 
     if(!aStart || !aEnd || !bStart || !bEnd) return true;
 
-    // Convertir bEnd a "día siguiente" para que sea inclusivo en UI (si eliges 2026-01-31, incluye ese día).
+    // to inclusive -> end exclusivo sumando 1 día
     const bEndEx = new Date(bEnd.getTime());
     bEndEx.setUTCDate(bEndEx.getUTCDate() + 1);
 
@@ -352,7 +390,6 @@
   }
 
   function qs(){
-    // Ya NO mandamos size.
     const from = $("from").value;
     const to = $("to").value;
     return new URLSearchParams({ from, to }).toString();
@@ -381,7 +418,6 @@
   async function loadOTC(){
     setStatus("busy", "Cargando...");
     $("metaLine").textContent = "—";
-    lastMeta = null;
 
     const url = `${API_BASE}/api/otc?${qs()}`;
     const res = await fetch(url, { headers: { "Accept":"application/json" } });
@@ -392,10 +428,9 @@
       throw new Error(data?.error || `HTTP ${res.status}`);
     }
 
-    lastMeta = data;
     rowsRaw = (data.rows || []).map(normalizeRow);
-
     setStatus("ok", `OK · ${rowsRaw.length} filas`);
+
     const metaBits = [
       `bookingsFetched=${data.bookingsFetched ?? "?"}`,
       `pagesUsed=${data.pagesUsed ?? "?"}`,
@@ -404,13 +439,13 @@
     ];
     $("metaLine").textContent = metaBits.join(" · ");
 
-    rebuildSourceFilter();
+    rebuildFilters();
     applyLocalFilters();
   }
 
   async function loadDebug(){
     setStatus("busy", "Debug...");
-    const url = `${API_BASE}/api/debug/bookings`; // el endpoint soporta ?size, pero ya no lo necesitamos aquí
+    const url = `${API_BASE}/api/debug/bookings`;
     const res = await fetch(url, { headers: { "Accept":"application/json" } });
     const data = await res.json();
     if(!res.ok || !data?.ok){
@@ -433,30 +468,43 @@
   }
 
   // =========================
-  // Local filters + render
+  // Filters
   // =========================
-  function rebuildSourceFilter(){
-    const sel = $("selSource");
-    const cur = sel.value;
+  function rebuildFilters(){
+    // Source
+    const selS = $("selSource");
+    const curS = selS.value;
     const sources = [...new Set(rowsRaw.map(r => safeStr(r.Source).trim()).filter(Boolean))]
       .sort((a,b)=>a.localeCompare(b));
-    sel.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${s}">${s}</option>`).join("");
-    sel.value = sources.includes(cur) ? cur : "";
+    selS.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${s}">${s}</option>`).join("");
+    selS.value = sources.includes(curS) ? curS : "";
+
+    // Status
+    const selSt = $("selStatus");
+    const curSt = selSt.value;
+    const statuses = [...new Set(rowsRaw.map(r => safeStr(r.Status).trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+    selSt.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join("");
+    selSt.value = statuses.includes(curSt) ? curSt : "";
   }
 
+  // =========================
+  // Local filters + render
+  // =========================
   function applyLocalFilters(){
     const q = $("q").value.trim().toLowerCase();
     const src = $("selSource").value.trim().toLowerCase();
+    const st = $("selStatus").value.trim().toLowerCase();
     const fromISO = $("from").value;
     const toISO = $("to").value;
 
     rowsFiltered = rowsRaw.filter(r=>{
-      // (3) Overlap por fechas (incluye cualquier reserva que toque el rango)
+      // overlap por fechas
       if(fromISO && toISO){
         if(!overlaps(r.DateArrival, r.DateDeparture, fromISO, toISO)) return false;
       }
-
       if(src && safeStr(r.Source).toLowerCase() !== src) return false;
+      if(st && safeStr(r.Status).toLowerCase() !== st) return false;
 
       if(!q) return true;
       const hay = [
@@ -466,8 +514,17 @@
     });
 
     renderKPIs();
+    renderMiniCharts();
     renderTable();
-    renderChart();
+  }
+
+  function sumByLineItem(name){
+    const key = String(name || "").toLowerCase();
+    return rowsFiltered.reduce((acc, r)=>{
+      const li = safeStr(r.LineItem).toLowerCase();
+      if(li === key) return acc + safeNum(r.GrossAmount);
+      return acc;
+    }, 0);
   }
 
   function renderKPIs(){
@@ -481,6 +538,14 @@
 
     const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
     $("kpiGross").textContent = moneyMXN(gross);
+
+    const room = sumByLineItem("RoomRate");
+    const fee  = sumByLineItem("Fee");
+    const tax  = sumByLineItem("Tax");
+
+    $("kpiRoomRate").textContent = moneyMXN(room);
+    $("kpiFee").textContent      = moneyMXN(fee);
+    $("kpiTax").textContent      = moneyMXN(tax);
   }
 
   function renderTable(){
@@ -508,22 +573,47 @@
     tb.appendChild(frag);
   }
 
-  function renderChart(){
+  // =========================
+  // Mini charts
+  // =========================
+  function buildCounts(field){
     const m = new Map();
     for(const r of rowsFiltered){
-      const k = safeStr(r.Source).trim() || "—";
+      const k = safeStr(r[field]).trim() || "—";
       m.set(k, (m.get(k) || 0) + 1);
     }
     const labels = [...m.keys()].sort((a,b)=> (m.get(b)-m.get(a)));
     const data = labels.map(k => m.get(k));
+    return { labels, data };
+  }
 
-    if(chSource) chSource.destroy();
-    chSource = new Chart($("chSource"), {
-      type: "bar",
-      data: { labels, datasets: [{ label: "Line items por Source", data }] },
+  function renderMiniCharts(){
+    const src = buildCounts("Source");
+    const st  = buildCounts("Status");
+
+    if(chSourcePie) chSourcePie.destroy();
+    if(chStatusBar) chStatusBar.destroy();
+
+    chSourcePie = new Chart($("chSourcePie"), {
+      type: "pie",
+      data: { labels: src.labels.slice(0, 12), datasets: [{ data: src.data.slice(0, 12) }] },
       options: {
         responsive:true,
-        plugins:{ legend:{ display:true } },
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:true, position:"bottom", labels:{ boxWidth:10 } },
+          tooltip:{ enabled:true }
+        }
+      }
+    });
+
+    chStatusBar = new Chart($("chStatusBar"), {
+      type: "bar",
+      data: { labels: st.labels.slice(0, 12), datasets: [{ label:"Filas", data: st.data.slice(0, 12) }] },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{ legend:{ display:false }, tooltip:{ enabled:true } },
         scales:{ y:{ beginAtZero:true } }
       }
     });
@@ -564,13 +654,11 @@
     $("btnCsv").addEventListener("click", downloadCSV);
     $("btnDebug").addEventListener("click", loadDebug);
 
-    // Filtrado local inmediato (sin recargar) para q/source/fechas
-    ["q","selSource","from","to"].forEach(id=>{
+    ["q","selSource","selStatus","from","to"].forEach(id=>{
       $(id).addEventListener("input", applyLocalFilters);
       $(id).addEventListener("change", applyLocalFilters);
     });
 
-    // Autoload
     $("btnLoad").click();
   })();
 </script>
