@@ -3,406 +3,760 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Check-In · Reservas & Ocupación (Lodgify)</title>
+  <title>Check-Inn · Ocupación (Lodgify)</title>
   <style>
     :root{
-      --bg:#ffffff;
-      --fg:#0b1020;
-      --muted:#667085;
-      --border:#e5e7eb;
-      --chip:#f3f4f6;
-      --chipfg:#111827;
-      --shadow: 0 14px 40px rgba(2,6,23,.12);
-      --radius:14px;
+      --bg:#0b1020;
+      --card:#111a33;
+      --muted:#a9b4d0;
+      --text:#eaf0ff;
+      --line:rgba(255,255,255,.12);
+      --accent:#4aa3ff;
+      --good:#2ee59d;
+      --warn:#ffcc66;
+      --bad:#ff6b6b;
     }
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:24px;max-width:1180px;color:var(--fg);background:var(--bg)}
-    h1{margin:0 0 8px 0;font-size:22px}
-    h2{margin:22px 0 10px 0;font-size:18px}
-    .muted{color:var(--muted);font-size:13px;line-height:1.4}
-    .card{border:1px solid var(--border);border-radius:var(--radius);padding:14px 14px 12px 14px;box-shadow:0 1px 0 rgba(2,6,23,.03)}
-    .row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
-    label{display:flex;flex-direction:column;font-size:13px;gap:6px;min-width:160px}
-    input,select,button{font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:#fff}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#070a14 0%, #0b1020 60%, #070a14 100%);color:var(--text)}
+    a{color:var(--accent)}
+    .wrap{max-width:1200px;margin:20px auto;padding:0 16px}
+    h1{margin:10px 0 6px;font-size:22px;letter-spacing:.2px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px;line-height:1.35}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:980px){.grid{grid-template-columns:380px 1fr}}
+    .card{
+      background:rgba(17,26,51,.88);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 16px 40px rgba(0,0,0,.35);
+      overflow:visible; /* clave para que no recorte */
+      position:relative;
+    }
+    .card h2{margin:0 0 10px;font-size:14px;color:var(--text);opacity:.95}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+    label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+    input,button{
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:14px;
+      outline:none;
+    }
+    input[type="number"]{width:120px}
+    input[type="date"]{width:160px}
     button{cursor:pointer}
-    button.primary{background:#0b5fff;border-color:#0b5fff;color:#fff}
-    button:disabled{opacity:.55;cursor:not-allowed}
-    pre{background:#0b1020;color:#d7e2ff;padding:14px;border-radius:14px;overflow:auto;max-height:340px}
-    .split{display:grid;grid-template-columns: 1fr;gap:14px}
-    @media (min-width: 980px){.split{grid-template-columns: 1fr 1fr}}
+    button:active{transform:translateY(1px)}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.06);font-size:12px;color:var(--muted)}
+    .dot{width:8px;height:8px;border-radius:99px;background:var(--accent);display:inline-block}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
-    /* ---------- Table ---------- */
-    .tableWrap{border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:540px}
-    table{border-collapse:separate;border-spacing:0;width:100%;min-width:860px;background:#fff}
-    th,td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;font-size:13px}
-    th{position:sticky;top:0;background:#fafafa;z-index:2;text-align:left}
-    td.num{text-align:right;font-variant-numeric: tabular-nums}
-    tr:hover td{background:#fcfcff}
-    .tag{display:inline-flex;align-items:center;gap:6px;background:var(--chip);color:var(--chipfg);border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:12px}
-
-    /* ---------- MultiSelect (no se recorta por contenedores) ---------- */
-    .ms{position:relative}
-    .msBtn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .msBtn .msLabel{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-    .msBtn .msPlaceholder{color:var(--muted)}
-    .msCaret{opacity:.7}
-
-    /* Panel se monta en <body> con position:fixed */
-    .msPanel{
-      position:fixed;
-      min-width:260px;
-      max-width:min(520px, calc(100vw - 24px));
-      background:#fff;
-      border:1px solid var(--border);
-      border-radius:14px;
-      box-shadow:var(--shadow);
-      z-index:99999;
-      padding:10px;
+    /* MultiSelect (botón) */
+    .ms-btn{
+      min-width: 240px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      cursor:pointer;
+      user-select:none;
     }
-    .msPanel header{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-    .msPanel input[type="search"]{flex:1;min-width:160px}
-    .msList{max-height:260px;overflow:auto;border-top:1px solid var(--border);padding-top:8px}
-    .msItem{display:flex;gap:10px;align-items:center;padding:8px 8px;border-radius:10px;cursor:pointer}
-    .msItem:hover{background:#f8fafc}
-    .msItem input{width:16px;height:16px}
-    .msFoot{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
-    .msFoot button{padding:8px 10px;border-radius:10px}
+    .ms-btn .left{display:flex;flex-direction:column;gap:2px}
+    .ms-btn .title{font-size:13px;color:var(--text)}
+    .ms-btn .hint{font-size:11px;color:var(--muted)}
+    .chev{opacity:.8}
 
-    .hint{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+    /* Tabla */
+    .tableWrap{
+      width:100%;
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(0,0,0,.12);
+    }
+    table{border-collapse:separate;border-spacing:0;width:max(900px,100%)}
+    thead th{
+      position:sticky; top:0;
+      background:rgba(12,18,38,.92);
+      backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--line);
+      padding:10px 10px;
+      text-align:left;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      z-index:2;
+    }
+    tbody td{
+      border-bottom:1px solid rgba(255,255,255,.06);
+      padding:10px 10px;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    tbody tr:hover td{background:rgba(255,255,255,.04)}
+    .stickyCol{
+      position:sticky; left:0;
+      background:rgba(10,14,30,.98);
+      z-index:1;
+    }
+    thead .stickyCol{z-index:3}
+    .num{text-align:right}
+    .heat{
+      padding:6px 8px;
+      border-radius:10px;
+      display:inline-flex;
+      justify-content:flex-end;
+      min-width:72px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+    }
+    .small{font-size:12px;color:var(--muted)}
+    .note{margin-top:10px;color:var(--muted);font-size:12px}
+    .statusBar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .err{color:#ffd1d1}
   </style>
 </head>
 <body>
-  <h1>Reservas & Ocupación (Lodgify)</h1>
-  <p class="muted">
-    Este panel usa tu backend en Cloud Run (mismo dominio) y resuelve el problema de dropdown recortado
-    montando los menús en <code>position:fixed</code> sobre <code>&lt;body&gt;</code>.
-  </p>
+  <div class="wrap">
+    <h1>Ocupación por alojamiento (por mes)</h1>
+    <p class="sub">
+      Se calcula con tus reservas de Lodgify (no invasivo: sólo lectura). Por defecto: <b>01-ene-2025</b> a <b>hoy</b>.
+      La última columna muestra el <b>promedio de X meses</b> según el filtro (si no eliges nada, promedia todos los meses visibles).
+    </p>
 
-  <div class="split">
-    <div class="card">
-      <h2>Parámetros</h2>
-      <div class="row">
-        <label>
-          Desde
-          <input id="from" type="date" value="2026-01-01">
-        </label>
-        <label>
-          Hasta
-          <input id="to" type="date" value="2026-01-31">
-        </label>
-        <label>
-          Límite por página
-          <input id="limit" type="number" value="200" min="10" max="200">
-        </label>
-        <label>
-          fetchMode
-          <select id="fetchMode">
-            <option value="all" selected>all (recomendado)</option>
-            <option value="filtered">filtered (prueba)</option>
-          </select>
-        </label>
+    <div class="grid">
+      <div class="card" id="cardParams">
+        <h2>Parámetros</h2>
 
-        <label style="min-width:260px">
-          Propiedad
-          <div id="propiedadMs" class="ms"></div>
-        </label>
+        <div class="row">
+          <label>
+            Desde
+            <input id="from" type="date">
+          </label>
+          <label>
+            Hasta
+            <input id="to" type="date">
+          </label>
+          <label>
+            Tamaño de página (API)
+            <input id="size" type="number" value="200" min="10" max="200">
+          </label>
+        </div>
 
-        <label style="min-width:320px">
-          Meses para promedio (X)
-          <div id="mesesAvgMs" class="ms"></div>
-        </label>
+        <div class="row" style="margin-top:12px">
+          <label style="min-width:260px">
+            Propiedad
+            <div id="msPropiedad"></div>
+          </label>
+          <label style="min-width:260px">
+            Alojamientos (HouseName)
+            <div id="msHouse"></div>
+          </label>
+        </div>
 
-        <button id="btnLoad" class="primary">Cargar</button>
-        <button id="btnCsv">Descargar CSV (OTC)</button>
-        <button id="btnDebug">Debug Lodgify</button>
+        <div class="row" style="margin-top:12px">
+          <label style="min-width:260px">
+            Promedio de meses (X)
+            <div id="msAvgMonths"></div>
+          </label>
+        </div>
+
+        <div class="statusBar">
+          <span class="pill"><span class="dot"></span> <span id="statBookings">Reservas: —</span></span>
+          <span class="pill"><span class="dot" style="background:var(--good)"></span> <span id="statHouses">Alojamientos: —</span></span>
+          <span class="pill"><span class="dot" style="background:var(--warn)"></span> <span id="statMonths">Meses: —</span></span>
+        </div>
+
+        <p class="note">
+          Si el dropdown de <b>Propiedad</b> antes se “cortaba”, aquí ya no: el menú se renderiza en <span class="mono">body</span> con posición fija para evitar el recorte por contenedores.
+        </p>
+
+        <p class="note err" id="errBox" style="display:none"></p>
       </div>
 
-      <div class="hint">
-        <span class="tag">📌 Promedio: si no eliges meses, se promedia sobre todos los meses visibles.</span>
-        <span class="tag">🧾 CSV: usa el endpoint OTC original (prorrateado por noches).</span>
+      <div class="card">
+        <h2>Tabla</h2>
+        <div class="tableWrap" id="tableWrap">
+          <table id="tbl">
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <p class="note" id="meta"></p>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>Salida</h2>
-      <pre id="out">Listo.</pre>
     </div>
   </div>
 
-  <h2>Ocupación por alojamiento (por mes)</h2>
-  <p class="muted">Ocupación = noches ocupadas / noches del mes. La última columna muestra el promedio de los meses seleccionados (X).</p>
-  <div class="tableWrap">
-    <table id="tblOcc">
-      <thead id="tblOccHead"></thead>
-      <tbody id="tblOccBody"></tbody>
-    </table>
-  </div>
+<script>
+/* ---------------- Utilities ---------------- */
+const $ = (id) => document.getElementById(id);
 
-  <script>
-    const $ = (id) => document.getElementById(id);
-    const out = (x) => ($("out").textContent = typeof x === "string" ? x : JSON.stringify(x, null, 2));
+function pad2(n){ return String(n).padStart(2,"0"); }
+function toISODate(d){
+  const y = d.getFullYear();
+  const m = pad2(d.getMonth()+1);
+  const day = pad2(d.getDate());
+  return `${y}-${m}-${day}`;
+}
+function monthKey(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`; } // YYYY-MM
+function monthLabel(key){
+  const [y,m] = key.split("-");
+  const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  return `${months[Number(m)-1]}-${y}`;
+}
+function daysInMonth(year, month1){ // month1 1..12
+  return new Date(year, month1, 0).getDate();
+}
+function clampDate(d, minD, maxD){
+  const t = d.getTime();
+  return new Date(Math.min(Math.max(t, minD.getTime()), maxD.getTime()));
+}
+function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 
-    function qsBase() {
-      const from = $("from").value;
-      const to = $("to").value;
-      const limit = $("limit").value;
-      const fetchMode = $("fetchMode").value;
-      return new URLSearchParams({ from, to, limit, fetchMode }).toString();
+function guessPropiedad(houseName){
+  const s = String(houseName||"").trim();
+  if(!s) return "Sin nombre";
+  // heurística: toma lo antes de " - " o " | " o " · "
+  const seps = [" - "," | "," · "," — "," – "];
+  for(const sep of seps){
+    const i = s.indexOf(sep);
+    if(i>0) return s.slice(0,i).trim();
+  }
+  return s;
+}
+
+function debounce(fn, ms=250){
+  let t=null;
+  return (...args)=>{
+    clearTimeout(t);
+    t=setTimeout(()=>fn(...args), ms);
+  };
+}
+
+function showErr(msg){
+  const el = $("errBox");
+  if(!msg){ el.style.display="none"; el.textContent=""; return; }
+  el.style.display="block";
+  el.textContent = msg;
+}
+
+/* ---------------- MultiSelect (portal a body, anti-recorte) ---------------- */
+class MultiSelect {
+  constructor({ mountEl, title, placeholder="Seleccionar…", onChange }){
+    this.mountEl = mountEl;
+    this.title = title;
+    this.placeholder = placeholder;
+    this.onChange = onChange || (()=>{});
+    this.options = []; // {value,label,meta}
+    this.selected = new Set();
+    this.isOpen = false;
+
+    this.btn = document.createElement("div");
+    this.btn.className = "ms-btn";
+    this.btn.tabIndex = 0;
+    this.btn.innerHTML = `
+      <div class="left">
+        <div class="title">${this.title}</div>
+        <div class="hint">${this.placeholder}</div>
+      </div>
+      <div class="chev">▾</div>
+    `;
+    this.mountEl.appendChild(this.btn);
+
+    this.menu = document.createElement("div");
+    this.menu.style.position = "fixed";
+    this.menu.style.zIndex = 99999;
+    this.menu.style.display = "none";
+    this.menu.style.minWidth = "280px";
+    this.menu.style.maxWidth = "520px";
+    this.menu.style.background = "rgba(17,26,51,.98)";
+    this.menu.style.border = "1px solid rgba(255,255,255,.14)";
+    this.menu.style.borderRadius = "14px";
+    this.menu.style.boxShadow = "0 20px 60px rgba(0,0,0,.55)";
+    this.menu.style.padding = "10px";
+    this.menu.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <input type="text" class="msSearch" placeholder="Buscar..." style="flex:1">
+        <button type="button" class="msAll" style="padding:8px 10px;border-radius:12px">Todo</button>
+        <button type="button" class="msNone" style="padding:8px 10px;border-radius:12px">Nada</button>
+      </div>
+      <div class="msList" style="max-height:280px;overflow:auto;padding-right:4px"></div>
+    `;
+    document.body.appendChild(this.menu);
+
+    this.searchEl = this.menu.querySelector(".msSearch");
+    this.listEl = this.menu.querySelector(".msList");
+    this.btnAll = this.menu.querySelector(".msAll");
+    this.btnNone = this.menu.querySelector(".msNone");
+
+    this.btn.addEventListener("click", ()=> this.toggle());
+    this.btn.addEventListener("keydown", (e)=>{
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); this.toggle(); }
+      if(e.key==="Escape"){ this.close(); }
+    });
+
+    this.searchEl.addEventListener("input", ()=> this.renderList());
+    this.btnAll.addEventListener("click", ()=>{
+      this.options.forEach(o=> this.selected.add(o.value));
+      this.refreshButton();
+      this.renderList();
+      this.onChange(this.getSelected());
+    });
+    this.btnNone.addEventListener("click", ()=>{
+      this.selected.clear();
+      this.refreshButton();
+      this.renderList();
+      this.onChange(this.getSelected());
+    });
+
+    window.addEventListener("resize", ()=> this.reposition());
+    window.addEventListener("scroll", ()=> this.reposition(), true);
+
+    document.addEventListener("mousedown", (e)=>{
+      if(!this.isOpen) return;
+      if(this.menu.contains(e.target) || this.btn.contains(e.target)) return;
+      this.close();
+    });
+  }
+
+  setOptions(options, { keepSelection=true } = {}){
+    this.options = Array.isArray(options) ? options : [];
+    if(!keepSelection){
+      this.selected.clear();
+    } else {
+      // limpia selección inválida
+      const valid = new Set(this.options.map(o=>o.value));
+      this.selected = new Set([...this.selected].filter(v=>valid.has(v)));
+    }
+    this.refreshButton();
+    this.renderList();
+  }
+
+  setSelected(values){
+    this.selected = new Set(Array.isArray(values) ? values : []);
+    const valid = new Set(this.options.map(o=>o.value));
+    this.selected = new Set([...this.selected].filter(v=>valid.has(v)));
+    this.refreshButton();
+    this.renderList();
+  }
+
+  getSelected(){ return [...this.selected]; }
+
+  refreshButton(){
+    const hint = this.btn.querySelector(".hint");
+    const n = this.selected.size;
+    if(n===0) hint.textContent = this.placeholder;
+    else if(n===1){
+      const v = [...this.selected][0];
+      const opt = this.options.find(o=>o.value===v);
+      hint.textContent = opt ? opt.label : String(v);
+    } else {
+      hint.textContent = `${n} seleccionados`;
+    }
+  }
+
+  renderList(){
+    const q = (this.searchEl.value||"").toLowerCase().trim();
+    const opts = q
+      ? this.options.filter(o => String(o.label).toLowerCase().includes(q))
+      : this.options;
+
+    this.listEl.innerHTML = "";
+    if(!opts.length){
+      const div = document.createElement("div");
+      div.className = "small";
+      div.style.padding = "6px 4px";
+      div.textContent = "Sin resultados.";
+      this.listEl.appendChild(div);
+      return;
     }
 
-    // ---------------- MultiSelect (portal a body) ----------------
-    function createMultiSelect({ mountEl, placeholder = "Selecciona...", items = [], onChange }) {
-      const state = {
-        items: [],
-        selected: new Set(),
-        panel: null,
-        search: "",
-      };
+    for(const o of opts){
+      const row = document.createElement("label");
+      row.style.display = "flex";
+      row.style.alignItems = "center";
+      row.style.gap = "10px";
+      row.style.padding = "8px 6px";
+      row.style.borderRadius = "12px";
+      row.style.cursor = "pointer";
+      row.style.userSelect = "none";
+      row.addEventListener("mouseenter", ()=> row.style.background="rgba(255,255,255,.05)");
+      row.addEventListener("mouseleave", ()=> row.style.background="transparent");
 
-      function setItems(newItems) {
-        state.items = [...newItems];
-        // conserva selección sólo si existe
-        const allowed = new Set(state.items.map((x) => x.value));
-        state.selected = new Set([...state.selected].filter((v) => allowed.has(v)));
-        renderBtn();
-        renderPanel();
-      }
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = this.selected.has(o.value);
+      cb.addEventListener("change", ()=>{
+        if(cb.checked) this.selected.add(o.value);
+        else this.selected.delete(o.value);
+        this.refreshButton();
+        this.onChange(this.getSelected());
+      });
 
-      function setSelected(values) {
-        state.selected = new Set(values);
-        renderBtn();
-        if (typeof onChange === "function") onChange(getSelected());
-      }
+      const txt = document.createElement("div");
+      txt.style.display = "flex";
+      txt.style.flexDirection = "column";
+      const t1 = document.createElement("div");
+      t1.textContent = o.label;
+      t1.style.fontSize = "13px";
+      const t2 = document.createElement("div");
+      t2.textContent = o.meta ? String(o.meta) : "";
+      t2.style.fontSize = "11px";
+      t2.style.color = "rgba(233,240,255,.65)";
+      if(!o.meta) t2.style.display="none";
+      txt.appendChild(t1); txt.appendChild(t2);
 
-      function getSelected() {
-        return [...state.selected];
-      }
+      row.appendChild(cb);
+      row.appendChild(txt);
+      this.listEl.appendChild(row);
+    }
+  }
 
-      function closePanel() {
-        if (state.panel) {
-          state.panel.remove();
-          state.panel = null;
-          document.removeEventListener("mousedown", onDocDown, true);
-          window.removeEventListener("scroll", closePanel, true);
-          window.removeEventListener("resize", closePanel, true);
+  reposition(){
+    if(!this.isOpen) return;
+    const r = this.btn.getBoundingClientRect();
+    const margin = 8;
+    const w = Math.min(Math.max(r.width, 280), 520);
+    this.menu.style.width = w + "px";
+    let left = r.left;
+    left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
+    let top = r.bottom + 8;
+    const menuH = this.menu.getBoundingClientRect().height || 340;
+    if(top + menuH > window.innerHeight - margin){
+      top = Math.max(margin, r.top - menuH - 8);
+    }
+    this.menu.style.left = left + "px";
+    this.menu.style.top = top + "px";
+  }
+
+  open(){
+    this.isOpen = true;
+    this.menu.style.display = "block";
+    this.reposition();
+    this.searchEl.value = "";
+    this.searchEl.focus();
+    this.renderList();
+  }
+  close(){
+    this.isOpen = false;
+    this.menu.style.display = "none";
+  }
+  toggle(){
+    this.isOpen ? this.close() : this.open();
+  }
+}
+
+/* ---------------- Data + Render ---------------- */
+let ALL_BOOKINGS = [];
+let META = {};
+
+const msProp = new MultiSelect({
+  mountEl: $("msPropiedad"),
+  title: "Propiedad",
+  placeholder: "Todas (si no eliges nada)",
+  onChange: debounce(()=> renderAll(), 150),
+});
+const msHouse = new MultiSelect({
+  mountEl: $("msHouse"),
+  title: "Alojamientos",
+  placeholder: "Todos (si no eliges nada)",
+  onChange: debounce(()=> renderAll(), 150),
+});
+const msAvg = new MultiSelect({
+  mountEl: $("msAvgMonths"),
+  title: "Meses para promedio",
+  placeholder: "Todos los meses visibles",
+  onChange: debounce(()=> renderAll(), 150),
+});
+
+function setDefaults(){
+  const today = new Date();
+  $("to").value = toISODate(today);
+  $("from").value = "2025-01-01";
+}
+setDefaults();
+
+async function fetchBookings(){
+  showErr("");
+  const from = $("from").value;
+  const to = $("to").value;
+  const size = Math.min(200, Math.max(10, Number($("size").value || 200)));
+
+  const qs = new URLSearchParams({ from, to, size: String(size) });
+
+  $("meta").textContent = "Cargando…";
+  const res = await fetch(`/api/bookings?${qs.toString()}`);
+  const data = await res.json();
+  if(!res.ok || !data.ok){
+    throw new Error(data?.error || "Error al cargar /api/bookings");
+  }
+
+  ALL_BOOKINGS = data.bookings || [];
+  META = data;
+
+  $("meta").textContent =
+    `Fuente: /api/bookings · pagesUsed=${data.pagesUsed} · totalCount=${data.totalCount} · bookingsInRange=${ALL_BOOKINGS.length}`;
+
+  // opciones de filtros
+  const propCounts = new Map();
+  const houseCounts = new Map();
+
+  for(const b of ALL_BOOKINGS){
+    const hn = b.houseName || String(b.property_id || "");
+    const pn = guessPropiedad(hn);
+    propCounts.set(pn, (propCounts.get(pn)||0)+1);
+    houseCounts.set(hn, (houseCounts.get(hn)||0)+1);
+  }
+
+  const propOptions = [...propCounts.entries()]
+    .sort((a,b)=> a[0].localeCompare(b[0]))
+    .map(([name,c])=>({ value:name, label:name, meta:`${c} reservas` }));
+
+  const houseOptions = [...houseCounts.entries()]
+    .sort((a,b)=> a[0].localeCompare(b[0]))
+    .map(([name,c])=>({ value:name, label:name, meta:`${c} reservas` }));
+
+  msProp.setOptions(propOptions, { keepSelection:true });
+  msHouse.setOptions(houseOptions, { keepSelection:true });
+
+  renderAll();
+}
+
+function bookingIsActive(b){
+  const s = String(b.status||"").toLowerCase();
+  return !(s.includes("cancel") || s.includes("canceled") || s.includes("cancelled"));
+}
+
+function filterBookings(){
+  const selProp = new Set(msProp.getSelected());
+  const selHouse = new Set(msHouse.getSelected());
+
+  return ALL_BOOKINGS.filter(b=>{
+    if(!bookingIsActive(b)) return false;
+    const hn = b.houseName || String(b.property_id||"");
+    const pn = guessPropiedad(hn);
+    if(selProp.size && !selProp.has(pn)) return false;
+    if(selHouse.size && !selHouse.has(hn)) return false;
+    return true;
+  });
+}
+
+function computeMonthsInRange(fromISO, toISO){
+  const from = new Date(fromISO + "T00:00:00");
+  const to = new Date(toISO + "T00:00:00");
+  const months = [];
+  let cur = new Date(from.getFullYear(), from.getMonth(), 1);
+  const end = new Date(to.getFullYear(), to.getMonth(), 1);
+  while(cur <= end){
+    months.push(monthKey(cur));
+    cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+  }
+  return months;
+}
+
+function computeAvailableDaysByMonth(fromISO, toISO, months){
+  const from = startOfDay(new Date(fromISO + "T00:00:00"));
+  const to = startOfDay(new Date(toISO + "T00:00:00"));
+  const map = new Map();
+  for(const mk of months){
+    const [y,m] = mk.split("-").map(Number);
+    const dim = daysInMonth(y,m);
+    const monthStart = new Date(y, m-1, 1);
+    const monthEnd = new Date(y, m-1, dim); // inclusive
+    const a = clampDate(monthStart, from, to);
+    const b = clampDate(monthEnd, from, to);
+    const days = Math.max(0, Math.round((startOfDay(b)-startOfDay(a))/(24*3600*1000)) + 1);
+    map.set(mk, days);
+  }
+  return map;
+}
+
+function allocateNightsByMonth(arrivalISO, departureISO, fromISO, toISO){
+  // arrival inclusive, departure exclusive. Se clampa al rango.
+  const from = startOfDay(new Date(fromISO + "T00:00:00"));
+  const to = startOfDay(new Date(toISO + "T00:00:00"));
+  const start = startOfDay(new Date(arrivalISO + "T00:00:00"));
+  const endExcl = startOfDay(new Date(departureISO + "T00:00:00"));
+
+  // clamp to [from, to+1day)
+  const clampStart = new Date(Math.max(start.getTime(), from.getTime()));
+  const toExcl = addDays(to, 1);
+  const clampEndExcl = new Date(Math.min(endExcl.getTime(), toExcl.getTime()));
+
+  const out = new Map();
+  if(clampEndExcl <= clampStart) return out;
+
+  let d = new Date(clampStart);
+  while(d < clampEndExcl){
+    const mk = monthKey(d);
+    out.set(mk, (out.get(mk)||0) + 1);
+    d = addDays(d, 1);
+  }
+  return out;
+}
+
+function fmtPct(x){
+  if(!Number.isFinite(x)) return "—";
+  return `${x.toFixed(1)}%`;
+}
+
+function pctColor(p){
+  if(!Number.isFinite(p)) return "rgba(255,255,255,.04)";
+  if(p >= 85) return "rgba(46,229,157,.18)";
+  if(p >= 60) return "rgba(74,163,255,.16)";
+  if(p >= 35) return "rgba(255,204,102,.16)";
+  return "rgba(255,107,107,.14)";
+}
+
+function renderAll(){
+  const fromISO = $("from").value;
+  const toISO = $("to").value;
+  if(!fromISO || !toISO) return;
+
+  const filtered = filterBookings();
+
+  const months = computeMonthsInRange(fromISO, toISO);
+  const availableDays = computeAvailableDaysByMonth(fromISO, toISO, months);
+
+  // actualizar opciones de meses para promedio (X)
+  const monthOptions = months.map(mk=>({ value: mk, label: monthLabel(mk), meta:`${availableDays.get(mk)} días` }));
+  msAvg.setOptions(monthOptions, { keepSelection:true });
+
+  const selAvg = new Set(msAvg.getSelected());
+  const avgMonths = selAvg.size ? months.filter(m=>selAvg.has(m)) : months;
+
+  // calcular ocupación por house y month
+  const houseSet = new Set();
+  const propSet = new Set();
+  const occ = new Map(); // house -> Map(month -> nights)
+
+  for(const b of filtered){
+    const hn = b.houseName || String(b.property_id||"");
+    houseSet.add(hn);
+    propSet.add(guessPropiedad(hn));
+
+    const alloc = allocateNightsByMonth(b.arrival, b.departure, fromISO, toISO);
+    if(!occ.has(hn)) occ.set(hn, new Map());
+    const m = occ.get(hn);
+    for(const [mk, n] of alloc.entries()){
+      m.set(mk, (m.get(mk)||0) + n);
+    }
+  }
+
+  $("statBookings").textContent = `Reservas: ${filtered.length}`;
+  $("statHouses").textContent = `Alojamientos: ${houseSet.size}`;
+  $("statMonths").textContent = `Meses: ${months.length}`;
+
+  // render tabla
+  const houses = [...houseSet].sort((a,b)=> a.localeCompare(b));
+
+  // Header
+  const thead = $("thead");
+  thead.innerHTML = "";
+  const hr = document.createElement("tr");
+
+  const th0 = document.createElement("th");
+  th0.className = "stickyCol";
+  th0.textContent = "Alojamiento";
+  hr.appendChild(th0);
+
+  for(const mk of months){
+    const th = document.createElement("th");
+    th.textContent = monthLabel(mk);
+    th.className = "num";
+    hr.appendChild(th);
+  }
+
+  const thAvg = document.createElement("th");
+  thAvg.textContent = selAvg.size ? `Promedio (${avgMonths.length} meses)` : `Promedio (todos)`;
+  thAvg.className = "num";
+  hr.appendChild(thAvg);
+
+  thead.appendChild(hr);
+
+  // Body
+  const tbody = $("tbody");
+  tbody.innerHTML = "";
+
+  for(const hn of houses){
+    const tr = document.createElement("tr");
+
+    const tdName = document.createElement("td");
+    tdName.className = "stickyCol";
+    tdName.innerHTML = `<div>${hn}</div><div class="small">${guessPropiedad(hn)}</div>`;
+    tr.appendChild(tdName);
+
+    const monthMap = occ.get(hn) || new Map();
+
+    // acumulador para promedio
+    let sumPct = 0;
+    let countPct = 0;
+
+    for(const mk of months){
+      const nights = monthMap.get(mk) || 0;
+      const days = availableDays.get(mk) || 0;
+      const pct = days ? (nights / days) * 100 : NaN;
+
+      if(avgMonths.includes(mk)){
+        if(Number.isFinite(pct)){
+          sumPct += pct;
+          countPct += 1;
         }
       }
 
-      function onDocDown(e) {
-        if (!state.panel) return;
-        if (state.panel.contains(e.target)) return;
-        if (mountEl.contains(e.target)) return;
-        closePanel();
-      }
+      const td = document.createElement("td");
+      td.className = "num";
 
-      function renderBtn() {
-        mountEl.innerHTML = "";
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "msBtn";
-        btn.innerHTML = `
-          <div class="msLabel">
-            <span class="${state.selected.size ? "" : "msPlaceholder"}">
-              ${state.selected.size ? "" : placeholder}
-            </span>
-          </div>
-          <span class="msCaret">▾</span>
-        `;
+      const pill = document.createElement("span");
+      pill.className = "heat";
+      pill.style.background = pctColor(pct);
+      pill.title = `${hn} · ${monthLabel(mk)}\nNoches: ${nights} / ${days} días\nOcupación: ${fmtPct(pct)}`;
+      pill.textContent = fmtPct(pct);
 
-        const labelWrap = btn.querySelector(".msLabel");
-        if (state.selected.size) {
-          const selectedItems = state.items.filter((x) => state.selected.has(x.value));
-          const max = 3;
-          selectedItems.slice(0, max).forEach((it) => {
-            const chip = document.createElement("span");
-            chip.className = "tag";
-            chip.textContent = it.label;
-            labelWrap.appendChild(chip);
-          });
-          if (selectedItems.length > max) {
-            const more = document.createElement("span");
-            more.className = "tag";
-            more.textContent = `+${selectedItems.length - max}`;
-            labelWrap.appendChild(more);
-          }
-        }
-
-        btn.addEventListener("click", () => {
-          if (state.panel) return closePanel();
-          openPanel(btn);
-        });
-
-        mountEl.appendChild(btn);
-      }
-
-      function openPanel(btn) {
-        const r = btn.getBoundingClientRect();
-        const panel = document.createElement("div");
-        panel.className = "msPanel";
-        panel.style.left = `${Math.max(12, Math.min(r.left, window.innerWidth - 12))}px`;
-        panel.style.top = `${Math.min(r.bottom + 8, window.innerHeight - 12)}px`;
-
-        panel.innerHTML = `
-          <header>
-            <input type="search" placeholder="Buscar..." />
-            <span class="tag">${state.selected.size} seleccionados</span>
-          </header>
-          <div class="msList"></div>
-          <div class="msFoot">
-            <button type="button" data-act="all">Seleccionar todo</button>
-            <button type="button" data-act="none">Limpiar</button>
-          </div>
-        `;
-
-        document.body.appendChild(panel);
-        state.panel = panel;
-
-        const search = panel.querySelector('input[type="search"]');
-        const list = panel.querySelector(".msList");
-
-        function renderList() {
-          const q = (state.search || "").trim().toLowerCase();
-          const filtered = !q
-            ? state.items
-            : state.items.filter((x) => x.label.toLowerCase().includes(q));
-
-          list.innerHTML = "";
-          for (const it of filtered) {
-            const row = document.createElement("div");
-            row.className = "msItem";
-            row.innerHTML = `
-              <input type="checkbox" ${state.selected.has(it.value) ? "checked" : ""} />
-              <div style="display:flex;flex-direction:column;gap:2px">
-                <div style="font-weight:600">${it.label}</div>
-                <div class="muted" style="font-size:12px">${it.value}</div>
-              </div>
-            `;
-            row.addEventListener("click", (e) => {
-              if (e.target && e.target.tagName === "INPUT") return;
-              const v = it.value;
-              if (state.selected.has(v)) state.selected.delete(v);
-              else state.selected.add(v);
-              renderList();
-              renderHeaderCount();
-              renderBtn();
-              if (typeof onChange === "function") onChange(getSelected());
-            });
-
-            const cb = row.querySelector("input");
-            cb.addEventListener("change", () => {
-              const v = it.value;
-              if (cb.checked) state.selected.add(v);
-              else state.selected.delete(v);
-              renderHeaderCount();
-              renderBtn();
-              if (typeof onChange === "function") onChange(getSelected());
-            });
-
-            list.appendChild(row);
-          }
-        }
-
-        function renderHeaderCount() {
-          const badge = panel.querySelector("header .tag");
-          if (badge) badge.textContent = `${state.selected.size} seleccionados`;
-        }
-
-        search.addEventListener("input", () => {
-          state.search = search.value || "";
-          renderList();
-        });
-
-        panel.querySelector('[data-act="all"]').addEventListener("click", () => {
-          for (const it of state.items) state.selected.add(it.value);
-          renderList();
-          renderHeaderCount();
-          renderBtn();
-          if (typeof onChange === "function") onChange(getSelected());
-        });
-
-        panel.querySelector('[data-act="none"]').addEventListener("click", () => {
-          state.selected.clear();
-          renderList();
-          renderHeaderCount();
-          renderBtn();
-          if (typeof onChange === "function") onChange(getSelected());
-        });
-
-        renderList();
-
-        // cerrar al click fuera / scroll / resize
-        setTimeout(() => {
-          document.addEventListener("mousedown", onDocDown, true);
-          window.addEventListener("scroll", closePanel, true);
-          window.addEventListener("resize", closePanel, true);
-        }, 0);
-      }
-
-      function renderPanel() {
-        // si está abierto, re-render list
-        if (!state.panel) return;
-        const search = state.panel.querySelector('input[type="search"]');
-        state.search = search ? (search.value || "") : "";
-        const list = state.panel.querySelector(".msList");
-        if (!list) return;
-        // dispara re-render por cierre y reapertura simple:
-        const btn = mountEl.querySelector("button.msBtn");
-        closePanel();
-        if (btn) openPanel(btn);
-      }
-
-      // init
-      setItems(items);
-      renderBtn();
-
-      return { setItems, setSelected, getSelected };
+      td.appendChild(pill);
+      tr.appendChild(td);
     }
 
-    // ---------------- Ocupación helpers ----------------
-    const fmtMes = new Intl.DateTimeFormat("es-MX", { month: "short", year: "numeric" });
+    const avg = countPct ? (sumPct / countPct) : NaN;
 
-    function toMonthKeyUTC(d) {
-      const y = d.getUTCFullYear();
-      const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-      return `${y}-${m}`;
-    }
+    const tdAvg = document.createElement("td");
+    tdAvg.className = "num";
+    const pillAvg = document.createElement("span");
+    pillAvg.className = "heat";
+    pillAvg.style.background = pctColor(avg);
+    pillAvg.title = selAvg.size
+      ? `Promedio de ${avgMonths.length} meses seleccionados\n${fmtPct(avg)}`
+      : `Promedio de todos los meses visibles\n${fmtPct(avg)}`;
+    pillAvg.textContent = fmtPct(avg);
+    tdAvg.appendChild(pillAvg);
+    tr.appendChild(tdAvg);
 
-    function parseISO(iso) {
-      // UTC midnight
-      return new Date(`${iso}T00:00:00Z`);
-    }
+    tbody.appendChild(tr);
+  }
+}
 
-    function daysInMonthUTC(year, month1to12) {
-      // month1to12: 1..12
-      return new Date(Date.UTC(year, month1to12, 0)).getUTCDate();
-    }
+/* ---------------- Events: auto-refresh inmediato ---------------- */
+const refresh = debounce(async ()=>{
+  try{
+    await fetchBookings();
+  }catch(e){
+    showErr(String(e?.message || e));
+    $("meta").textContent = "";
+    ALL_BOOKINGS = [];
+    renderAll();
+  }
+}, 250);
 
-    function monthRange(fromISO, toISO) {
-      const from = parseISO(fromISO);
-      const to = parseISO(toISO);
-      const cur = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1));
-      const end = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), 1));
-      const out = [];
-      while (cur <= end) {
-        const key = toMonthKeyUTC(cur);
-        const label = fmtMes.format(cur).replace(".", ""); // ej. "ene 2026"
-        out.push({ value: key, label });
-        cur.setUTCMonth(cur.getUTCMonth() + 1);
-      }
-      return out;
-    }
+["from","to","size"].forEach(id=>{
+  $(id).addEventListener("change", refresh);
+  $(id).addEventListener("input", refresh);
+});
 
-    function clampToRange(arrivalISO, departureISO, fromISO, toISO) {
-      const a = parseISO(arrivalISO);
-      const d = parseISO(departureISO);
-      const from = parseISO(fromISO);
-      const toExclusive = parseISO(toISO);
-      toExclusive.setUTCDate(toExclusive.getUTCDate() + 1);
-
-      const start = a > from ? a : from;
-      const end = d < toExclusive ? d : toExclusive;
-      if (end <= start) return null;
-      return { start, end }; // end es exclusivo
-    }
-
-    function splitNightsByMonth(clamped) {
-      // recibe {start,end
+// initial load
+refresh();
+</script>
+</body>
+</html>
