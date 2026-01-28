@@ -295,7 +295,7 @@
 <main class="wrap">
 
   <!-- Parámetros -->
-  <section class="card">
+  <section class="card" style="overflow:visible;">
     <div class="hd">
       <div>
         <h2>Parámetros</h2>
@@ -450,6 +450,28 @@
             <option value="line">Gráfica de líneas (% ocupación)</option>
           </select>
         </label>
+
+        
+        <div class="mcb" id="mcbOccAvgMonths" style="flex:1.2">
+          <div class="hint">Promedio (mes-año)</div>
+          <button class="mcbBtn" type="button">
+            <span class="mcbLabel">Todos</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="mcbPanel">
+            <input class="mcbSearch" type="text" placeholder="Buscar mes..." />
+            <div class="mcbTools">
+              <button type="button" class="mcbAll">Seleccionar todo</button>
+              <button type="button" class="mcbNone">Limpiar</button>
+            </div>
+            <div class="mcbList"></div>
+            <div class="mcbFooter">
+              <span class="mcbCount">0 seleccionados</span>
+              <button type="button" class="mcbClose">Cerrar</button>
+            </div>
+          </div>
+        </div>
+
 
         <!-- ✅ combobox multi: Propiedad (ocupación) -->
         <div class="mcb" id="mcbOccPropiedad" style="flex:1.2">
@@ -1105,9 +1127,12 @@
     return out;
   }
 
-  function rebuildOccMCBsFromContext(availableProps, availableHouses){
+  function rebuildOccMCBsFromContext(availableProps, availableHouses, availableMonths){
     // Propiedad (ocupación)
     setMCBItems("mcbOccPropiedad", availableProps, true);
+
+    // Meses para promedio (ocupación)
+    setMCBItems("mcbOccAvgMonths", availableMonths, true);
 
     // Alojamientos
     setMCBItems("mcbOccHouses", availableHouses, true);
@@ -1174,7 +1199,7 @@
     const availableHousesAll = [...houseSet].sort((a,b)=>a.localeCompare(b));
 
     // Rebuild occupancy MCBs with available items (keep selected if possible)
-    rebuildOccMCBsFromContext(availableProps, availableHousesAll);
+    rebuildOccMCBsFromContext(availableProps, availableHousesAll, months.map(m=>m.key));
 
     // Apply occupancy-local property filter
     const occProps = getMCBSelected("mcbOccPropiedad").map(s=>s.toLowerCase());
@@ -1196,11 +1221,19 @@
 
     const housesToShow = housesAvailable.filter(h => !occHasHouse || occHouseSet.has(h));
 
+    
+    // Promedio: meses seleccionados (si no hay selección, usa todos los meses visibles)
+    const avgMonthsSel = getMCBSelected("mcbOccAvgMonths");
+    const avgMonthKeys = (avgMonthsSel && avgMonthsSel.length) ? avgMonthsSel : months.map(m=>m.key);
+    const avgSet = new Set(avgMonthKeys);
+    const avgCount = avgSet.size;
+
     // Header
     const trh = document.createElement("tr");
     trh.innerHTML = `
       <th class="houseCol">HouseName</th>
       ${months.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
+      <th>Promedio (${avgCount} meses)</th>
     `;
     thead.appendChild(trh);
 
@@ -1236,13 +1269,42 @@
         `;
       }).join("");
 
-      tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}`;
+      // Avg cell (ponderado por noches disponibles en meses seleccionados)
+let occSum = 0;
+let totalSum = 0;
+for(const mo of months){
+  if(!avgSet.has(mo.key)) continue;
+  const ms = monthStartUTC(mo.y, mo.m0);
+  const me = monthEndUTCExclusive(mo.y, mo.m0);
+  const totalNightsMonth = daysBetweenUTC(ms, me);
+  totalSum += totalNightsMonth;
+  occSum += (hm.get(mo.key) || 0);
+}
+const avgPct = totalSum > 0 ? (occSum / totalSum) * 100 : 0;
+const avgPctTxt = `${avgPct.toFixed(0)}%`;
+const avgOccTxt = `${occSum}/${totalSum} noches`;
+const avgCell = `
+  <td class="occCell">
+    <div class="occTop">
+      <span class="mono">${escapeHtml(avgOccTxt)}</span>
+      <span class="mono">${escapeHtml(avgPctTxt)}</span>
+    </div>
+    <div class="occMain">
+      <div class="bar" title="${escapeHtml(avgPctTxt)}">
+        <div style="width:${Math.max(0, Math.min(100, avgPct)).toFixed(1)}%"></div>
+      </div>
+    </div>
+  </td>
+`;
+
+tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCell}`;
+
       frag.appendChild(tr);
     }
     tbody.appendChild(frag);
 
     $("occMeta").textContent =
-      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length}`;
+      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length} · Promedio: ${avgCount} meses`;
 
     // Build series for line chart using housesToShow
     buildOccupancySeriesForChart(months, housesToShow, map);
@@ -1342,6 +1404,7 @@
     // init multi-comboboxes
     initMCB("mcbPropiedad", { emptyLabel:"Todas", onChange: ()=> applyLocalFilters() });
     initMCB("mcbOccPropiedad", { emptyLabel:"Todas", onChange: ()=> renderOccupancyByMonth() });
+    initMCB("mcbOccAvgMonths", { emptyLabel:"Todos", onChange: ()=> renderOccupancyByMonth() });
     initMCB("mcbOccHouses", { emptyLabel:"Todos", onChange: ()=> renderOccupancyByMonth() });
 
     // botones header
