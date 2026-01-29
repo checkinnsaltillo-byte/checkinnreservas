@@ -108,7 +108,30 @@
     .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
     .kpi .mini{margin-top:8px; height:110px; width:100%}
 
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
+    
+
+    /* ======= KPI destacado: Gross + subKPIs ======= */
+    .kpiGrossBig{
+      border-color: rgba(74,222,128,.35);
+      background: linear-gradient(180deg, rgba(74,222,128,.16), rgba(15,26,48,.55));
+    }
+    .kpiGrossBig .val{ font-size:22px; }
+    .kpiNest{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:8px;
+    }
+    .kpiSub{
+      border:1px solid rgba(30,43,74,.75);
+      background: rgba(11,18,32,.45);
+      border-radius:14px;
+      padding:10px;
+      min-height:64px;
+    }
+    .kpiSub .lbl{ font-size:11.5px; color:var(--muted); }
+    .kpiSub .val{ margin-top:6px; font-size:14px; font-weight:900; letter-spacing:.2px; }
+.mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
 
     .tableWrap{
       border:1px solid var(--line);
@@ -266,26 +289,7 @@
       color:var(--muted);
       font-size:12px;
     }
-  
-  .kpi.kpiGrossMain{
-    background: linear-gradient(135deg, rgba(45, 120, 255, .18), rgba(30, 60, 140, .12));
-    border: 1px solid rgba(90, 150, 255, .28);
-    box-shadow: 0 10px 22px rgba(0,0,0,.22);
-    grid-column: span 2;
-  }
-  .kpi.kpiGrossMain .val{ font-size: 26px; font-weight: 800; letter-spacing: .2px; }
-  .kpiNest{ display:flex; gap:10px; margin-top:10px; }
-  .kpiMini{
-    flex:1;
-    padding:10px 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.10);
-    background: rgba(0,0,0,.12);
-  }
-  .kpiMini .lbl{ font-size: 11px; color: rgba(232,238,252,.75); }
-  .kpiMini .val{ font-size: 14px; font-weight: 700; margin-top:2px; }
-
-</style>
+  </style>
 </head>
 
 <body>
@@ -406,40 +410,43 @@
         <div class="kpi">
           <div class="lbl">Noches (sum)</div>
           <div class="val" id="kpiNights">—</div>
-          
+          <div class="meta">Suma Nights</div>
+        </div>
+
 
         <div class="kpi">
           <div class="lbl">Huéspedes únicos</div>
           <div class="val" id="kpiGuests">—</div>
-          <div class="meta">Por teléfono/nombre (normalizado)</div>
+          <div class="meta">Por teléfono o nombre</div>
         </div>
 
         <div class="kpi">
           <div class="lbl">Precio / noche (prom)</div>
           <div class="val" id="kpiAvgNight">—</div>
-          <div class="meta">Gross / Noches</div>
-        </div>
-<div class="meta">Suma Nights</div>
+          <div class="meta">Gross / Nights</div>
         </div>
 
-        <div class="kpi kpiGrossMain">
-  <div class="lbl">Gross (sum)</div>
-  <div class="val" id="kpiGross">—</div>
-  <div class="meta">Suma GrossAmount</div>
-  <div class="kpiNest">
-    <div class="kpiMini">
-      <div class="lbl">RoomRate</div>
-      <div class="val" id="kpiRoomRate">—</div>
-    </div>
-    <div class="kpiMini">
-      <div class="lbl">Fee</div>
-      <div class="val" id="kpiFee">—</div>
-    </div>
-    <div class="kpiMini">
-      <div class="lbl">Tax</div>
-      <div class="val" id="kpiTax">—</div>
-    </div>
-  </div>
+                <div class="kpi kpiGrossBig">
+          <div class="lbl">Gross (sum)</div>
+          <div class="val" id="kpiGross">—</div>
+          <div class="meta">Suma GrossAmount</div>
+
+          <div class="kpiNest">
+            <div class="kpiSub">
+              <div class="lbl">RoomRate</div>
+              <div class="val" id="kpiRoomRate">—</div>
+            </div>
+            <div class="kpiSub">
+              <div class="lbl">Fee</div>
+              <div class="val" id="kpiFee">—</div>
+            </div>
+            <div class="kpiSub">
+              <div class="lbl">Tax</div>
+              <div class="val" id="kpiTax">—</div>
+            </div>
+          </div>
+        </div>
+</div>
 </div>
 </div>
 
@@ -626,7 +633,6 @@
   let chSourceBar = null;
   let chStatusBar = null;
   let chOccLines = null;
-  let occHighlight = null;
 
   // Ocupación series cache
   let occSeries = null; // { months:[...], houses:[...], pctByHouse: Map(house -> [pct...]) }
@@ -794,9 +800,7 @@
     const statuses = [...new Set(rowsRaw.map(r => safeStr(r.Status).trim()).filter(Boolean))]
       .sort((a,b)=>a.localeCompare(b));
     selSt.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
-    const booked = statuses.find(s => normalizeText(s) === "booked");
-    if(!curSt && booked) selSt.value = booked;
-    else selSt.value = statuses.includes(curSt) ? curSt : "";
+    selSt.value = statuses.includes(curSt) ? curSt : "";
   }
 
   // ===== Multi-combobox implementation =====
@@ -1012,11 +1016,11 @@ function unescapeHtml(s){
     }, 0);
   }
 
-  function renderKPIs(){
+    function renderKPIs(){
     $("pillFiltered").textContent = `${rowsFiltered.length.toLocaleString("es-MX")} filas`;
 
-    const uniq = new Set(rowsFiltered.map(r => safeStr(r.Id))).size;
-    $("kpiBookings").textContent = uniq.toLocaleString("es-MX");
+    const uniqBookings = new Set(rowsFiltered.map(r => safeStr(r.Id))).size;
+    $("kpiBookings").textContent = uniqBookings.toLocaleString("es-MX");
 
     const nights = rowsFiltered.reduce((a,r)=>a + safeNum(r.Nights), 0);
     $("kpiNights").textContent = nights.toLocaleString("es-MX");
@@ -1024,19 +1028,30 @@ function unescapeHtml(s){
     const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
     $("kpiGross").textContent = moneyMXN(gross);
 
+    // Huéspedes únicos (prioriza teléfono; si no hay, usa nombre+email normalizados)
+    const norm = (s)=> safeStr(s)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/\s+/g," ").trim();
+
+    const guestKeys = new Set();
+    for(const r of rowsFiltered){
+      const phone = normalizePhoneDigits(r.GuestPhone);
+      if(phone && phone.length >= 7) guestKeys.add("p:" + phone);
+      else{
+        const nm = norm(r.GuestName);
+        const em = norm(r.GuestEmail);
+        if(nm || em) guestKeys.add("n:" + nm + "|e:" + em);
+      }
+    }
+    $("kpiGuests").textContent = guestKeys.size.toLocaleString("es-MX");
+
+    const avgNight = nights > 0 ? (gross / nights) : 0;
+    $("kpiAvgNight").textContent = nights > 0 ? moneyMXN(avgNight) : "—";
+
     $("kpiRoomRate").textContent = moneyMXN(sumByLineItem("RoomRate"));
     $("kpiFee").textContent      = moneyMXN(sumByLineItem("Fee"));
     $("kpiTax").textContent      = moneyMXN(sumByLineItem("Tax"));
-  
-
-    // Huéspedes únicos (robusto: por teléfono o nombre/email normalizado)
-    const guestSet = new Set(rowsFiltered.map(r=> guestKeyFromRow(r)));
-    $("kpiGuests").textContent = guestSet.size.toLocaleString("es-MX");
-
-    // Precio promedio por noche (Gross / Noches)
-    const avg = nights ? (gross / nights) : 0;
-    $("kpiAvgNight").textContent = nights ? moneyMXN(avg) : "—";
-}
+  }
 
   // ===== Table OTC =====
   function renderTable(){
@@ -1136,15 +1151,14 @@ function unescapeHtml(s){
       type: "bar",
       data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
       options: {
-                indexAxis:"y",
-responsive:true,
+        responsive:true,
         maintainAspectRatio:false,
         plugins:{
           legend:{ display:false },
           tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
           barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
-        scales:{ x:{ beginAtZero:true }, y:{  beginAtZero:true  } }
+        scales:{ y:{ beginAtZero:true } }
       },
       plugins: [barValueLabels]
     });
@@ -1153,15 +1167,14 @@ responsive:true,
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
-                indexAxis:"y",
-responsive:true,
+        responsive:true,
         maintainAspectRatio:false,
         plugins:{
           legend:{ display:false },
           tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
           barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
-        scales:{ x:{ beginAtZero:true }, y:{  beginAtZero:true  } }
+        scales:{ y:{ beginAtZero:true } }
       },
       plugins: [barValueLabels]
     });
@@ -1418,23 +1431,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       return { label:h, data, tension:0.25, pointRadius:0, borderWidth:1 };
     });
 
-    
-    // Resaltado por selección en leyenda (sin ocultar series)
-    if(occHighlight){
-      for(const ds of datasets){
-        const isSel = ds.label === occHighlight;
-        ds.borderWidth = isSel ? 3 : 1;
-        ds.borderDash = isSel ? [] : [6,4];
-        ds.pointRadius = isSel ? 2 : 0;
-      }
-    } else {
-      for(const ds of datasets){
-        ds.borderWidth = 1;
-        ds.borderDash = [];
-        ds.pointRadius = 0;
-      }
-    }
-if(chOccLines) chOccLines.destroy();
+    if(chOccLines) chOccLines.destroy();
     chOccLines = new Chart(canvas, {
       type: "line",
       data: { labels, datasets },
@@ -1447,10 +1444,32 @@ if(chOccLines) chOccLines.destroy();
             display:true,
             position:"bottom",
             labels:{ boxWidth:10 },
-            onClick:(e, item)=>{
-              const label = item.text;
-              occHighlight = (occHighlight === label) ? null : label;
-              renderOccLineChart();
+            onClick:(e, legendItem, legend)=>{
+              const chart = legend.chart;
+              const idx = legendItem.datasetIndex;
+
+              const cur = chart.$highlightIndex;
+              chart.$highlightIndex = (cur === idx) ? null : idx;
+
+              chart.data.datasets.forEach((ds, i)=>{
+                ds.hidden = false;
+                ds.$origBorderColor = ds.$origBorderColor || ds.borderColor;
+                if(chart.$highlightIndex === null){
+                  ds.borderWidth = 1;
+                  ds.borderDash = [];
+                  ds.borderColor = ds.$origBorderColor;
+                }else if(i === chart.$highlightIndex){
+                  ds.borderWidth = 3;
+                  ds.borderDash = [];
+                  ds.borderColor = ds.$origBorderColor;
+                }else{
+                  ds.borderWidth = 1;
+                  ds.borderDash = [6,4];
+                  ds.borderColor = "rgba(159,176,208,.35)";
+                }
+              });
+
+              chart.update();
             }
           },
           tooltip:{ callbacks:{ label:(ctx)=>` ${ctx.dataset.label}: ${ctx.raw}%` } }
@@ -1627,7 +1646,7 @@ if(chOccLines) chOccLines.destroy();
       const sGross = Math.log1p(gross) / Math.log1p(maxGross);
 
       // Score final: puedes ajustar pesos
-      const score01 = (0.60*sBookings) + (0.40*sGross);
+      const score01 = (0.45*sBookings) + (0.40*sGross) + (0.10*recency) + (0.05*diversity);
       const score = Math.max(0, Math.min(100, Math.round(score01 * 100)));
 
       let stars = 1;
@@ -1653,27 +1672,7 @@ if(chOccLines) chOccLines.destroy();
     return s + e;
   }
 
-  
-function scoreColor(score){
-  const s = Math.max(0, Math.min(100, Number(score)||0));
-  const hue = (s/100)*120; // 0=rojo, 120=verde
-  return "hsl(" + hue + ", 85%, 55%)";
-}
-function starsHtml(score, stars){
-    const fill = scoreColor(score);
-    const empty = "rgba(232,238,252,.18)";
-    let out = '<div style="display:flex; gap:4px; align-items:center;">';
-    for(let i=1;i<=5;i++){
-      const c = (i<=stars) ? fill : empty;
-      out += '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">'
-          + '<path fill="' + c + '" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>'
-          + '</svg>';
-    }
-    out += '</div>';
-    return out;
-  }
-
-function openGuestsWindow(){
+  function openGuestsWindow(){
     const rows = rowsFiltered; // ✅ usa el universo actual (Parámetros + filtros)
     const profiles = buildGuestProfiles(rows);
 
@@ -1904,14 +1903,9 @@ function openGuestsWindow(){
           <div class="meta">HouseName únicos</div>
         </div>
         <div class="kpi">
-          <div class="lbl">Primera reserva</div>
-          <div class="val" id="kpiFirst">—</div>
-          <div class="meta">Fecha de primera llegada</div>
-        </div>
-        <div class="kpi">
-          <div class="lbl">Última reserva</div>
-          <div class="val" id="kpiLast">—</div>
-          <div class="meta">Fecha de última llegada</div>
+          <div class="lbl">Recencia</div>
+          <div class="val" id="kpiRecency">—</div>
+          <div class="meta">Días desde última llegada</div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
@@ -1922,12 +1916,10 @@ function openGuestsWindow(){
 
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Datos de contacto</div>
-          <div id="contactName" style="margin-top:8px; font-weight:900; font-size:18px; letter-spacing:.2px;">—</div>
-          <div class="meta mono" id="contactBits" style="margin-top:6px">—</div>
-          <a class="pill" id="contactWa" href="#" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; text-decoration:none;">Abrir WhatsApp</a>
+          <div class="meta mono" id="contactLine" style="margin-top:8px">—</div>
           <div class="hint" style="margin-top:10px">
             Metodología de estrellas:
-            <br/>Score (0-100) = 60% Reservas + 40% Monto.
+            <br/>Score (0-100) = 45% Reservas + 40% Monto + 10% Recencia + 5% Diversidad.
             <br/>★★★★★ ≥ 85 · ★★★★ ≥ 70 · ★★★ ≥ 55 · ★★ ≥ 40 · ★ resto.
           </div>
         </div>
@@ -2075,52 +2067,24 @@ function openGuestsWindow(){
     if(!selected) return;
 
     $("pillSelected").textContent = labelForGuest(selected);
-    $("kpiStars").innerHTML = starsHtml(selected.score, selected.stars);
+    $("kpiStars").textContent = starText(selected.stars);
     $("kpiScore").textContent = \`Score: \${selected.score}/100\`;
     $("kpiBookings").textContent = String(selected.bookings.length);
     $("kpiGross").textContent = moneyMXN(selected.totalGross);
     $("kpiNights").textContent = String(selected.totalNights);
     $("kpiHouses").textContent = String(selected.houses.size);
-    const fmt = (ts)=> ts ? new Date(ts).toLocaleDateString("es-MX") : "—";
-    $("kpiFirst").textContent = fmt(selected.firstArrivalTs);
-    $("kpiLast").textContent  = fmt(selected.lastArrivalTs);
+    $("kpiRecency").textContent = String(selected.daysSinceLast ?? "—");
 
-
-    const bits = [];
-    if(selected.GuestEmail) bits.push("Email: " + selected.GuestEmail);
-    const phoneDigits = onlyDigits(selected.GuestPhone);
-    if(selected.GuestPhone) bits.push("Tel: " + selected.GuestPhone);
-    $("contactName").textContent = selected.GuestName || "—";
-    $("contactBits").textContent = bits.join(" · ") || "—";
-    const wa = phoneDigits ? ("https://wa.me/" + phoneDigits) : "#";
-    $("contactWa").href = wa;
+    const contactBits = [];
+    if(selected.GuestEmail) contactBits.push(\`Email: \${selected.GuestEmail}\`);
+    if(selected.GuestPhone) contactBits.push(\`Tel: \${selected.GuestPhone}\`);
+    $("contactLine").textContent = contactBits.join(" · ") || "—";
 
     renderSourcesChart(selected);
     renderBookingsTable(selected);
   }
 
-  const barValueLabelsGuest = {
-  id:"barValueLabelsGuest",
-  afterDatasetsDraw(chart){
-    const {ctx} = chart;
-    const ds = chart.data.datasets[0];
-    if(!ds) return;
-    const meta = chart.getDatasetMeta(0);
-    ctx.save();
-    ctx.font = "12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
-    ctx.fillStyle = "rgba(232,238,252,.85)";
-    meta.data.forEach((bar, i)=>{
-      const v = ds.data[i];
-      const p = bar.tooltipPosition();
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillText(String(v), p.x + 8, p.y);
-    });
-    ctx.restore();
-  }
-};
-
-function renderSourcesChart(g){
+  function renderSourcesChart(g){
     const labels = [...g.sources.keys()];
     labels.sort((a,b)=> (g.sources.get(b).count - g.sources.get(a).count));
     const data = labels.map(k=> g.sources.get(k).count);
@@ -2130,14 +2094,13 @@ function renderSourcesChart(g){
       type:"bar",
       data:{ labels, datasets:[{ label:"Reservas", data }] },
       options:{
-        indexAxis:"y",
         responsive:true,
         maintainAspectRatio:false,
         plugins:{
           legend:{ display:false },
           tooltip:{ callbacks:{ label:(ctx)=> \` \${ctx.raw} reservas\` } }
         },
-        scales:{ x:{ beginAtZero:true, ticks:{ precision:0 } } }
+        scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
       }
     });
   }
@@ -2192,9 +2155,12 @@ function renderSourcesChart(g){
     $("btnClose").addEventListener("click", ()=> window.close());
     $("btnRefresh").addEventListener("click", ()=> refreshFromOpener());
 
-    // Sin selección por defecto (hasta que el usuario elija)
-    input.value = "";
-})();
+    // Selecciona el mejor por defecto (top score)
+    if(profiles.length){
+      selectGuest(profiles[0].guestKey);
+      input.value = labelForGuest(profiles[0]);
+    }
+  })();
 <\/script>
 </body>
 </html>`;
