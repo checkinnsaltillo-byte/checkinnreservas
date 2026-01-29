@@ -327,107 +327,32 @@
   }
 
 
-  /* --- Tema global (light/dark) por variables --- */
-  :root{
-    --bg: #ffffff;
-    --panel: #ffffff;
-    --text: #111827;
-    --muted: #6b7280;
-    --border: #e5e7eb;
-    --card: #ffffff;
-    --chip: #f3f4f6;
-    --shadow: rgba(0,0,0,.06);
-  }
-  body.theme-dark{
-    --bg: #0b1220;
-    --panel: #0f172a;
-    --text: #e5e7eb;
-    --muted: #94a3b8;
-    --border: #1f2a44;
-    --card: #0f172a;
-    --chip: #111c33;
-    --shadow: rgba(0,0,0,.35);
-  }
-
-  body{ background: var(--bg) !important; color: var(--text) !important; }
-  .card, .panel, .box, .modal, .popover, .window, .bd, .hd{ background: var(--card) !important; color: var(--text) !important; }
-  .hint, .meta, .muted, .subtle{ color: var(--muted) !important; }
-  table, th, td{ color: var(--text) !important; }
-  th, td, .kpi, .lbl{ border-color: var(--border) !important; }
-  input, select, button{ color: var(--text) !important; background: var(--panel) !important; border-color: var(--border) !important; }
-
-  /* --- Toggle button --- */
-  .themeToggleBtn{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:8px 10px; border-radius:10px;
-    border:1px solid var(--border);
-    background: var(--panel);
-    box-shadow: 0 6px 18px var(--shadow);
-    cursor:pointer; user-select:none;
-    font-weight:700; font-size:.85rem;
-  }
-  .themeDot{ width:10px; height:10px; border-radius:999px; background: var(--muted); }
-
-  /* --- Huéspedes: botones de contacto ultra-compactos --- */
-  .contactRow{ gap: 6px; }
+  /* === OVERRIDE: íconos ultra pequeños en Datos de contacto (Huéspedes) === */
+  .contactRow{ align-items:center; }
   .btnContact{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    padding:4px 8px;
-    border-radius:8px;
-    font-size:0.78rem;
-    font-weight:700;
-    text-decoration:none;
-    line-height:1.1;
-    border:1px solid var(--border);
-    background: var(--panel);
-    cursor:pointer;
-    max-width:100%;
-    white-space:nowrap;
+    padding:3px 6px !important;
+    border-radius:999px !important;
+    font-size:12px !important;
+    line-height:1.05 !important;
+    gap:5px !important;
+    white-space:nowrap !important;
   }
-  .btnContact span{ line-height:1.1; }
-  .btnContact:hover{ filter: brightness(1.03); }
-  .btnWA{ color:#0a7c3b; border-color:#b7e4c7; }
-  body.theme-dark .btnWA{ border-color:#22543d; }
-  .btnMail{ color: var(--text); border-color: var(--border); }
+  .btnContact span{ line-height:1.05 !important; }
   .ico{
-    width:14px !important;
-    height:14px !important;
-    min-width:14px !important;
-    min-height:14px !important;
+    width:10px !important;
+    height:10px !important;
+    min-width:10px !important;
+    min-height:10px !important;
+    flex:0 0 10px !important;
     display:inline-block !important;
     vertical-align:middle !important;
-    flex:0 0 14px !important;
   }
-  .ico path{ fill: currentColor; }
+  .ico path{ fill: currentColor !important; }
 
 </style>
 </head>
 
 <body>
-<script>
-(function(){
-  const KEY="otc_theme_mode";
-  function apply(){
-    const m=(localStorage.getItem(KEY)||"light").toLowerCase();
-    document.body.classList.toggle("theme-dark", m==="dark");
-    try{
-      if(window.Chart){
-        const c=(m==="dark")?"#e5e7eb":"#111827";
-        Chart.defaults.color=c;
-        Chart.defaults.borderColor=(m==="dark")?"#1f2a44":"#e5e7eb";
-      }
-      if(window.__charts && Array.isArray(window.__charts)){
-        window.__charts.forEach(ch=>{ try{ ch.update(); }catch(e){} });
-      }
-    }catch(e){}
-  }
-  apply();
-  window.addEventListener("storage", (ev)=>{ if(ev.key===KEY) apply(); });
-})();
-</script>
-
 <header>
   <div class="wrap">
     <div class="topbar">
@@ -2431,67 +2356,6 @@ renderSourcesChart(selected);
   if(window.Chart) startApp();
   else window.addEventListener('chartjs:ready', startApp, { once:true });
 <\/script>
-
-<script>
-(function(){
-  const KEY = "otc_theme_mode"; // "light" | "dark"
-  function getMode(){
-    return (localStorage.getItem(KEY) || "light").toLowerCase();
-  }
-  function setMode(mode){
-    localStorage.setItem(KEY, mode);
-  }
-  function applyMode(mode){
-    const m = (mode === "dark") ? "dark" : "light";
-    document.body.classList.toggle("theme-dark", m === "dark");
-    // label
-    const lbl = document.getElementById("themeLabel");
-    if(lbl) lbl.textContent = (m === "dark") ? "Oscuro" : "Claro";
-    const dot = document.getElementById("themeDot");
-    if(dot) dot.style.background = (m === "dark") ? "#22c55e" : "#111827";
-
-    // Chart.js global colors for contrast (si existe)
-    try{
-      if(window.Chart){
-        const c = (m === "dark") ? "#e5e7eb" : "#111827";
-        Chart.defaults.color = c;
-        Chart.defaults.borderColor = (m === "dark") ? "#1f2a44" : "#e5e7eb";
-      }
-      // Fuerza update de charts si guardaste referencias globales comunes
-      if(window.__charts && Array.isArray(window.__charts)){
-        window.__charts.forEach(ch => { try{ ch.update(); }catch(e){} });
-      }
-    }catch(e){}
-  }
-
-  // init
-  applyMode(getMode());
-
-  // button
-  const btn = document.getElementById("btnThemeToggle");
-  if(btn){
-    btn.addEventListener("click", () => {
-      const next = (getMode() === "dark") ? "light" : "dark";
-      setMode(next);
-      applyMode(next);
-      // notificar a ventanas hijas (storage event)
-      try{ localStorage.setItem(KEY, next); }catch(e){}
-    });
-  }
-
-  // sync across windows
-  window.addEventListener("storage", (ev) => {
-    if(ev.key === KEY){
-      applyMode(getMode());
-    }
-  });
-
-  // expose for popups to call
-  window.__applyThemeMode = applyMode;
-  window.__getThemeMode = getMode;
-})();
-</script>
-
 </body>
 </html>`;
 
