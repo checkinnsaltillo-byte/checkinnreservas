@@ -1308,7 +1308,11 @@ function unescapeHtml(s){
     // Propiedad (ocupación)
     setMCBItems("mcbOccPropiedad", availableProps, true);
 
-    // Meses para promedio (ocufunction renderOccupancyByMonth(){
+    // Meses para promedio (ocupación)
+    setMCBItems("mcbOccAvgMonths", availableMonths, true);
+  }
+
+  function renderOccupancyByMonth(){
     const fromISO = $("from").value;
     const toISO = $("to").value;
     const months = monthsBetween(fromISO, toISO);
