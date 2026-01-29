@@ -266,33 +266,7 @@
       color:var(--muted);
       font-size:12px;
     }
-  
-    /* ======= Guest summary ======= */
-    .guestRow{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
-    .guestRow > *{flex:1}
-    .guestMatches{
-      display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;
-    }
-    .guestChip{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(76,201,240,.22);
-      background:rgba(76,201,240,.08);
-      cursor:pointer;
-      font-size:12.5px;
-      color:var(--text);
-      max-width: 100%;
-    }
-    .guestChip.active{
-      border-color: rgba(76,201,240,.45);
-      background: rgba(76,201,240,.14);
-      box-shadow: 0 10px 20px rgba(76,201,240,.10);
-    }
-    .guestChip .mono{opacity:.9}
-    .stars{letter-spacing:1px}
-
-</style>
+  </style>
 </head>
 
 <body>
@@ -313,6 +287,7 @@
         <button id="btnReload" class="primary">Recargar datos</button>
         <button id="btnCsv">Descargar CSV</button>
         <button id="btnDebug" class="ghost">Debug</button>
+        <button id="btnGuests" class="ghost">Huéspedes</button>
       </div>
     </div>
   </div>
@@ -565,98 +540,6 @@
     </div>
   </section>
 
-
-  <!-- Resumen por huésped -->
-  <section class="card">
-    <div class="hd">
-      <div>
-        <h2>Resumen por huésped</h2>
-        <div class="hint">
-          Filtra por <b>nombre</b> o <b>teléfono</b>. Se calcula con las filas ya filtradas por los parámetros actuales.
-          La clasificación (★) se basa en cantidad de reservas, monto y recurrencia.
-        </div>
-      </div>
-      <div class="hint" id="guestMeta">—</div>
-    </div>
-
-    <div class="bd">
-      <div class="guestRow">
-        <label style="flex:1.6">
-          <div class="hint">Seleccionar huésped (combo con búsqueda)</div>
-          <input id="guestCombo" list="guestList" placeholder="Escribe nombre o teléfono (sin acentos / mayúsculas)…" />
-          <datalist id="guestList"></datalist>
-          <div class="hint" style="margin-top:6px">Tip: puedes escribir parcial. Se hace coincidencia “inteligente” (sin acentos, sin mayúsculas, y tolerante a nombres parecidos).</div>
-        </label>
-        <label class="small">
-          <div class="hint">Sugerencias similares</div>
-          <div class="hint">Da click en un chip para ver detalle</div>
-        </label>
-      </div>
-
-      <div class="guestMatches" id="guestMatches"></div>
-
-      <div class="hint" id="guestNoData" style="display:none; margin-top:10px">No se detectaron huéspedes para los filtros actuales.</div>
-
-      <div class="kpis" style="margin-top:12px">
-        <div class="kpi">
-          <div class="lbl">Reservas (IDs únicos)</div>
-          <div class="val" id="g_kpiBookings">—</div>
-          <div class="meta">Cantidad total de estancias detectadas</div>
-        </div>
-
-        <div class="kpi">
-          <div class="lbl">Monto pagado (sum Gross)</div>
-          <div class="val" id="g_kpiGross">—</div>
-          <div class="meta">Suma GrossAmount (todas las líneas)</div>
-        </div>
-
-        <div class="kpi">
-          <div class="lbl">Alojamientos donde se hospedó</div>
-          <div class="val" id="g_kpiHouses">—</div>
-          <div class="meta">HouseName distintos</div>
-        </div>
-
-        <div class="kpi">
-          <div class="lbl">Clasificación</div>
-          <div class="val" id="g_kpiStars">—</div>
-          <div class="meta" id="g_kpiExplain">—</div>
-        </div>
-
-        <div class="kpi" style="grid-column: span 6;">
-          <div class="lbl">Resumen por Source</div>
-          <div class="meta">Reservas (IDs) y monto por canal</div>
-          <div class="tableWrap" style="margin-top:10px">
-            <div class="scrollY" style="max-height:260px">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Source</th>
-                    <th>Reservas (IDs)</th>
-                    <th>Monto (Gross)</th>
-                  </tr>
-                </thead>
-                <tbody id="guestSourceTbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div class="kpi" style="grid-column: span 6;">
-          <div class="lbl">Metodología de “huésped importante”</div>
-          <div class="meta" style="white-space:normal; line-height:1.4; margin-top:8px">
-            <b>Puntaje 0–100</b> = Reservas (0–40) + Monto (0–40) + Recurrencia (0–20).<br/>
-            • <b>Reservas</b>: 8 pts por reserva (máx 40).<br/>
-            • <b>Monto</b>: escala logarítmica (máx 40) para no “castigar” valores muy altos.<br/>
-            • <b>Recurrencia</b>: 5 pts por mes distinto con estancia (máx 20).<br/>
-            <b>Estrellas</b>: 1★ (0–19), 2★ (20–39), 3★ (40–59), 4★ (60–79), 5★ (80–100).<br/>
-            Se marca como <b>huésped importante</b> cuando obtiene <b>5★</b>.
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
   <!-- Tabla OTC -->
   <section class="card">
     <div class="hd">
@@ -709,10 +592,6 @@
 
   let rowsRaw = [];
   let rowsFiltered = [];
-
-  // Guest summary state
-  let guestSelectedKey = null;
-  let guestScores = new Map();
 
   // Charts
   let chSourceBar = null;
@@ -1043,376 +922,6 @@
     return `<a href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(raw)}</a>`;
   }
 
-
-  // ===== Guest summary helpers =====
-  function guestKeyFromRow(r){
-    const phoneDigits = normalizePhoneDigits(r.GuestPhone);
-    if(phoneDigits) return "p:" + phoneDigits;
-    const nm = safeStr(r.GuestName).trim().toLowerCase();
-    if(nm) return "n:" + nm;
-    return "u:unknown";
-  }
-
-  function guestDisplayFromKey(key){
-    if(!key) return "—";
-    if(key.startsWith("p:")) return key.slice(2);
-    if(key.startsWith("n:")) return key.slice(2);
-    return "—";
-  }
-
-  function monthKeyFromMMDDYYYY(s){
-    const d = parseMMDDYYYY(s);
-    if(!d) return null;
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth()+1).padStart(2,"0");
-    return `${y}-${m}`;
-  }
-
-  function computeGuestScore(stats){
-    // stats: {bookingsCount, grossSum, activeMonthsCount}
-    const bookingsPts = Math.min(40, stats.bookingsCount * 8);
-
-    const gross = Math.max(0, stats.grossSum || 0);
-    // log scale: 0 -> 0, 1k -> ~10, 10k -> ~20, 100k -> ~30, 1M -> ~40 (aprox)
-    const grossPts = Math.min(40, Math.log10(gross + 1) * 10);
-
-    const recPts = Math.min(20, stats.activeMonthsCount * 5);
-
-    const score = Math.max(0, Math.min(100, bookingsPts + grossPts + recPts));
-    const stars = Math.min(5, Math.max(1, Math.ceil(score / 20)));
-
-    return {
-      score,
-      stars,
-      important: stars >= 5,
-      breakdown: { bookingsPts, grossPts, recPts }
-    };
-  }
-
-  function starsText(n){
-    const k = Math.max(0, Math.min(5, Number(n)||0));
-    return "★".repeat(k) + "☆".repeat(5-k);
-  }
-
-  function buildGuestStats(rows){
-    // Dedup bookings by Id per guest for booking count.
-    const byKey = new Map();
-    // Track seen booking ids per key
-    const seenByKey = new Map();
-
-    for(const r of rows){
-      const key = guestKeyFromRow(r);
-
-      if(!byKey.has(key)){
-        byKey.set(key, {
-          key,
-          guestName: safeStr(r.GuestName).trim(),
-          guestPhone: normalizePhoneDigits(r.GuestPhone),
-          guestEmail: safeStr(r.GuestEmail).trim(),
-          grossSum: 0,
-          houses: new Set(),
-          sources: new Map(), // source -> {grossSum, bookingIds:Set}
-          months: new Set(),  // distinct months
-          bookingIds: new Set()
-        });
-        seenByKey.set(key, new Set());
-      }
-
-      const st = byKey.get(key);
-      st.grossSum += safeNum(r.GrossAmount);
-      if(r.HouseName) st.houses.add(safeStr(r.HouseName).trim());
-      const mk = monthKeyFromMMDDYYYY(r.DateArrival);
-      if(mk) st.months.add(mk);
-
-      const src = safeStr(r.Source).trim() || "—";
-      if(!st.sources.has(src)){
-        st.sources.set(src, { grossSum: 0, bookingIds: new Set() });
-      }
-      st.sources.get(src).grossSum += safeNum(r.GrossAmount);
-
-      const id = safeStr(r.Id);
-      if(id){
-        st.bookingIds.add(id);
-        st.sources.get(src).bookingIds.add(id);
-      }
-    }
-
-    // Finalize counts + score
-    const out = [];
-    for(const st of byKey.values()){
-      const bookingsCount = st.bookingIds.size;
-      const activeMonthsCount = st.months.size;
-      const scoreObj = computeGuestScore({ bookingsCount, grossSum: st.grossSum, activeMonthsCount });
-
-      out.push({
-        ...st,
-        bookingsCount,
-        activeMonthsCount,
-        score: scoreObj.score,
-        stars: scoreObj.stars,
-        important: scoreObj.important,
-        scoreBreakdown: scoreObj.breakdown
-      });
-    }
-
-    // Build score map for quick lookup
-    const scoreMap = new Map();
-    for(const g of out){
-      scoreMap.set(g.key, { stars: g.stars, important: g.important, score: g.score });
-    }
-
-    return { guests: out, scoreMap };
-  }
-
-
-  // ---- Guest summary: combobox + fuzzy matching (sin acentos / mayúsculas) ----
-  let guestOptionIndex = [];     // [{key,label,norm,nameNorm,phoneDigits,score}]
-  let guestLabelToKey = new Map(); // norm(label)->key
-
-  function stripDiacritics(str){
-    const s = String(str ?? "");
-    // NFD + quitar diacríticos (fallback para navegadores viejos)
-    try{
-      return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    }catch(e){
-      return s.replace(/[\u0300-\u036f]/g, "");
-    }
-  }
-
-  function normText(str){
-    return stripDiacritics(String(str ?? ""))
-      .toLowerCase()
-      .replace(/\s+/g," ")
-      .trim();
-  }
-
-  function digitsOnly(str){
-    return String(str ?? "").replace(/\D/g,"");
-  }
-
-  function bigramSet(s){
-    const out = new Set();
-    const t = ` ${s} `;
-    for(let i=0;i<t.length-1;i++){
-      out.add(t.slice(i,i+2));
-    }
-    return out;
-  }
-
-  function fuzzyScore(queryNorm, targetNorm){
-    if(!queryNorm) return 0;
-    if(!targetNorm) return 0;
-
-    // match directo por inclusión
-    const idx = targetNorm.indexOf(queryNorm);
-    if(idx >= 0){
-      // más alto si aparece al inicio
-      const bias = 1 - Math.min(idx / Math.max(1,targetNorm.length), 0.6);
-      return 0.85 + 0.15 * bias;
-    }
-
-    // overlap de bigramas (ligero y rápido)
-    const q = bigramSet(queryNorm);
-    const t = bigramSet(targetNorm);
-    let inter = 0;
-    q.forEach(bg=>{ if(t.has(bg)) inter++; });
-    const denom = Math.max(q.size, t.size, 1);
-    return inter / denom; // 0..1
-  }
-
-  function rebuildGuestCombo(guests){
-    const dl = $("guestList");
-    const combo = $("guestCombo");
-    const noData = $("guestNoData");
-
-    guestOptionIndex = [];
-    guestLabelToKey = new Map();
-
-    if(!dl) return;
-
-    if(!guests || !guests.length){
-      dl.innerHTML = "";
-      if(combo) combo.value = "";
-      if(noData) noData.style.display = "block";
-      return;
-    } else {
-      if(noData) noData.style.display = "none";
-    }
-
-    // Orden por score desc para que el autocompletado priorice mejores huéspedes
-    const ordered = [...guests].sort((a,b)=> (b.score - a.score) || (b.bookingsCount - a.bookingsCount) || (b.grossSum - a.grossSum));
-
-    dl.innerHTML = ordered.map(g=>{
-      const name = g.guestName || "—";
-      const phone = g.guestPhone ? ` · ${g.guestPhone}` : "";
-      const stars = g.important ? " ⭐" : (g.stars ? ` ${starsText(g.stars)}` : "");
-      const label = `${name}${phone}${stars}`.trim();
-      const norm = normText(label);
-      guestLabelToKey.set(norm, g.key);
-      guestOptionIndex.push({
-        key: g.key,
-        label,
-        norm,
-        nameNorm: normText(g.guestName),
-        phoneDigits: digitsOnly(g.guestPhone),
-        score: g.score
-      });
-      return `<option value="${escapeHtml(label)}"></option>`;
-    }).join("");
-  }
-
-  function bestGuestKeyFromQuery(qRaw){
-    const qNorm = normText(qRaw);
-    const qDigits = digitsOnly(qRaw);
-    if(!qNorm && !qDigits) return null;
-
-    let best = { key:null, s:-1 };
-
-    for(const opt of guestOptionIndex){
-      let s = 0;
-
-      // Teléfono: coincidencia fuerte por dígitos
-      if(qDigits && opt.phoneDigits){
-        if(opt.phoneDigits.includes(qDigits)) s = Math.max(s, 0.95);
-      }
-
-      // Nombre/label: fuzzy sin acentos
-      if(qNorm){
-        s = Math.max(s, fuzzyScore(qNorm, opt.nameNorm));
-        s = Math.max(s, 0.75 * fuzzyScore(qNorm, opt.norm)); // label completo un poco menor
-      }
-
-      // desempate por score del huésped (importancia histórica)
-      const total = s + 0.000001 * (opt.score || 0);
-
-      if(total > best.s){
-        best = { key: opt.key, s: total };
-      }
-    }
-
-    return best.key;
-  }
-
-  function renderGuestSummary(){
-    const combo = $("guestCombo");
-    const qRaw = combo ? combo.value.trim() : "";
-
-    const meta = $("guestMeta");
-    const matchesEl = $("guestMatches");
-    const tb = $("guestSourceTbody");
-
-    if(!matchesEl || !tb) return;
-
-    // Build guest stats from current filtered rows
-    const { guests, scoreMap } = buildGuestStats(rowsFiltered);
-    guestScores = scoreMap;
-
-    // Rebuild datalist each render so siempre represente el estado filtrado actual
-    rebuildGuestCombo(guests);
-
-    // Si el usuario escribió algo, elegimos mejor coincidencia (fuzzy)
-    if(qRaw){
-      const k = bestGuestKeyFromQuery(qRaw);
-      if(k) guestSelectedKey = k;
-    }
-
-    // Si no hay selección, toma el top por score
-    if(!guestSelectedKey){
-      const topG = [...guests].sort((a,b)=> (b.score - a.score) || (b.bookingsCount - a.bookingsCount) || (b.grossSum - a.grossSum))[0];
-      guestSelectedKey = topG ? topG.key : null;
-    } else {
-      // si el key ya no existe por filtros, re-selecciona
-      if(!guests.some(g=>g.key===guestSelectedKey)){
-        const topG = [...guests].sort((a,b)=> (b.score - a.score) || (b.bookingsCount - a.bookingsCount) || (b.grossSum - a.grossSum))[0];
-        guestSelectedKey = topG ? topG.key : null;
-      }
-    }
-
-    // Sugerencias similares: usar query si existe, si no, top score
-    const qNorm = normText(qRaw);
-    const qDigits = digitsOnly(qRaw);
-
-    const filtered = (qNorm || qDigits)
-      ? guests.map(g=>{
-          const nameNorm = normText(g.guestName);
-          const phoneDigits = digitsOnly(g.guestPhone);
-          let s = 0;
-          if(qDigits && phoneDigits && phoneDigits.includes(qDigits)) s = Math.max(s, 0.95);
-          if(qNorm) s = Math.max(s, fuzzyScore(qNorm, nameNorm));
-          return { g, s };
-        })
-        .filter(x=>x.s > 0.10)
-        .sort((a,b)=> (b.s - a.s) || (b.g.score - a.g.score))
-        .map(x=>x.g)
-      : [...guests].sort((a,b)=> (b.score - a.score) || (b.bookingsCount - a.bookingsCount) || (b.grossSum - a.grossSum));
-
-    const top = filtered.slice(0, 12);
-
-    matchesEl.innerHTML = top.map(g=>{
-      const isActive = g.key === guestSelectedKey;
-      const label = g.guestName || (g.guestPhone ? `Tel ${g.guestPhone}` : guestDisplayFromKey(g.key));
-      const sub = g.guestPhone ? g.guestPhone : "";
-      const star = g.important ? "⭐" : "";
-      return `
-        <div class="guestChip ${isActive ? "active":""}" data-key="${escapeHtml(g.key)}" title="${escapeHtml(label)}">
-          <span>${star}${escapeHtml(label || "—")}</span>
-          <span class="mono" style="color:var(--muted)">${escapeHtml(sub)}</span>
-          <span class="mono" style="color:var(--muted)">${escapeHtml(starsText(g.stars))}</span>
-        </div>
-      `;
-    }).join("") || `<span class="hint">No hay coincidencias para el filtro actual.</span>`;
-
-    matchesEl.querySelectorAll(".guestChip").forEach(ch=>{
-      ch.addEventListener("click", ()=>{
-        const k = unescapeHtml(ch.getAttribute("data-key"));
-        guestSelectedKey = k;
-        // sincroniza el combo al label del seleccionado (si existe)
-        const opt = guestOptionIndex.find(o=>o.key===k);
-        if(combo && opt) combo.value = opt.label;
-        renderGuestSummary();
-        renderTable();
-      });
-    });
-
-    const selected = guests.find(g => g.key === guestSelectedKey) || top[0] || null;
-
-    if(!selected){
-      $("g_kpiBookings").textContent = "—";
-      $("g_kpiGross").textContent = "—";
-      $("g_kpiHouses").textContent = "—";
-      $("g_kpiStars").textContent = "—";
-      $("g_kpiExplain").textContent = "—";
-      tb.innerHTML = "";
-      if(meta) meta.textContent = `Huéspedes detectados: ${guests.length.toLocaleString("es-MX")}`;
-      return;
-    }
-
-    if(meta) meta.textContent = `Huéspedes detectados: ${guests.length.toLocaleString("es-MX")} · Seleccionado: ${selected.guestName || selected.guestPhone || guestDisplayFromKey(selected.key)}`;
-
-    $("g_kpiBookings").textContent = selected.bookingsCount.toLocaleString("es-MX");
-    $("g_kpiGross").textContent = moneyMXN(selected.grossSum);
-    $("g_kpiHouses").textContent = String(selected.houses.size);
-    $("g_kpiStars").innerHTML = `<span class="stars">${escapeHtml(starsText(selected.stars))}</span>`;
-    const b = selected.scoreBreakdown || {};
-    $("g_kpiExplain").textContent = `Score ${Math.round(selected.score)}/100 · Reservas ${Math.round(b.bookingsPts||0)} · Monto ${Math.round(b.grossPts||0)} · Recurrencia ${Math.round(b.recPts||0)}`;
-
-    // Source breakdown table for selected guest
-    const sources = [...selected.sources.entries()].map(([src, v])=>({
-      src,
-      bookings: v.bookingIds.size,
-      gross: v.grossSum
-    })).sort((a,b)=> (b.gross - a.gross) || (b.bookings - a.bookings) || a.src.localeCompare(b.src));
-
-    tb.innerHTML = sources.map(s=>`
-      <tr>
-        <td>${escapeHtml(s.src)}</td>
-        <td class="mono">${s.bookings.toLocaleString("es-MX")}</td>
-        <td class="mono">${moneyMXN(s.gross)}</td>
-      </tr>
-    `).join("") || `<tr><td colspan="3" class="hint">Sin datos</td></tr>`;
-  }
-  }
-
 function unescapeHtml(s){
     // solo para nuestros values
     return String(s ?? "")
@@ -1459,7 +968,6 @@ function unescapeHtml(s){
     renderKPIs();
     renderMiniChartsByAmount();
     renderOccupancyByMonth();
-    renderGuestSummary();
     renderTable();
   }
 
@@ -1498,7 +1006,7 @@ function unescapeHtml(s){
     for(const r of rowsFiltered){
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="mono">${(guestScores.get(guestKeyFromRow(r))?.important ? "⭐ " : "")}${escapeHtml(safeStr(r.Id) || "—")}</td>
+        <td class="mono">${escapeHtml(safeStr(r.Id) || "—")}</td>
         <td>${escapeHtml(safeStr(r.Property) || "—")}</td>
         <td>${escapeHtml(safeStr(r.Source) || "—")}</td>
         <td>${escapeHtml(safeStr(r.Status) || "—")}</td>
@@ -1917,6 +1425,665 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     $("to").value = ymdLocal(today);
   }
 
+  
+  // ===== Huéspedes: perfil + clasificación =====
+  function normalizeText(s){
+    return safeStr(s)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")  // quita acentos
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function guestKeyFromRow(r){
+    const phoneDigits = normalizePhoneDigits(r.GuestPhone);
+    if(phoneDigits && phoneDigits.length >= 7) return `p:${phoneDigits}`;
+    const nm = normalizeText(r.GuestName);
+    const em = normalizeText(r.GuestEmail);
+    if(nm) return `n:${nm}|e:${em}`;
+    if(em) return `e:${em}`;
+    return `u:${safeStr(r.Id) || Math.random()}`;
+  }
+
+  function parseDateForSort(mmddyyyy){
+    const d = parseMMDDYYYY(mmddyyyy);
+    return d ? d.getTime() : 0;
+  }
+
+  function buildGuestProfiles(rows){
+    // 1) agrupar por booking Id para obtener monto total por reserva (sum line-items)
+    const bookingMap = new Map(); // id -> bookingAgg
+    for(const r of rows){
+      const id = safeStr(r.Id);
+      if(!id) continue;
+
+      if(!bookingMap.has(id)){
+        bookingMap.set(id, {
+          id,
+          guestKey: guestKeyFromRow(r),
+          GuestName: safeStr(r.GuestName).trim(),
+          GuestEmail: safeStr(r.GuestEmail).trim(),
+          GuestPhone: safeStr(r.GuestPhone).trim(),
+          GuestCountryCode: safeStr(r.GuestCountryCode).trim(),
+          Property: safeStr(r.Property).trim(),
+          HouseName: safeStr(r.HouseName).trim(),
+          Source: safeStr(r.Source).trim(),
+          Status: safeStr(r.Status).trim(),
+          DateArrival: safeStr(r.DateArrival).trim(),
+          DateDeparture: safeStr(r.DateDeparture).trim(),
+          Nights: safeNum(r.Nights),
+          Gross: 0,
+        });
+      }
+      const b = bookingMap.get(id);
+      b.Gross += safeNum(r.GrossAmount);
+      // En caso de datos vacíos en un line-item, conserva el mejor
+      if(!b.GuestName && r.GuestName) b.GuestName = safeStr(r.GuestName).trim();
+      if(!b.GuestEmail && r.GuestEmail) b.GuestEmail = safeStr(r.GuestEmail).trim();
+      if(!b.GuestPhone && r.GuestPhone) b.GuestPhone = safeStr(r.GuestPhone).trim();
+      if(!b.Property && r.Property) b.Property = safeStr(r.Property).trim();
+      if(!b.HouseName && r.HouseName) b.HouseName = safeStr(r.HouseName).trim();
+      if(!b.Source && r.Source) b.Source = safeStr(r.Source).trim();
+      if(!b.Status && r.Status) b.Status = safeStr(r.Status).trim();
+      if(!b.DateArrival && r.DateArrival) b.DateArrival = safeStr(r.DateArrival).trim();
+      if(!b.DateDeparture && r.DateDeparture) b.DateDeparture = safeStr(r.DateDeparture).trim();
+    }
+
+    // 2) agrupar por huésped (guestKey)
+    const guests = new Map(); // guestKey -> profile
+    for(const b of bookingMap.values()){
+      if(!guests.has(b.guestKey)){
+        guests.set(b.guestKey, {
+          guestKey: b.guestKey,
+          GuestName: b.GuestName || "—",
+          GuestEmail: b.GuestEmail || "",
+          GuestPhone: b.GuestPhone || "",
+          GuestCountryCode: b.GuestCountryCode || "",
+          bookings: [],
+          sources: new Map(), // Source -> {count, gross}
+          houses: new Set(),
+          properties: new Set(),
+          totalGross: 0,
+          totalNights: 0,
+          firstArrivalTs: null,
+          lastArrivalTs: null,
+        });
+      }
+      const g = guests.get(b.guestKey);
+      g.bookings.push(b);
+      g.totalGross += safeNum(b.Gross);
+      g.totalNights += safeNum(b.Nights);
+      if(b.HouseName) g.houses.add(b.HouseName);
+      if(b.Property) g.properties.add(b.Property);
+
+      const src = b.Source || "—";
+      if(!g.sources.has(src)) g.sources.set(src, { count: 0, gross: 0 });
+      const s = g.sources.get(src);
+      s.count += 1;
+      s.gross += safeNum(b.Gross);
+
+      const ts = parseDateForSort(b.DateArrival);
+      if(ts){
+        if(g.firstArrivalTs == null || ts < g.firstArrivalTs) g.firstArrivalTs = ts;
+        if(g.lastArrivalTs == null || ts > g.lastArrivalTs) g.lastArrivalTs = ts;
+      }
+
+      // Si hay un "mejor" nombre (más largo) úsalo
+      const curr = safeStr(g.GuestName).trim();
+      const cand = safeStr(b.GuestName).trim();
+      if(cand && (curr === "—" || cand.length > curr.length)) g.GuestName = cand;
+      if(!g.GuestPhone && b.GuestPhone) g.GuestPhone = b.GuestPhone;
+      if(!g.GuestEmail && b.GuestEmail) g.GuestEmail = b.GuestEmail;
+    }
+
+    // 3) scoring relativo (0-100) y estrellas
+    const arr = [...guests.values()];
+    const maxBookings = Math.max(1, ...arr.map(g=>g.bookings.length));
+    const maxGross = Math.max(1, ...arr.map(g=>g.totalGross));
+
+    const now = Date.now();
+    const dayMs = 86400000;
+
+    for(const g of arr){
+      const bN = g.bookings.length;
+      const gross = g.totalGross;
+
+      // Recencia: 1 si fue hoy/reciente, decae a ~0 con 365 días
+      const daysSince = g.lastArrivalTs ? Math.max(0, (now - g.lastArrivalTs)/dayMs) : 9999;
+      const recency = Math.exp(-daysSince / 180); // half-ish around 125d, suave
+
+      // Diversidad (alojamientos distintos): 0..1 (log)
+      const diversity = Math.min(1, Math.log1p(g.houses.size) / Math.log1p(6));
+
+      const sBookings = Math.log1p(bN) / Math.log1p(maxBookings);
+      const sGross = Math.log1p(gross) / Math.log1p(maxGross);
+
+      // Score final: puedes ajustar pesos
+      const score01 = (0.45*sBookings) + (0.40*sGross) + (0.10*recency) + (0.05*diversity);
+      const score = Math.max(0, Math.min(100, Math.round(score01 * 100)));
+
+      let stars = 1;
+      if(score >= 85) stars = 5;
+      else if(score >= 70) stars = 4;
+      else if(score >= 55) stars = 3;
+      else if(score >= 40) stars = 2;
+
+      g.score = score;
+      g.stars = stars;
+      g.daysSinceLast = Math.round(daysSince);
+    }
+
+    // 4) orden default: mejores primero
+    arr.sort((a,b)=> (b.score - a.score) || (b.totalGross - a.totalGross) || (b.bookings.length - a.bookings.length));
+
+    return arr;
+  }
+
+  function starText(n){
+    const s = "★★★★★".slice(0, Math.max(0, Math.min(5, n||0)));
+    const e = "☆☆☆☆☆".slice(0, 5 - s.length);
+    return s + e;
+  }
+
+  function openGuestsWindow(){
+    const rows = rowsFiltered; // ✅ usa el universo actual (Parámetros + filtros)
+    const profiles = buildGuestProfiles(rows);
+
+    // Guardamos para que la ventana pueda "refrescar" sin re-copiar todo (opener access)
+    window.__guestProfiles = profiles;
+
+    const w = window.open("", "guestSummary", "width=1180,height=820,noopener=no");
+    if(!w){
+      alert("No se pudo abrir la ventana (posible bloqueo de popups). Permite popups para este sitio.");
+      return;
+    }
+
+    const doc = w.document;
+
+    const html = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Huéspedes · Resumen</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
+    --shadow: 0 12px 28px rgba(0,0,0,.35);
+    --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:var(--font);
+    background:linear-gradient(180deg,#070b15 0%, #0b1220 40%, #070b15 100%);
+    color:var(--text);
+  }
+  header{
+    position:sticky; top:0; z-index:60;
+    background:rgba(7,11,21,.78); backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .wrap{max-width:1280px; margin:0 auto; padding:16px 18px;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .logo{
+    width:34px; height:34px; border-radius:12px;
+    background: radial-gradient(circle at 30% 30%, #4cc9f0 0%, #4361ee 55%, #3a0ca3 100%);
+    box-shadow: 0 10px 20px rgba(67,97,238,.35);
+  }
+  h1{font-size:15px; margin:0; font-weight:900; letter-spacing:.2px}
+  .sub{margin:2px 0 0; color:var(--muted); font-size:12px}
+  button, input{
+    background:var(--panel); color:var(--text);
+    border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+    font-size:13px; outline:none;
+  }
+  button{cursor:pointer}
+  button:hover{border-color:#2b3c63}
+  button.primary{
+    background:linear-gradient(180deg, rgba(76,201,240,.18), rgba(67,97,238,.10));
+    border-color:rgba(76,201,240,.35);
+  }
+  .card{
+    background:linear-gradient(180deg, rgba(15,26,48,.98), rgba(11,18,32,.98));
+    border:1px solid var(--line);
+    border-radius:var(--r);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    margin-top:14px;
+  }
+  .hd{
+    padding:14px 14px 10px; border-bottom:1px solid var(--line);
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  }
+  .hd h2{margin:0; font-size:14px; letter-spacing:.2px}
+  .hint{margin:3px 0 0; font-size:12px; color:var(--muted)}
+  .bd{padding:14px}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
+  .row > *{flex:1}
+  .kpis{
+    display:grid; gap:10px;
+    grid-template-columns: repeat(6, 1fr);
+  }
+  @media (max-width: 1100px){ .kpis{grid-template-columns:repeat(3,1fr)} }
+  @media (max-width: 720px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width: 520px){ .kpis{grid-template-columns:1fr} }
+  .kpi{
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(18,31,58,.7), rgba(15,26,48,.55));
+    border-radius:16px;
+    padding:12px;
+    min-height: 86px;
+  }
+  .kpi .lbl{font-size:12px; color:var(--muted)}
+  .kpi .val{margin-top:6px; font-size:18px; font-weight:900; letter-spacing:.3px}
+  .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 8px; border-radius:999px;
+    background:rgba(76,201,240,.10);
+    border:1px solid rgba(76,201,240,.22);
+    color:var(--text);
+    font-size:12px;
+    white-space:nowrap;
+  }
+
+  /* ===== Combo (single select) ===== */
+  .combo{ position:relative; min-width: 320px; }
+  .combo input{ width:100%; }
+  .comboPanel{
+    position:absolute; top: calc(100% + 8px); left:0; right:0;
+    z-index:80;
+    background: rgba(11,18,32,.98);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow: var(--shadow);
+    padding:10px;
+    display:none;
+  }
+  .combo.open .comboPanel{ display:block; }
+  .comboList{
+    max-height: 300px; overflow:auto;
+    border:1px solid rgba(30,43,74,.75);
+    border-radius:12px;
+    background: rgba(18,31,58,.25);
+  }
+  .comboItem{
+    padding:10px 10px;
+    border-bottom:1px solid rgba(30,43,74,.55);
+    cursor:pointer;
+    display:flex; justify-content:space-between; gap:10px;
+  }
+  .comboItem:last-child{ border-bottom:none; }
+  .comboItem:hover{ background: rgba(76,201,240,.06); }
+  .tag{ color:var(--muted); font-size:12px; }
+  .grid2{ display:grid; grid-template-columns: 1.3fr .7fr; gap:10px; align-items:start; }
+  @media (max-width: 980px){ .grid2{ grid-template-columns:1fr; } }
+  .tableWrap{
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    background:rgba(18,31,58,.35);
+  }
+  table{width:100%; border-collapse:collapse; font-size:12.5px}
+  thead{ background:rgba(11,18,32,.95); }
+  th, td{ padding:10px 10px; border-bottom:1px solid rgba(30,43,74,.75); text-align:left; white-space:nowrap; }
+  tbody tr:hover{ background:rgba(76,201,240,.06); }
+  .scrollY{ max-height: 420px; overflow:auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>Huéspedes · Resumen</h1>
+          <div class="sub">Se alimenta del universo actual del OTC (Parámetros + filtros).</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnRefresh" class="ghost">Actualizar</button>
+        <button id="btnClose" class="primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card" style="overflow:visible;">
+    <div class="hd">
+      <div>
+        <h2>Buscar huésped</h2>
+        <div class="hint">Escribe nombre o teléfono. Ignora acentos y mayúsculas. También acepta coincidencias parciales.</div>
+      </div>
+      <div class="hint"><span class="pill" id="pillUniverse">—</span></div>
+    </div>
+    <div class="bd">
+      <div class="row">
+        <div class="combo" id="comboGuest" style="flex:2">
+          <div class="hint">Huésped (combo)</div>
+          <input id="guestInput" placeholder="Ej. José Pérez / 8441234567" autocomplete="off" />
+          <div class="comboPanel">
+            <div class="comboList" id="guestList"></div>
+            <div class="hint" style="margin-top:8px">Tip: puedes pegar un número; se normaliza a dígitos para buscar.</div>
+          </div>
+        </div>
+
+        <div style="flex:1">
+          <div class="hint">Selección actual</div>
+          <div class="pill" id="pillSelected">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>Indicadores del huésped</h2>
+        <div class="hint">Reservas, monto, alojamientos, sources y clasificación (estrellas).</div>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="kpis">
+        <div class="kpi">
+          <div class="lbl">Clasificación</div>
+          <div class="val" id="kpiStars">—</div>
+          <div class="meta" id="kpiScore">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Reservas</div>
+          <div class="val" id="kpiBookings">—</div>
+          <div class="meta">IDs distintos</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Monto pagado (Gross)</div>
+          <div class="val" id="kpiGross">—</div>
+          <div class="meta">Suma de line-items por reserva</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Noches</div>
+          <div class="val" id="kpiNights">—</div>
+          <div class="meta">Suma Nights</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Alojamientos distintos</div>
+          <div class="val" id="kpiHouses">—</div>
+          <div class="meta">HouseName únicos</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Recencia</div>
+          <div class="val" id="kpiRecency">—</div>
+          <div class="meta">Días desde última llegada</div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 3;">
+          <div class="lbl">Reservas por Source</div>
+          <div class="meta">Distribución por canal</div>
+          <div style="height:260px; margin-top:8px;"><canvas id="chSources"></canvas></div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 3;">
+          <div class="lbl">Datos de contacto</div>
+          <div class="meta mono" id="contactLine" style="margin-top:8px">—</div>
+          <div class="hint" style="margin-top:10px">
+            Metodología de estrellas:
+            <br/>Score (0-100) = 45% Reservas + 40% Monto + 10% Recencia + 5% Diversidad.
+            <br/>★★★★★ ≥ 85 · ★★★★ ≥ 70 · ★★★ ≥ 55 · ★★ ≥ 40 · ★ resto.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>Historial de reservas (del universo actual)</h2>
+        <div class="hint">Se deduplica por Id y suma el Gross por reserva.</div>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="tableWrap">
+        <div class="scrollY">
+          <table>
+            <thead>
+              <tr>
+                <th>Id</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th>Property</th>
+                <th>HouseName</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Gross</th>
+              </tr>
+            </thead>
+            <tbody id="tbBookings"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const $ = (id)=>document.getElementById(id);
+
+  function moneyMXN(v){
+    const n = Number(v);
+    if(!Number.isFinite(n)) return "—";
+    try{ return new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(n); }
+    catch{ return "$" + n.toFixed(2); }
+  }
+
+  function safeStr(v){ return (v===null || v===undefined) ? "" : String(v); }
+
+  function normalizeText(s){
+    return safeStr(s)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\s+/g," ")
+      .trim();
+  }
+
+  function onlyDigits(s){ return safeStr(s).replace(/\D/g,""); }
+
+  function starText(n){
+    const s = "★★★★★".slice(0, Math.max(0, Math.min(5, n||0)));
+    const e = "☆☆☆☆☆".slice(0, 5 - s.length);
+    return s + e;
+  }
+
+  let profiles = (window.opener && window.opener.__guestProfiles) ? window.opener.__guestProfiles : [];
+  let selected = null;
+  let chSources = null;
+
+  function labelForGuest(g){
+    const nm = g.GuestName && g.GuestName !== "—" ? g.GuestName : "(Sin nombre)";
+    const ph = g.GuestPhone ? (" · " + g.GuestPhone) : "";
+    return nm + ph;
+  }
+
+  function scoreMatch(q, g){
+    const qn = normalizeText(q);
+    const qd = onlyDigits(q);
+
+    const nm = normalizeText(g.GuestName);
+    const em = normalizeText(g.GuestEmail);
+    const ph = onlyDigits(g.GuestPhone);
+
+    if(qd && ph && ph.includes(qd)) return 1000 - (ph.indexOf(qd) || 0);
+    if(qn && (nm === qn)) return 950;
+    if(qn && nm.includes(qn)) return 900 - (nm.indexOf(qn) || 0);
+    if(qn && em.includes(qn)) return 700;
+    // token match
+    if(qn){
+      const toks = qn.split(" ").filter(Boolean);
+      let hit = 0;
+      for(const t of toks){
+        if(nm.includes(t)) hit += 1;
+      }
+      if(hit) return 500 + hit*30;
+    }
+    return 0;
+  }
+
+  function renderList(){
+    const combo = $("comboGuest");
+    const input = $("guestInput");
+    const list = $("guestList");
+    const q = input.value.trim();
+
+    let items = profiles.map(g=>({ g, s: q ? scoreMatch(q,g) : 1 }));
+    if(q) items = items.filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+    else items = items.sort((a,b)=> (b.g.score-a.g.score));
+
+    const top = items.slice(0, 80);
+
+    list.innerHTML = top.map(({g})=>{
+      const nm = labelForGuest(g);
+      const right = \`\${starText(g.stars)} · \${g.score}\`;
+      return \`<div class="comboItem" data-key="\${g.guestKey}">
+        <div>
+          <div>\${escapeHtml(nm)}</div>
+          <div class="tag">\${g.bookings.length} reservas · \${moneyMXN(g.totalGross)} · \${g.houses.size} aloj.</div>
+        </div>
+        <div class="tag">\${escapeHtml(right)}</div>
+      </div>\`;
+    }).join("") || \`<div class="comboItem"><span class="tag">Sin resultados</span></div>\`;
+
+    list.querySelectorAll(".comboItem[data-key]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const key = el.getAttribute("data-key");
+        selectGuest(key);
+        combo.classList.remove("open");
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function selectGuest(key){
+    selected = profiles.find(g=>g.guestKey === key) || null;
+    if(!selected) return;
+
+    $("pillSelected").textContent = labelForGuest(selected);
+    $("kpiStars").textContent = starText(selected.stars);
+    $("kpiScore").textContent = \`Score: \${selected.score}/100\`;
+    $("kpiBookings").textContent = String(selected.bookings.length);
+    $("kpiGross").textContent = moneyMXN(selected.totalGross);
+    $("kpiNights").textContent = String(selected.totalNights);
+    $("kpiHouses").textContent = String(selected.houses.size);
+    $("kpiRecency").textContent = String(selected.daysSinceLast ?? "—");
+
+    const contactBits = [];
+    if(selected.GuestEmail) contactBits.push(\`Email: \${selected.GuestEmail}\`);
+    if(selected.GuestPhone) contactBits.push(\`Tel: \${selected.GuestPhone}\`);
+    $("contactLine").textContent = contactBits.join(" · ") || "—";
+
+    renderSourcesChart(selected);
+    renderBookingsTable(selected);
+  }
+
+  function renderSourcesChart(g){
+    const labels = [...g.sources.keys()];
+    labels.sort((a,b)=> (g.sources.get(b).count - g.sources.get(a).count));
+    const data = labels.map(k=> g.sources.get(k).count);
+
+    if(chSources) chSources.destroy();
+    chSources = new Chart($("chSources"), {
+      type:"bar",
+      data:{ labels, datasets:[{ label:"Reservas", data }] },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ callbacks:{ label:(ctx)=> \` \${ctx.raw} reservas\` } }
+        },
+        scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+      }
+    });
+  }
+
+  function renderBookingsTable(g){
+    const tb = $("tbBookings");
+    const arr = [...g.bookings].sort((a,b)=> (new Date(a.DateArrival).getTime() - new Date(b.DateArrival).getTime()));
+    tb.innerHTML = arr.map(b=>{
+      return \`<tr>
+        <td class="mono">\${escapeHtml(b.id)}</td>
+        <td class="mono">\${escapeHtml(b.DateArrival || "—")}</td>
+        <td class="mono">\${escapeHtml(b.DateDeparture || "—")}</td>
+        <td>\${escapeHtml(b.Property || "—")}</td>
+        <td title="\${escapeHtml(b.HouseName||"")}">\${escapeHtml(b.HouseName || "—")}</td>
+        <td>\${escapeHtml(b.Source || "—")}</td>
+        <td>\${escapeHtml(b.Status || "—")}</td>
+        <td class="mono">\${moneyMXN(b.Gross)}</td>
+      </tr>\`;
+    }).join("") || \`<tr><td colspan="8" class="tag">Sin reservas</td></tr>\`;
+  }
+
+  function refreshFromOpener(){
+    profiles = (window.opener && window.opener.__guestProfiles) ? window.opener.__guestProfiles : [];
+    $("pillUniverse").textContent = \`\${profiles.length} huéspedes\`;
+    // si ya había selección, intenta mantenerla
+    const key = selected?.guestKey;
+    renderList();
+    if(key){
+      const still = profiles.find(g=>g.guestKey===key);
+      if(still) selectGuest(key);
+      else $("pillSelected").textContent = "—";
+    }
+  }
+
+  (function init(){
+    const combo = $("comboGuest");
+    const input = $("guestInput");
+
+    $("pillUniverse").textContent = \`\${profiles.length} huéspedes\`;
+    $("pillSelected").textContent = "—";
+
+    function open(){ combo.classList.add("open"); renderList(); }
+    function close(){ combo.classList.remove("open"); }
+
+    input.addEventListener("focus", open);
+    input.addEventListener("input", ()=>{ open(); renderList(); });
+
+    document.addEventListener("click", (e)=>{
+      if(!combo.contains(e.target)) close();
+    });
+
+    $("btnClose").addEventListener("click", ()=> window.close());
+    $("btnRefresh").addEventListener("click", ()=> refreshFromOpener());
+
+    // Selecciona el mejor por defecto (top score)
+    if(profiles.length){
+      selectGuest(profiles[0].guestKey);
+      input.value = labelForGuest(profiles[0]);
+    }
+  })();
+</script>
+</body>
+</html>`;
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+  }
+
+
   (function init(){
     $("baseUrl").textContent = API_BASE || "same-origin";
     setDefaultDates();
@@ -1934,6 +2101,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     });
     $("btnCsv").addEventListener("click", downloadCSV);
     $("btnDebug").addEventListener("click", loadDebug);
+    $("btnGuests").addEventListener("click", openGuestsWindow);
 
     // filtros instantáneos: cuando cambias fechas, se hace fetch inmediato (porque cambia el universo)
     // debounce para no spamear el backend
@@ -1956,19 +2124,6 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       $(id).addEventListener("change", applyLocalFilters);
     });
 
-
-    // resumen por huésped: combobox
-    const gc = $("guestCombo");
-    if(gc){
-      const onGuestChange = ()=>{
-        // Si el usuario está escribiendo, el motor fuzzy define el mejor match
-        renderGuestSummary();
-        renderTable(); // para que cualquier icono/estilo dependiente se sincronice
-      };
-      gc.addEventListener("input", onGuestChange);
-      gc.addEventListener("change", onGuestChange);
-    }
-
     // vista ocupación
     $("occView").addEventListener("change", syncOccView);
 
@@ -1979,87 +2134,5 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     });
   })();
 </script>
-
-<!-- ===================== -->
-<!-- Resumen por huésped -->
-<!-- ===================== -->
-<section class="card" id="guestSummarySection">
-  <h3>Resumen por huésped</h3>
-  <label>Selecciona huésped</label>
-  <input list="guestList" id="guestSelect" placeholder="Nombre o teléfono" />
-  <datalist id="guestList"></datalist>
-
-  <div class="kpis">
-    <span id="gs_reservas">Reservas: –</span> |
-    <span id="gs_monto">Monto: –</span> |
-    <span id="gs_props">Alojamientos: –</span> |
-    <span id="gs_score">Clasificación: –</span>
-  </div>
-
-  <table class="table">
-    <thead><tr><th>Source</th><th>Reservas</th><th>Monto</th></tr></thead>
-    <tbody id="gs_source_rows"></tbody>
-  </table>
-</section>
-
-<script>
-(function(){
-  function norm(s){
-    return (s||"").toString().normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase();
-  }
-
-  function buildGuests(rows){
-    const m = {};
-    rows.forEach(r=>{
-      const name = r.GuestName || "";
-      const phone = (r.GuestPhone||"").replace(/\D/g,"");
-      const key = norm(name)+"|"+phone;
-      if(!m[key]) m[key]={name,phone,rows:[]};
-      m[key].rows.push(r);
-    });
-    return Object.values(m);
-  }
-
-  function scoreGuest(g){
-    const reservas = new Set(g.rows.map(r=>r.Id)).size;
-    const monto = g.rows.reduce((a,r)=>a+(+r.GrossAmount||0),0);
-    const months = new Set(g.rows.map(r=>(r.CheckIn||"").slice(0,7))).size;
-    const score = Math.min(40,reservas*8)+Math.min(40,Math.log10(monto+1)*10)+Math.min(20,months*5);
-    return Math.round(score);
-  }
-
-  window.initGuestSummary = function(rows){
-    const guests = buildGuests(rows);
-    const dl = document.getElementById("guestList");
-    dl.innerHTML = guests.map(g=>`<option value="${g.name} ${g.phone}">`).join("");
-
-    const sel = document.getElementById("guestSelect");
-    sel.oninput = ()=>{
-      const v = norm(sel.value);
-      const g = guests.find(x=>norm(x.name+" "+x.phone).includes(v));
-      if(!g) return;
-      const reservas = new Set(g.rows.map(r=>r.Id)).size;
-      const monto = g.rows.reduce((a,r)=>a+(+r.GrossAmount||0),0);
-      const props = new Set(g.rows.map(r=>r.HouseName)).size;
-      const score = scoreGuest(g);
-      const stars = "★★★★★☆☆☆☆☆".slice(5-Math.min(5,Math.ceil(score/20)),10);
-
-      document.getElementById("gs_reservas").textContent = "Reservas: "+reservas;
-      document.getElementById("gs_monto").textContent = "Monto: $"+monto.toFixed(0);
-      document.getElementById("gs_props").textContent = "Alojamientos: "+props;
-      document.getElementById("gs_score").textContent = "Clasificación: "+stars;
-
-      const bySrc={};
-      g.rows.forEach(r=>{
-        bySrc[r.Source]=bySrc[r.Source]||{c:0,m:0};
-        bySrc[r.Source].c++; bySrc[r.Source].m+=(+r.GrossAmount||0);
-      });
-      document.getElementById("gs_source_rows").innerHTML =
-        Object.entries(bySrc).map(([s,o])=>`<tr><td>${s}</td><td>${o.c}</td><td>$${o.m.toFixed(0)}</td></tr>`).join("");
-    };
-  };
-})();
-</script>
-
 </body>
 </html>
