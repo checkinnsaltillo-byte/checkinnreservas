@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Checkinnreservas · Dashboard OTC</title>
-  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
     :root{
       --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
-      --shadow: 0 12px 28px rgba(0,0,0,.35); }
+      --shadow: 0 12px 28px rgba(0,0,0,.35);
       --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
     *{box-sizing:border-box}
@@ -671,33 +671,7 @@
     return "rgb(" + r + "," + g + ",60)";
   }
 
-  
-    // ---- helpers (popup) ----
-    function fmtYMD(d){
-      if(!d) return "";
-      const dt = (d instanceof Date) ? d : new Date(d);
-      if(isNaN(dt.getTime())) return "";
-      const y = dt.getFullYear();
-      const m = String(dt.getMonth()+1).padStart(2,"0");
-      const day = String(dt.getDate()).padStart(2,"0");
-      return y+"-"+m+"-"+day;
-    }
-
-    // Reuse Chart.js from opener (avoid document.write loading cross-site scripts)
-    const ChartCtor = (function(){
-      const op = window.opener || null;
-      if(!op) return null;
-      const c = op.Chart;
-      if(typeof c === "function") return c;                 // typical UMD global
-      if(c && typeof c.Chart === "function") return c.Chart; // some bundlers wrap it
-      if(c && typeof c.default === "function") return c.default;
-      return null;
-    })();
-
-    if(!ChartCtor){
-      console.warn("Chart.js constructor not available in popup (expected from opener). Charts will be skipped.");
-    }
-function renderStars(stars, score){
+  function renderStars(stars, score){
     var n = Math.max(0, Math.min(5, Number(stars)||0));
     var c = semaforoColor(score);
     var out = "";
@@ -1203,7 +1177,7 @@ function unescapeHtml(s){
       return String(Math.round(n));
     };
 
-    chSourceBar = new ChartCtor($("chSourceBar"), {
+    chSourceBar = new Chart($("chSourceBar"), {
       type: "bar",
       data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
       options: {
@@ -1219,7 +1193,7 @@ function unescapeHtml(s){
       plugins: [barValueLabels]
     });
 
-    chStatusBar = new ChartCtor($("chStatusBar"), {
+    chStatusBar = new Chart($("chStatusBar"), {
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
@@ -1488,7 +1462,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     });
 
     if(chOccLines) chOccLines.destroy();
-    chOccLines = new ChartCtor(canvas, {
+    chOccLines = new Chart(canvas, {
       type: "line",
       data: { labels, datasets },
       options: {
@@ -1706,6 +1680,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 
       g.score = score;
       g.stars = stars;
+      g.daysSinceLast = Math.round(daysSince);
     }
 
     // 4) orden default: mejores primero
@@ -1718,23 +1693,6 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     const s = "★★★★★".slice(0, Math.max(0, Math.min(5, n||0)));
     const e = "☆☆☆☆☆".slice(0, 5 - s.length);
     return s + e;
-  }
-
-  function semaforoColor(score){
-    const s = Math.max(0, Math.min(100, Number(score)||0));
-    const r = Math.round(255 * (100 - s) / 100);
-    const g = Math.round(180 * s / 100);
-    return "rgb(" + r + "," + g + ",60)";
-  }
-  function renderStars(stars, score){
-    const n = Math.max(0, Math.min(5, Number(stars)||0));
-    const c = semaforoColor(score);
-    let out = "";
-    for(let i=0;i<5;i++){
-      const col = (i < n) ? c : "rgba(159,176,208,.55)";
-      out += '<span style="color:' + col + '">★</span>';
-    }
-    return out;
   }
 
   function openGuestsWindow(){
@@ -1758,6 +1716,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Huéspedes · Resumen</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>
 <style>
   :root{
     --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
@@ -2023,51 +1982,6 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 </main>
 
 <script>
-// ---- helpers (popup) ----
-const ChartJS = (window.opener && window.opener.Chart) ? window.opener.Chart : null;
-
-function fmtYMD(d){
-  if(!d) return "";
-  const dt = (d instanceof Date) ? d : new Date(d);
-  if(isNaN(dt.getTime())) return "";
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth()+1).padStart(2,"0");
-  const day = String(dt.getDate()).padStart(2,"0");
-  return y+"-"+m+"-"+day;
-}
-
-function clamp01(x){ return Math.max(0, Math.min(1, x)); }
-
-function semaforoRGB(t){
-  // t in [0,1] : red->yellow->green
-  t = clamp01(t);
-  let r,g,b;
-  if(t < 0.5){
-    const u = t/0.5; // 0..1
-    r = 220;
-    g = Math.round(40 + u*(200-40));
-    b = 50;
-  } else {
-    const u = (t-0.5)/0.5;
-    r = Math.round(220 + u*(40-220));
-    g = 200;
-    b = 50;
-  }
-  return "rgb("+r+","+g+","+b+")";
-}
-
-function renderStars(containerEl, stars, score01){
-  // containerEl: element; stars: 1..5; score01: 0..1
-  if(!containerEl) return;
-  const fill = semaforoRGB(score01);
-  const empty = "rgba(255,255,255,0.18)";
-  let html = "";
-  for(let i=1;i<=5;i++){
-    const c = (i<=stars) ? fill : empty;
-    html += '<span style="display:inline-block;font-size:18px;line-height:1;color:'+c+'">★</span>';
-  }
-  containerEl.innerHTML = html;
-}
   const $ = (id)=>document.getElementById(id);
 
   function moneyMXN(v){
@@ -2087,26 +2001,29 @@ function renderStars(containerEl, stars, score01){
       .trim();
   }
 
+    }
+
   function onlyDigits(s){ return safeStr(s).replace(/\D/g,""); }
 
-  function starText(n){
-    const s = "★★★★★".slice(0, Math.max(0, Math.min(5, n||0)));
-    const e = "☆☆☆☆☆".slice(0, 5 - s.length);
-    return s + e;
+  function fmtYMD(ts){
+    if(!ts) return "—";
+    try{ return new Date(ts).toISOString().slice(0,10); }
+    catch{ return "—"; }
   }
 
   function semaforoColor(score){
-    const s = Math.max(0, Math.min(100, Number(score)||0));
-    const r = Math.round(255 * (100 - s) / 100);
-    const g = Math.round(180 * s / 100);
+    var s = Math.max(0, Math.min(100, Number(score)||0));
+    var r = Math.round(255 * (100 - s) / 100);
+    var g = Math.round(180 * s / 100);
     return "rgb(" + r + "," + g + ",60)";
   }
+
   function renderStars(stars, score){
-    const n = Math.max(0, Math.min(5, Number(stars)||0));
-    const c = semaforoColor(score);
-    let out = "";
-    for(let i=0;i<5;i++){
-      const col = (i < n) ? c : "rgba(159,176,208,.55)";
+    var n = Math.max(0, Math.min(5, Number(stars)||0));
+    var c = semaforoColor(score);
+    var out = "";
+    for(var i=0;i<5;i++){
+      var col = (i < n) ? c : "rgba(159,176,208,.28)";
       out += '<span style="color:' + col + '">★</span>';
     }
     return out;
@@ -2160,13 +2077,13 @@ function renderStars(containerEl, stars, score01){
 
     list.innerHTML = top.map(({g})=>{
       const nm = labelForGuest(g);
-      const right = \`\${starText(g.stars)} · \${g.score}\`;
+      const right = `${renderStars(g.stars, g.score)} <span class=\"tag mono\">· ${g.score}</span>`;
       return \`<div class="comboItem" data-key="\${g.guestKey}">
         <div>
           <div>\${escapeHtml(nm)}</div>
-          <div class="tag">\${g.bookings.length} reservas · \${moneyMXN(g.totalGross)} · \${g.houses.size} aloj.</div>
+          <div class="tag">${g.bookings.length} reservas · ${moneyMXN(g.totalGross)} · ${g.houses.size} aloj. · ${fmtYMD(g.firstArrivalTs)} → ${fmtYMD(g.lastArrivalTs)}</div>
         </div>
-        <div class="tag">\${escapeHtml(right)}</div>
+        <div class="tag">${right}</div>
       </div>\`;
     }).join("") || \`<div class="comboItem"><span class="tag">Sin resultados</span></div>\`;
 
@@ -2215,8 +2132,7 @@ function renderStars(containerEl, stars, score01){
     const data = labels.map(k=> g.sources.get(k).count);
 
     if(chSources) chSources.destroy();
-    if(!ChartJS) { console.warn("Chart.js no disponible en popup"); return; }
-    chSources = new ChartCtor($("chSources"), {
+    chSources = new Chart($("chSources"), {
       type:"bar",
       data:{ labels, datasets:[{ label:"Reservas", data }] },
       options:{
