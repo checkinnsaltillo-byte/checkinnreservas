@@ -684,10 +684,18 @@
     }
 
     // Reuse Chart.js from opener (avoid document.write loading cross-site scripts)
-    const ChartJS = (window.opener && window.opener.Chart) ? window.opener.Chart : (window.Chart || null);
+    const ChartCtor = (function(){
+      const op = window.opener || null;
+      if(!op) return null;
+      const c = op.Chart;
+      if(typeof c === "function") return c;                 // typical UMD global
+      if(c && typeof c.Chart === "function") return c.Chart; // some bundlers wrap it
+      if(c && typeof c.default === "function") return c.default;
+      return null;
+    })();
 
-    if(!ChartJS){
-      console.warn("Chart.js not available in popup (expected from opener). Charts will be skipped.");
+    if(!ChartCtor){
+      console.warn("Chart.js constructor not available in popup (expected from opener). Charts will be skipped.");
     }
 function renderStars(stars, score){
     var n = Math.max(0, Math.min(5, Number(stars)||0));
@@ -1195,7 +1203,7 @@ function unescapeHtml(s){
       return String(Math.round(n));
     };
 
-    chSourceBar = new ChartJS($("chSourceBar"), {
+    chSourceBar = new ChartCtor($("chSourceBar"), {
       type: "bar",
       data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
       options: {
@@ -1211,7 +1219,7 @@ function unescapeHtml(s){
       plugins: [barValueLabels]
     });
 
-    chStatusBar = new ChartJS($("chStatusBar"), {
+    chStatusBar = new ChartCtor($("chStatusBar"), {
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
@@ -1480,7 +1488,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     });
 
     if(chOccLines) chOccLines.destroy();
-    chOccLines = new ChartJS(canvas, {
+    chOccLines = new ChartCtor(canvas, {
       type: "line",
       data: { labels, datasets },
       options: {
@@ -2208,7 +2216,7 @@ function renderStars(containerEl, stars, score01){
 
     if(chSources) chSources.destroy();
     if(!ChartJS) { console.warn("Chart.js no disponible en popup"); return; }
-    chSources = new ChartJS($("chSources"), {
+    chSources = new ChartCtor($("chSources"), {
       type:"bar",
       data:{ labels, datasets:[{ label:"Reservas", data }] },
       options:{
