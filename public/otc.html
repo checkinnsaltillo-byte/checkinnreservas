@@ -1750,7 +1750,6 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Huéspedes · Resumen</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>
 <style>
   :root{
     --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
@@ -2016,6 +2015,51 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 </main>
 
 <script>
+// ---- helpers (popup) ----
+const ChartJS = (window.opener && window.opener.Chart) ? window.opener.Chart : null;
+
+function fmtYMD(d){
+  if(!d) return "";
+  const dt = (d instanceof Date) ? d : new Date(d);
+  if(isNaN(dt.getTime())) return "";
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth()+1).padStart(2,"0");
+  const day = String(dt.getDate()).padStart(2,"0");
+  return y+"-"+m+"-"+day;
+}
+
+function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+function semaforoRGB(t){
+  // t in [0,1] : red->yellow->green
+  t = clamp01(t);
+  let r,g,b;
+  if(t < 0.5){
+    const u = t/0.5; // 0..1
+    r = 220;
+    g = Math.round(40 + u*(200-40));
+    b = 50;
+  } else {
+    const u = (t-0.5)/0.5;
+    r = Math.round(220 + u*(40-220));
+    g = 200;
+    b = 50;
+  }
+  return "rgb("+r+","+g+","+b+")";
+}
+
+function renderStars(containerEl, stars, score01){
+  // containerEl: element; stars: 1..5; score01: 0..1
+  if(!containerEl) return;
+  const fill = semaforoRGB(score01);
+  const empty = "rgba(255,255,255,0.18)";
+  let html = "";
+  for(let i=1;i<=5;i++){
+    const c = (i<=stars) ? fill : empty;
+    html += '<span style="display:inline-block;font-size:18px;line-height:1;color:'+c+'">★</span>';
+  }
+  containerEl.innerHTML = html;
+}
   const $ = (id)=>document.getElementById(id);
 
   function moneyMXN(v){
@@ -2163,6 +2207,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     const data = labels.map(k=> g.sources.get(k).count);
 
     if(chSources) chSources.destroy();
+    if(!ChartJS) { console.warn("Chart.js no disponible en popup"); return; }
     chSources = new ChartJS($("chSources"), {
       type:"bar",
       data:{ labels, datasets:[{ label:"Reservas", data }] },
