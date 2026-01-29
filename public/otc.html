@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Checkinnreservas · Dashboard OTC</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
 
   <style>
     :root{
       --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
-      --shadow: 0 12px 28px rgba(0,0,0,.35);
+      --shadow: 0 12px 28px rgba(0,0,0,.35); }
       --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
     *{box-sizing:border-box}
@@ -671,7 +671,25 @@
     return "rgb(" + r + "," + g + ",60)";
   }
 
-  function renderStars(stars, score){
+  
+    // ---- helpers (popup) ----
+    function fmtYMD(d){
+      if(!d) return "";
+      const dt = (d instanceof Date) ? d : new Date(d);
+      if(isNaN(dt.getTime())) return "";
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth()+1).padStart(2,"0");
+      const day = String(dt.getDate()).padStart(2,"0");
+      return y+"-"+m+"-"+day;
+    }
+
+    // Reuse Chart.js from opener (avoid document.write loading cross-site scripts)
+    const ChartJS = (window.opener && window.opener.Chart) ? window.opener.Chart : (window.Chart || null);
+
+    if(!ChartJS){
+      console.warn("Chart.js not available in popup (expected from opener). Charts will be skipped.");
+    }
+function renderStars(stars, score){
     var n = Math.max(0, Math.min(5, Number(stars)||0));
     var c = semaforoColor(score);
     var out = "";
@@ -1177,7 +1195,7 @@ function unescapeHtml(s){
       return String(Math.round(n));
     };
 
-    chSourceBar = new Chart($("chSourceBar"), {
+    chSourceBar = new ChartJS($("chSourceBar"), {
       type: "bar",
       data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
       options: {
@@ -1193,7 +1211,7 @@ function unescapeHtml(s){
       plugins: [barValueLabels]
     });
 
-    chStatusBar = new Chart($("chStatusBar"), {
+    chStatusBar = new ChartJS($("chStatusBar"), {
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
@@ -1462,7 +1480,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     });
 
     if(chOccLines) chOccLines.destroy();
-    chOccLines = new Chart(canvas, {
+    chOccLines = new ChartJS(canvas, {
       type: "line",
       data: { labels, datasets },
       options: {
@@ -2145,7 +2163,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     const data = labels.map(k=> g.sources.get(k).count);
 
     if(chSources) chSources.destroy();
-    chSources = new Chart($("chSources"), {
+    chSources = new ChartJS($("chSources"), {
       type:"bar",
       data:{ labels, datasets:[{ label:"Reservas", data }] },
       options:{
