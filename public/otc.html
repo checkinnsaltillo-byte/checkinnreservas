@@ -108,27 +108,6 @@
     .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
     .kpi .mini{margin-top:8px; height:110px; width:100%}
 
-    /* ===== KPI Gross destacado + subKPIs ===== */
-    .kpi.grossMain{
-      border-color: rgba(76,201,240,.45);
-      background: linear-gradient(180deg, rgba(76,201,240,.18), rgba(67,97,238,.10));
-      box-shadow: 0 14px 30px rgba(67,97,238,.18);
-    }
-    .kpi .subkpis{
-      margin-top:10px;
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap:8px;
-    }
-    .kpi .subkpi{
-      border:1px solid rgba(30,43,74,.75);
-      border-radius:12px;
-      padding:8px 10px;
-      background: rgba(11,18,32,.35);
-    }
-    .kpi .subkpi .slbl{font-size:11.5px; color:var(--muted)}
-    .kpi .subkpi .sval{margin-top:4px; font-size:13px; font-weight:900}
-
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
 
     .tableWrap{
@@ -287,7 +266,26 @@
       color:var(--muted);
       font-size:12px;
     }
-  </style>
+  
+  .kpi.kpiGrossMain{
+    background: linear-gradient(135deg, rgba(45, 120, 255, .18), rgba(30, 60, 140, .12));
+    border: 1px solid rgba(90, 150, 255, .28);
+    box-shadow: 0 10px 22px rgba(0,0,0,.22);
+    grid-column: span 2;
+  }
+  .kpi.kpiGrossMain .val{ font-size: 26px; font-weight: 800; letter-spacing: .2px; }
+  .kpiNest{ display:flex; gap:10px; margin-top:10px; }
+  .kpiMini{
+    flex:1;
+    padding:10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(0,0,0,.12);
+  }
+  .kpiMini .lbl{ font-size: 11px; color: rgba(232,238,252,.75); }
+  .kpiMini .val{ font-size: 14px; font-weight: 700; margin-top:2px; }
+
+</style>
 </head>
 
 <body>
@@ -398,7 +396,6 @@
     </div>
 
     <div class="bd">
-      
       <div class="kpis">
         <div class="kpi">
           <div class="lbl">Reservas únicas</div>
@@ -407,15 +404,14 @@
         </div>
 
         <div class="kpi">
-          <div class="lbl">Huéspedes únicos</div>
-          <div class="val" id="kpiGuests">—</div>
-          <div class="meta">Tel/Email/Nombre normalizado</div>
-        </div>
-
-        <div class="kpi">
           <div class="lbl">Noches (sum)</div>
           <div class="val" id="kpiNights">—</div>
-          <div class="meta">Suma Nights</div>
+          
+
+        <div class="kpi">
+          <div class="lbl">Huéspedes únicos</div>
+          <div class="val" id="kpiGuests">—</div>
+          <div class="meta">Por teléfono/nombre (normalizado)</div>
         </div>
 
         <div class="kpi">
@@ -423,27 +419,29 @@
           <div class="val" id="kpiAvgNight">—</div>
           <div class="meta">Gross / Noches</div>
         </div>
-
-        <div class="kpi grossMain" style="grid-column: span 2;">
-          <div class="lbl">Gross (sum)</div>
-          <div class="val" id="kpiGross">—</div>
-          <div class="meta">Suma GrossAmount</div>
-
-          <div class="subkpis">
-            <div class="subkpi">
-              <div class="slbl">RoomRate (sum)</div>
-              <div class="sval" id="kpiRoomRate">—</div>
-            </div>
-            <div class="subkpi">
-              <div class="slbl">Fee (sum)</div>
-              <div class="sval" id="kpiFee">—</div>
-            </div>
-            <div class="subkpi">
-              <div class="slbl">Tax (sum)</div>
-              <div class="sval" id="kpiTax">—</div>
-            </div>
-          </div>
+<div class="meta">Suma Nights</div>
         </div>
+
+        <div class="kpi kpiGrossMain">
+  <div class="lbl">Gross (sum)</div>
+  <div class="val" id="kpiGross">—</div>
+  <div class="meta">Suma GrossAmount</div>
+  <div class="kpiNest">
+    <div class="kpiMini">
+      <div class="lbl">RoomRate</div>
+      <div class="val" id="kpiRoomRate">—</div>
+    </div>
+    <div class="kpiMini">
+      <div class="lbl">Fee</div>
+      <div class="val" id="kpiFee">—</div>
+    </div>
+    <div class="kpiMini">
+      <div class="lbl">Tax</div>
+      <div class="val" id="kpiTax">—</div>
+    </div>
+  </div>
+</div>
+</div>
 
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Monto por Source</div>
@@ -456,7 +454,7 @@
           <div class="meta">Barras (sum GrossAmount, top 12) + etiquetas</div>
           <div class="mini"><canvas id="chStatusBar"></canvas></div>
         </div>
-      </div></div>
+      </div>
     </div>
   </section>
 
@@ -623,13 +621,12 @@
 
   let rowsRaw = [];
   let rowsFiltered = [];
-  let __statusInit = true;
 
   // Charts
   let chSourceBar = null;
   let chStatusBar = null;
   let chOccLines = null;
-  let occHighlightLabel = null;
+  let occHighlight = null;
 
   // Ocupación series cache
   let occSeries = null; // { months:[...], houses:[...], pctByHouse: Map(house -> [pct...]) }
@@ -797,17 +794,9 @@
     const statuses = [...new Set(rowsRaw.map(r => safeStr(r.Status).trim()).filter(Boolean))]
       .sort((a,b)=>a.localeCompare(b));
     selSt.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
-    if(__statusInit){
-      const hasBooked = statuses.some(x => x.toLowerCase() === "booked");
-      if(hasBooked){
-        selSt.value = "Booked";
-      } else {
-        selSt.value = statuses.includes(curSt) ? curSt : "";
-      }
-      __statusInit = false;
-    } else {
-      selSt.value = statuses.includes(curSt) ? curSt : "";
-    }
+    const booked = statuses.find(s => normalizeText(s) === "booked");
+    if(!curSt && booked) selSt.value = booked;
+    else selSt.value = statuses.includes(curSt) ? curSt : "";
   }
 
   // ===== Multi-combobox implementation =====
@@ -926,7 +915,8 @@
         else state.selected.delete(val);
         updateMCBLabel(containerId);
         state.onChange(getMCBSelected(containerId));
-      });
+            },
+      plugins:[barValueLabelsGuest]
     });
 
     updateMCBLabel(containerId);
@@ -1023,16 +1013,11 @@ function unescapeHtml(s){
     }, 0);
   }
 
-    function renderKPIs(){
+  function renderKPIs(){
     $("pillFiltered").textContent = `${rowsFiltered.length.toLocaleString("es-MX")} filas`;
 
-    const uniqBookings = new Set(rowsFiltered.map(r => safeStr(r.Id))).size;
-    $("kpiBookings").textContent = uniqBookings.toLocaleString("es-MX");
-
-    // Huéspedes únicos (robusto: teléfono -> email -> nombre)
-    const uniqGuests = new Set(rowsFiltered.map(r => guestKeyFromRow(r))).size;
-    const kpiGuests = $("kpiGuests");
-    if(kpiGuests) kpiGuests.textContent = uniqGuests.toLocaleString("es-MX");
+    const uniq = new Set(rowsFiltered.map(r => safeStr(r.Id))).size;
+    $("kpiBookings").textContent = uniq.toLocaleString("es-MX");
 
     const nights = rowsFiltered.reduce((a,r)=>a + safeNum(r.Nights), 0);
     $("kpiNights").textContent = nights.toLocaleString("es-MX");
@@ -1040,14 +1025,19 @@ function unescapeHtml(s){
     const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
     $("kpiGross").textContent = moneyMXN(gross);
 
-    const avgNight = nights > 0 ? (gross / nights) : 0;
-    const kpiAvgNight = $("kpiAvgNight");
-    if(kpiAvgNight) kpiAvgNight.textContent = nights > 0 ? moneyMXN(avgNight) : "—";
-
     $("kpiRoomRate").textContent = moneyMXN(sumByLineItem("RoomRate"));
     $("kpiFee").textContent      = moneyMXN(sumByLineItem("Fee"));
     $("kpiTax").textContent      = moneyMXN(sumByLineItem("Tax"));
-  }
+  
+
+    // Huéspedes únicos (robusto: por teléfono o nombre/email normalizado)
+    const guestSet = new Set(rowsFiltered.map(r=> guestKeyFromRow(r)));
+    $("kpiGuests").textContent = guestSet.size.toLocaleString("es-MX");
+
+    // Precio promedio por noche (Gross / Noches)
+    const avg = nights ? (gross / nights) : 0;
+    $("kpiAvgNight").textContent = nights ? moneyMXN(avg) : "—";
+}
 
   // ===== Table OTC =====
   function renderTable(){
@@ -1091,7 +1081,7 @@ function unescapeHtml(s){
     return { labels, data };
   }
 
-    // Plugin: etiquetas en barras (sin librerías extra) — soporta vertical y horizontal
+  // Plugin: etiquetas encima de cada barra (sin librerías extra)
   const barValueLabels = {
     id: "barValueLabels",
     afterDatasetsDraw(chart, args, pluginOptions){
@@ -1101,10 +1091,10 @@ function unescapeHtml(s){
       const color = pluginOptions?.color || "rgba(232,238,252,.9)";
       const fontSize = pluginOptions?.fontSize || 11;
 
-      const indexAxis = (chart?.options?.indexAxis || "x"); // 'x' (vertical bars) or 'y' (horizontal bars)
-
       ctx.save();
       ctx.fillStyle = color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
       ctx.font = `${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
 
       chart.data.datasets.forEach((dataset, di)=>{
@@ -1113,18 +1103,7 @@ function unescapeHtml(s){
           const v = dataset.data[i];
           if(v === null || v === undefined) return;
           const p = el.tooltipPosition();
-
-          if(indexAxis === "y"){
-            // horizontal: texto a la derecha de la barra
-            ctx.textAlign = "left";
-            ctx.textBaseline = "middle";
-            ctx.fillText(fmt(v), p.x + offset, p.y);
-          } else {
-            // vertical: texto arriba de la barra
-            ctx.textAlign = "center";
-            ctx.textBaseline = "bottom";
-            ctx.fillText(fmt(v), p.x, p.y - offset);
-          }
+          ctx.fillText(fmt(v), p.x, p.y - offset);
         });
       });
 
@@ -1158,15 +1137,15 @@ function unescapeHtml(s){
       type: "bar",
       data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
       options: {
-        responsive:true,
+                indexAxis:"y",
+responsive:true,
         maintainAspectRatio:false,
         plugins:{
           legend:{ display:false },
           tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
           barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
-        indexAxis:"y",
-        scales:{ x:{ beginAtZero:true } }
+        scales:{ x:{ beginAtZero:true }, y:{  beginAtZero:true  } }
       },
       plugins: [barValueLabels]
     });
@@ -1175,15 +1154,15 @@ function unescapeHtml(s){
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
-        responsive:true,
+                indexAxis:"y",
+responsive:true,
         maintainAspectRatio:false,
         plugins:{
           legend:{ display:false },
           tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
           barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
-        indexAxis:"y",
-        scales:{ x:{ beginAtZero:true } }
+        scales:{ x:{ beginAtZero:true }, y:{  beginAtZero:true  } }
       },
       plugins: [barValueLabels]
     });
@@ -1437,12 +1416,26 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     const labels = occSeries.months;
     const datasets = occSeries.houses.map(h=>{
       const data = occSeries.pctByHouse.get(h) || labels.map(()=>0);
-      const isHighlighted = (occHighlightLabel && h === occHighlightLabel);
-      const isMuted = (occHighlightLabel && h !== occHighlightLabel);
-      return { label:h, data, tension:0.25, pointRadius: isHighlighted ? 2 : 0, borderWidth: isHighlighted ? 3 : 1, borderDash: isMuted ? [6,6] : [] };
+      return { label:h, data, tension:0.25, pointRadius:0, borderWidth:1 };
     });
 
-    if(chOccLines) chOccLines.destroy();
+    
+    // Resaltado por selección en leyenda (sin ocultar series)
+    if(occHighlight){
+      for(const ds of datasets){
+        const isSel = ds.label === occHighlight;
+        ds.borderWidth = isSel ? 3 : 1;
+        ds.borderDash = isSel ? [] : [6,4];
+        ds.pointRadius = isSel ? 2 : 0;
+      }
+    } else {
+      for(const ds of datasets){
+        ds.borderWidth = 1;
+        ds.borderDash = [];
+        ds.pointRadius = 0;
+      }
+    }
+if(chOccLines) chOccLines.destroy();
     chOccLines = new Chart(canvas, {
       type: "line",
       data: { labels, datasets },
@@ -1455,20 +1448,10 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
             display:true,
             position:"bottom",
             labels:{ boxWidth:10 },
-            onClick: (e, legendItem, legend)=>{
-              const label = legendItem?.text;
-              if(!label) return;
-              occHighlightLabel = (occHighlightLabel === label) ? null : label;
-              // aplica estilos sin ocultar datasets
-              const chart = legend.chart;
-              chart.data.datasets.forEach(ds=>{
-                const isHighlighted = (occHighlightLabel && ds.label === occHighlightLabel);
-                const isMuted = (occHighlightLabel && ds.label !== occHighlightLabel);
-                ds.borderWidth = isHighlighted ? 3 : 1;
-                ds.borderDash = isMuted ? [6,6] : [];
-                ds.pointRadius = isHighlighted ? 2 : 0;
-              });
-              chart.update();
+            onClick:(e, item)=>{
+              const label = item.text;
+              occHighlight = (occHighlight === label) ? null : label;
+              renderOccLineChart();
             }
           },
           tooltip:{ callbacks:{ label:(ctx)=>` ${ctx.dataset.label}: ${ctx.raw}%` } }
@@ -1622,18 +1605,29 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       if(!g.GuestEmail && b.GuestEmail) g.GuestEmail = b.GuestEmail;
     }
 
-        // 3) scoring relativo (0-100) y estrellas (metodología: 60% Reservas + 40% Monto)
+    // 3) scoring relativo (0-100) y estrellas
     const arr = [...guests.values()];
     const maxBookings = Math.max(1, ...arr.map(g=>g.bookings.length));
     const maxGross = Math.max(1, ...arr.map(g=>g.totalGross));
+
+    const now = Date.now();
+    const dayMs = 86400000;
 
     for(const g of arr){
       const bN = g.bookings.length;
       const gross = g.totalGross;
 
+      // Recencia: 1 si fue hoy/reciente, decae a ~0 con 365 días
+      const daysSince = g.lastArrivalTs ? Math.max(0, (now - g.lastArrivalTs)/dayMs) : 9999;
+      const recency = Math.exp(-daysSince / 180); // half-ish around 125d, suave
+
+      // Diversidad (alojamientos distintos): 0..1 (log)
+      const diversity = Math.min(1, Math.log1p(g.houses.size) / Math.log1p(6));
+
       const sBookings = Math.log1p(bN) / Math.log1p(maxBookings);
       const sGross = Math.log1p(gross) / Math.log1p(maxGross);
 
+      // Score final: puedes ajustar pesos
       const score01 = (0.60*sBookings) + (0.40*sGross);
       const score = Math.max(0, Math.min(100, Math.round(score01 * 100)));
 
@@ -1645,7 +1639,9 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 
       g.score = score;
       g.stars = stars;
+      g.daysSinceLast = Math.round(daysSince);
     }
+
     // 4) orden default: mejores primero
     arr.sort((a,b)=> (b.score - a.score) || (b.totalGross - a.totalGross) || (b.bookings.length - a.bookings.length));
 
@@ -1658,37 +1654,27 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     return s + e;
   }
 
-  function fmtDate(ts){
-    if(!ts) return "—";
-    try{
-      return new Date(ts).toLocaleDateString("es-MX");
-    } catch {
-      return "—";
-    }
-  }
-
-  function scoreColor(score){
-    const s = Math.max(0, Math.min(100, Number(score)||0));
-    const hue = (s/100)*120; // 0=rojo, 120=verde
-    return `hsl(${hue}, 85%, 55%)`;
-  }
-
-  function starsHtml(score, stars){
+  
+function scoreColor(score){
+  const s = Math.max(0, Math.min(100, Number(score)||0));
+  const hue = (s/100)*120; // 0=rojo, 120=verde
+  return "hsl(" + hue + ", 85%, 55%)";
+}
+function starsHtml(score, stars){
     const fill = scoreColor(score);
     const empty = "rgba(232,238,252,.18)";
     let out = '<div style="display:flex; gap:4px; align-items:center;">';
     for(let i=1;i<=5;i++){
       const c = (i<=stars) ? fill : empty;
-      out += `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-        <path fill="${c}" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-      </svg>`;
+      out += '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">'
+          + '<path fill="' + c + '" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>'
+          + '</svg>';
     }
-    out += `</div>`;
+    out += '</div>';
     return out;
   }
 
-
-  function openGuestsWindow(){
+function openGuestsWindow(){
     const rows = rowsFiltered; // ✅ usa el universo actual (Parámetros + filtros)
     const profiles = buildGuestProfiles(rows);
 
@@ -1921,12 +1907,12 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
         <div class="kpi">
           <div class="lbl">Primera reserva</div>
           <div class="val" id="kpiFirst">—</div>
-          <div class="meta">Fecha de llegada</div>
+          <div class="meta">Fecha de primera llegada</div>
         </div>
         <div class="kpi">
           <div class="lbl">Última reserva</div>
           <div class="val" id="kpiLast">—</div>
-          <div class="meta">Fecha de llegada</div>
+          <div class="meta">Fecha de última llegada</div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
@@ -1937,11 +1923,9 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Datos de contacto</div>
-
-          <div id="contactName" style="margin-top:10px; font-size:18px; font-weight:950; letter-spacing:.2px;">—</div>
-          <div class="hint" id="contactPhone" style="margin-top:6px">—</div>
-          <div class="hint" id="contactEmail" style="margin-top:4px">—</div>
-
+          <div id="contactName" style="margin-top:8px; font-weight:900; font-size:18px; letter-spacing:.2px;">—</div>
+          <div class="meta mono" id="contactBits" style="margin-top:6px">—</div>
+          <a class="pill" id="contactWa" href="#" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; text-decoration:none;">Abrir WhatsApp</a>
           <div class="hint" style="margin-top:10px">
             Metodología de estrellas:
             <br/>Score (0-100) = 60% Reservas + 40% Monto.
@@ -2010,36 +1994,6 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     const e = "☆☆☆☆☆".slice(0, 5 - s.length);
     return s + e;
   }
-
-  function fmtDate(ts){
-    if(!ts) return "—";
-    try{
-      return new Date(ts).toLocaleDateString("es-MX");
-    } catch {
-      return "—";
-    }
-  }
-
-  function scoreColor(score){
-    const s = Math.max(0, Math.min(100, Number(score)||0));
-    const hue = (s/100)*120; // 0=rojo, 120=verde
-    return `hsl(${hue}, 85%, 55%)`;
-  }
-
-  function starsHtml(score, stars){
-    const fill = scoreColor(score);
-    const empty = "rgba(232,238,252,.18)";
-    let out = '<div style="display:flex; gap:4px; align-items:center;">';
-    for(let i=1;i<=5;i++){
-      const c = (i<=stars) ? fill : empty;
-      out += `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-        <path fill="${c}" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-      </svg>`;
-    }
-    out += `</div>`;
-    return out;
-  }
-
 
   let profiles = (window.opener && window.opener.__guestProfiles) ? window.opener.__guestProfiles : [];
   let selected = null;
@@ -2117,29 +2071,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       .replaceAll("'","&#039;");
   }
 
-  
-  function clearGuestUI(){
-    selected = null;
-    $("pillSelected").textContent = "—";
-    $("kpiStars").innerHTML = starsHtml(0, 0);
-    $("kpiScore").textContent = "—";
-    $("kpiBookings2").textContent = "—";
-    $("kpiGross2").textContent = "—";
-    $("kpiNights2").textContent = "—";
-    $("kpiHouses").textContent = "—";
-    $("kpiFirst").textContent = "—";
-    $("kpiLast").textContent = "—";
-    $("pillSources").textContent = "—";
-    $("pillHouses").textContent = "—";
-
-    $("contactName").textContent = "—";
-    $("contactPhone").textContent = "—";
-    $("contactEmail").textContent = "—";
-
-    if(chSources){ chSources.destroy(); chSources = null; }
-  }
-
-function selectGuest(key){
+  function selectGuest(key){
     selected = profiles.find(g=>g.guestKey === key) || null;
     if(!selected) return;
 
@@ -2150,50 +2082,46 @@ function selectGuest(key){
     $("kpiGross").textContent = moneyMXN(selected.totalGross);
     $("kpiNights").textContent = String(selected.totalNights);
     $("kpiHouses").textContent = String(selected.houses.size);
-    $("kpiFirst").textContent = fmtDate(selected.firstArrivalTs);
-    $("kpiLast").textContent = fmtDate(selected.lastArrivalTs);
+    const fmt = (ts)=> ts ? new Date(ts).toLocaleDateString("es-MX") : "—";
+    $("kpiFirst").textContent = fmt(selected.firstArrivalTs);
+    $("kpiLast").textContent  = fmt(selected.lastArrivalTs);
 
+
+    const bits = [];
+    if(selected.GuestEmail) bits.push("Email: " + selected.GuestEmail);
+    const phoneDigits = onlyDigits(selected.GuestPhone);
+    if(selected.GuestPhone) bits.push("Tel: " + selected.GuestPhone);
     $("contactName").textContent = selected.GuestName || "—";
-
-    const digits = onlyDigits(selected.GuestPhone);
-    if(digits){
-      $("contactPhone").innerHTML = `Tel: <a href="https://wa.me/${digits}" target="_blank" rel="noopener noreferrer">${escapeHtml(selected.GuestPhone)}</a>`;
-    } else {
-      $("contactPhone").textContent = selected.GuestPhone ? `Tel: ${selected.GuestPhone}` : "—";
-    }
-
-    $("contactEmail").textContent = selected.GuestEmail ? `Email: ${selected.GuestEmail}` : "—";
+    $("contactBits").textContent = bits.join(" · ") || "—";
+    const wa = phoneDigits ? ("https://wa.me/" + phoneDigits) : "#";
+    $("contactWa").href = wa;
 
     renderSourcesChart(selected);
     renderBookingsTable(selected);
   }
 
-  // Plugin simple para etiquetas en barras (counts)
-  const barValueLabels2 = {
-    id: "barValueLabels2",
-    afterDatasetsDraw(chart, args, opts){
-      const { ctx } = chart;
-      const offset = (opts && opts.offset) || 6;
-      ctx.save();
-      ctx.fillStyle = (opts && opts.color) || "rgba(232,238,252,.9)";
-      ctx.font = `${(opts && opts.fontSize) || 11}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+  const barValueLabelsGuest = {
+  id:"barValueLabelsGuest",
+  afterDatasetsDraw(chart){
+    const {ctx} = chart;
+    const ds = chart.data.datasets[0];
+    if(!ds) return;
+    const meta = chart.getDatasetMeta(0);
+    ctx.save();
+    ctx.font = "12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+    ctx.fillStyle = "rgba(232,238,252,.85)";
+    meta.data.forEach((bar, i)=>{
+      const v = ds.data[i];
+      const p = bar.tooltipPosition();
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
+      ctx.fillText(String(v), p.x + 8, p.y);
+    });
+    ctx.restore();
+  }
+};
 
-      chart.data.datasets.forEach((ds, di)=>{
-        const meta = chart.getDatasetMeta(di);
-        meta.data.forEach((el, i)=>{
-          const v = ds.data[i];
-          if(v === null || v === undefined) return;
-          const p = el.tooltipPosition();
-          ctx.fillText(String(v), p.x + offset, p.y);
-        });
-      });
-      ctx.restore();
-    }
-  };
-
-  function renderSourcesChart(g){
+function renderSourcesChart(g){
     const labels = [...g.sources.keys()];
     labels.sort((a,b)=> (g.sources.get(b).count - g.sources.get(a).count));
     const data = labels.map(k=> g.sources.get(k).count);
@@ -2203,17 +2131,15 @@ function selectGuest(key){
       type:"bar",
       data:{ labels, datasets:[{ label:"Reservas", data }] },
       options:{
+        indexAxis:"y",
         responsive:true,
         maintainAspectRatio:false,
-        indexAxis:"y",
         plugins:{
           legend:{ display:false },
-          tooltip:{ callbacks:{ label:(ctx)=> ` ${ctx.raw} reservas` } },
-          barValueLabels2: { offset: 6, fontSize: 11 }
+          tooltip:{ callbacks:{ label:(ctx)=> \` \${ctx.raw} reservas\` } }
         },
         scales:{ x:{ beginAtZero:true, ticks:{ precision:0 } } }
-      },
-      plugins:[barValueLabels2]
+      }
     });
   }
 
@@ -2258,12 +2184,7 @@ function selectGuest(key){
     function close(){ combo.classList.remove("open"); }
 
     input.addEventListener("focus", open);
-    input.addEventListener("input", ()=>{
-      const q = (input.value||"").trim();
-      open();
-      renderList();
-      if(!q) clearGuestUI();
-    });
+    input.addEventListener("input", ()=>{ open(); renderList(); });
 
     document.addEventListener("click", (e)=>{
       if(!combo.contains(e.target)) close();
@@ -2272,9 +2193,9 @@ function selectGuest(key){
     $("btnClose").addEventListener("click", ()=> window.close());
     $("btnRefresh").addEventListener("click", ()=> refreshFromOpener());
 
-    // Sin selección predeterminada: el usuario elige un huésped del combo.
-    clearGuestUI();
-  })();
+    // Sin selección por defecto (hasta que el usuario elija)
+    input.value = "";
+})();
 <\/script>
 </body>
 </html>`;
