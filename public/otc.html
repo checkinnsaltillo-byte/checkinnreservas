@@ -2460,7 +2460,7 @@ renderSourcesChart(selected);
     };
 
     if(chSources) chSources.destroy();
-    chSources = new Chart($("chSources"), {
+    chSources = new Chart(document.getElementById("chSources"), {
       type:"bar",
       data:{ labels, datasets:[{ label:"Reservas", data }] },
       options:{
