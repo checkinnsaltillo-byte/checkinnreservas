@@ -182,6 +182,13 @@
     }
     #occTable thead th.houseCol{ z-index: 10; }
 
+    /* --- Ocupación: asegurar sticky para encabezado HouseName --- */
+    #occTable thead th.houseCol{
+      left: 0;
+      position: sticky;
+    }
+
+
     .occCell{ min-width: 210px; white-space: normal; line-height: 1.25; }
     .occTop{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--muted); }
     .occMain{ margin-top:6px; display:flex; align-items:center; gap:10px; }
@@ -1533,7 +1540,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       const tdAvgA = document.createElement("td");
       tdAvgA.innerHTML = `<span class="mono">${avgPctAll.toFixed(0)}%</span>`;
 
-      trA.innerHTML = `<th class="stickyL">${escapeHtml(AVG_NAME)}</th>` + avgCells;
+      trA.innerHTML = `<td class="houseCol">${escapeHtml(AVG_NAME)}</td>` + avgCells;
       trA.appendChild(tdAvgA);
       frag.appendChild(trA);
     }
@@ -1549,9 +1556,11 @@ tbody.appendChild(frag);
     syncOccView();
   }
 
-  function buildOccupancySeriesForChart(months, houses, mapHouseMonth){
+  function buildOccupancySeriesForChart(months, housesArr, mapHouseMonth){
     const pctByHouse = new Map();
-    for(const house of houses){
+
+    // normal series for each house
+    for(const house of housesArr){
       const arr = [];
       const hm = mapHouseMonth.get(house) || new Map();
       for(const mo of months){
@@ -1566,28 +1575,29 @@ tbody.appendChild(frag);
     }
 
     // --- Serie extra: Promedio de los alojamientos (por mes) ---
-    if(houses.size){
-      const AVG_NAME = "Promedio de los alojamientos";
+    const AVG_NAME = "Promedio de los alojamientos";
+    if(housesArr && housesArr.length){
       const arrAvg = [];
-      for(let i=0;i<months.length;i++){
-        const mo = months[i];
+      for(const mo of months){
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
+
         let sumOcc = 0;
-        for(const h of houses){
-          const hm = map.get(h) || new Map();
+        for(const h of housesArr){
+          const hm = mapHouseMonth.get(h) || new Map();
           sumOcc += (hm.get(mo.key) || 0);
         }
-        const avgOcc = (houses.size ? (sumOcc / houses.size) : 0);
+        const avgOcc = sumOcc / housesArr.length;
         const pct = totalNightsMonth > 0 ? (avgOcc / totalNightsMonth) * 100 : 0;
         arrAvg.push(+pct.toFixed(2));
       }
       pctByHouse.set(AVG_NAME, arrAvg);
-      houses.add(AVG_NAME);
     }
 
-    occSeries = { months: months.map(m=>m.key), houses:[...houses], pctByHouse };
+    // Orden: Promedio primero (siempre resaltado), luego el resto
+    const houses = ["Promedio de los alojamientos", ...housesArr.filter(h=>h!=="Promedio de los alojamientos")];
+    occSeries = { months: months.map(m=>m.key), houses, pctByHouse };
   }
 
   function renderOccLineChart(){
@@ -1604,7 +1614,16 @@ tbody.appendChild(frag);
     const labels = occSeries.months;
     const datasets = occSeries.houses.map(h=>{
       const data = occSeries.pctByHouse.get(h) || labels.map(()=>0);
-      return { label:h, data, tension:0.25, pointRadius:0, borderWidth:1 };
+      const isAvg = (h === "Promedio de los alojamientos");
+      return {
+        label:h,
+        data,
+        tension:0.25,
+        pointRadius:0,
+        borderWidth: isAvg ? 4 : 1,
+        borderColor: isAvg ? "#ff3b30" : undefined,
+        borderDash: isAvg ? [] : undefined
+      };
     });
 
     if(chOccLines) chOccLines.destroy();
@@ -1624,12 +1643,29 @@ tbody.appendChild(frag);
               const chart = legend.chart;
               const idx = legendItem.datasetIndex;
 
-              const cur = chart.$highlightIndex;
-              chart.$highlightIndex = (cur === idx) ? null : idx;
+              const avgLabel = "Promedio de los alojamientos";
+              const avgIdx = chart.data.datasets.findIndex(d=>d.label===avgLabel);
+
+              // Si clickean el promedio, solo quita cualquier highlight (pero el promedio se queda rojo/grueso)
+              if(idx === avgIdx){
+                chart.$highlightIndex = null;
+              }else{
+                const cur = chart.$highlightIndex;
+                chart.$highlightIndex = (cur === idx) ? null : idx;
+              }
 
               chart.data.datasets.forEach((ds, i)=>{
                 ds.hidden = false;
                 ds.$origBorderColor = ds.$origBorderColor || ds.borderColor;
+
+                const isAvg = (i === avgIdx) || (ds.label === avgLabel);
+                if(isAvg){
+                  ds.borderWidth = 4;
+                  ds.borderDash = [];
+                  ds.borderColor = "#ff3b30";
+                  return;
+                }
+
                 if(chart.$highlightIndex === null){
                   ds.borderWidth = 1;
                   ds.borderDash = [];
