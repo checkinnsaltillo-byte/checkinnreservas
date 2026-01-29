@@ -372,6 +372,27 @@ body{ font-size:14px; }
 #contactLine a.kpiBtn:hover{ background: linear-gradient(180deg, #153459, #0f2542); }
 #contactLine a.kpiBtn .mono{ font-weight:800; }
 
+
+/* === Huéspedes: KPIs de contacto (WhatsApp / Email) === */
+#guestContactKPIs{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap:10px;
+  margin-top:8px;
+}
+#guestContactKPIs .kpi{
+  cursor:pointer;
+}
+#guestContactKPIs .kpi .lbl{
+  font-size:12px;
+  opacity:.9;
+}
+#guestContactKPIs .kpi .val{
+  font-size:14px;
+  font-weight:800;
+  line-height:1.2;
+}
+
 </style>
 </head>
 
@@ -486,6 +507,17 @@ body{ font-size:14px; }
       <div class="kpis">
         <div class="kpi">
           <div class="lbl">Reservas únicas</div>
+    <div id="guestContactKPIs">
+      <div class="kpi" id="kpiWhatsapp">
+        <div class="lbl">WhatsApp</div>
+        <div class="val" id="kpiWhatsappVal">—</div>
+      </div>
+      <div class="kpi" id="kpiEmail">
+        <div class="lbl">Correo electrónico</div>
+        <div class="val" id="kpiEmailVal">—</div>
+      </div>
+    </div>
+
           <div class="val" id="kpiBookings">—</div>
           <div class="meta">IDs distintos</div>
         </div>
@@ -2432,7 +2464,8 @@ function selectGuest(key){
       emailHtml = '<a class="mailLink" href="mailto:' + esc(emailRaw) + '" title="Enviar correo">' + esc(emailRaw) + '</a>';
     }
 
-    $("contactLine").innerHTML = '<div class="contactTitle">' + esc(name) + '</div>' + '<div class="contactActions">' + (phoneRaw ? '<a class="kpiBtn" href="https://wa.me/' + phoneDigits + '" target="_blank" rel="noopener noreferrer" title="Enviar WhatsApp">Enviar WhatsApp al <span class="mono">' + esc(phoneRaw) + '</span></a>' : '') + (emailRaw ? '<a class="kpiBtn" href="mailto:' + esc(emailRaw) + '" title="Enviar correo">Enviar E-mail al <span class="mono">' + esc(emailRaw) + '</span></a>' : '') + '</div>';
+    updateGuestContactKPIs(name, phoneRaw, phoneDigits, emailRaw);
+$("contactLine").innerHTML = '<div class="contactTitle">' + esc(name) + '</div>' + '<div class="contactActions">' + (phoneRaw ? '<a class="kpiBtn" href="https://wa.me/' + phoneDigits + '" target="_blank" rel="noopener noreferrer" title="Enviar WhatsApp">Enviar WhatsApp al <span class="mono">' + esc(phoneRaw) + '</span></a>' : '') + (emailRaw ? '<a class="kpiBtn" href="mailto:' + esc(emailRaw) + '" title="Enviar correo">Enviar E-mail al <span class="mono">' + esc(emailRaw) + '</span></a>' : '') + '</div>';
 renderSourcesChart(selected);
     renderBookingsTable(selected);
   }
@@ -2582,6 +2615,26 @@ renderSourcesChart(selected);
       alert(String(e.message || e));
     });
   })();
+
+// === Huéspedes: KPIs de contacto ===
+function updateGuestContactKPIs(name, phoneRaw, phoneDigits, emailRaw){
+  const kpiW = document.getElementById("kpiWhatsapp");
+  const kpiWV = document.getElementById("kpiWhatsappVal");
+  const kpiE = document.getElementById("kpiEmail");
+  const kpiEV = document.getElementById("kpiEmailVal");
+
+  if(kpiWV){
+    kpiWV.textContent = phoneRaw ? ("Enviar WhatsApp a " + phoneRaw) : "—";
+    kpiW.style.opacity = phoneRaw ? 1 : .5;
+    kpiW.onclick = phoneRaw ? ()=>window.open("https://wa.me/" + phoneDigits, "_blank") : null;
+  }
+  if(kpiEV){
+    kpiEV.textContent = emailRaw ? ("Enviar E-mail a " + emailRaw) : "—";
+    kpiE.style.opacity = emailRaw ? 1 : .5;
+    kpiE.onclick = emailRaw ? ()=>window.location.href=("mailto:" + emailRaw) : null;
+  }
+}
+
 </script>
 </body>
 </html>
