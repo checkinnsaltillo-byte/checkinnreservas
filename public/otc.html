@@ -266,21 +266,31 @@
       color:var(--muted);
       font-size:12px;
     }
-
-  /* Sortable headers */
-  th.sortable{ cursor:pointer; user-select:none; position:relative; }
-  th.sortable::after{ content:""; opacity:.55; margin-left:6px; }
-  th.sortable[data-dir="asc"]::after{ content:"▲"; }
-  th.sortable[data-dir="desc"]::after{ content:"▼"; }
-
-  /* ⭐ importante */
-  .vipStar{ display:inline-flex; align-items:center; gap:6px; }
-  .vipStar .s{ color:#ffd36a; filter: drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
-
-  /* Fix: allow dropdown panels to overflow in Parámetros card only */
-  #mcbPropiedad{ position:relative; }
-  #mcbPropiedad .mcbPanel{ z-index: 9999; }
-  section.card:has(#mcbPropiedad){ overflow: visible !important; }
+  
+    /* ======= Guest summary ======= */
+    .guestRow{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
+    .guestRow > *{flex:1}
+    .guestMatches{
+      display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;
+    }
+    .guestChip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(76,201,240,.22);
+      background:rgba(76,201,240,.08);
+      cursor:pointer;
+      font-size:12.5px;
+      color:var(--text);
+      max-width: 100%;
+    }
+    .guestChip.active{
+      border-color: rgba(76,201,240,.45);
+      background: rgba(76,201,240,.14);
+      box-shadow: 0 10px 20px rgba(76,201,240,.10);
+    }
+    .guestChip .mono{opacity:.9}
+    .stars{letter-spacing:1px}
 
 </style>
 </head>
@@ -311,7 +321,7 @@
 <main class="wrap">
 
   <!-- Parámetros -->
-  <section class="card">
+  <section class="card" style="overflow:visible;">
     <div class="hd">
       <div>
         <h2>Parámetros</h2>
@@ -444,91 +454,6 @@
     </div>
   </section>
 
-  <!-- Resumen por huésped -->
-  <section class="card">
-    <div class="hd">
-      <div>
-        <h2>Resumen por huésped</h2>
-        <div class="hint">Filtra por nombre o teléfono (usa los datos de la Tabla OTC). La evaluación de “huésped importante” se calcula automáticamente.</div>
-      </div>
-      <div class="hint" id="guestMeta">—</div>
-    </div>
-
-    <div class="bd">
-      <div class="row" style="margin-bottom:10px; gap:10px; flex-wrap:wrap">
-        <label style="flex:2; min-width:260px">
-          <div class="hint">Buscar huésped (nombre o teléfono)</div>
-          <input id="guestSearch" placeholder="Ej. Sofia Bucio o 528781110416" list="guestDatalist" />
-          <datalist id="guestDatalist"></datalist>
-        </label>
-
-        <label class="small" style="min-width:220px">
-          <div class="hint">Selección rápida</div>
-          <select id="guestSelect">
-            <option value="">—</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="kpis" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
-        <div class="kpi">
-          <div class="lbl">Clasificación</div>
-          <div class="val" id="gRating">—</div>
-          <div class="meta" id="gScoreMeta">—</div>
-        </div>
-
-        <div class="kpi">
-          <div class="lbl">Reservas</div>
-          <div class="val" id="gBookings">—</div>
-          <div class="meta">IDs distintos</div>
-        </div>
-
-        <div class="kpi">
-          <div class="lbl">Monto pagado</div>
-          <div class="val" id="gAmount">—</div>
-          <div class="meta">Suma GrossAmount (agregado por Id)</div>
-        </div>
-
-        <div class="kpi">
-          <div class="lbl">Alojamientos</div>
-          <div class="val" id="gHouses">—</div>
-          <div class="meta" id="gHousesList">—</div>
-        </div>
-
-        <div class="kpi" style="grid-column: span 2;">
-          <div class="lbl">Resumen por Source</div>
-          <div class="meta">Reservas y monto (agregado por Id)</div>
-          <div class="tableWrap" style="margin-top:6px">
-            <div class="scrollY" style="max-height:210px">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="sortable" data-key="Source">Source</th>
-                    <th class="sortable" data-key="Count">Reservas</th>
-                    <th class="sortable" data-key="Amount">Monto</th>
-                  </tr>
-                </thead>
-                <tbody id="gSourceTbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <details style="margin-top:12px">
-        <summary class="hint">Metodología de evaluación (huésped importante)</summary>
-        <div class="hint" style="margin-top:8px; line-height:1.45">
-          <b>Score (0–100)</b> = Reservas (0–40) + Monto (0–35) + Recurrencia (0–15) + Recencia (0–10).<br/>
-          • <b>Reservas</b>: min(Reservas/5, 1) × 40<br/>
-          • <b>Monto</b>: min(Monto/20000, 1) × 35 (asumiendo MXN; ajustable)<br/>
-          • <b>Recurrencia</b>: min(Meses con reserva/4, 1) × 15<br/>
-          • <b>Recencia</b>: si la última salida fue ≤ 180 días, hasta 10 puntos (lineal).<br/>
-          <b>5★</b> si Score ≥ 85 (marcado como “importante” con ⭐ en la Tabla OTC).
-        </div>
-      </details>
-    </div>
-  </section>
-
   <!-- Ocupación -->
   <section class="card">
     <div class="hd">
@@ -551,6 +476,28 @@
             <option value="line">Gráfica de líneas (% ocupación)</option>
           </select>
         </label>
+
+        
+        <div class="mcb" id="mcbOccAvgMonths" style="flex:1.2">
+          <div class="hint">Promedio (mes-año)</div>
+          <button class="mcbBtn" type="button">
+            <span class="mcbLabel">Todos</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="mcbPanel">
+            <input class="mcbSearch" type="text" placeholder="Buscar mes..." />
+            <div class="mcbTools">
+              <button type="button" class="mcbAll">Seleccionar todo</button>
+              <button type="button" class="mcbNone">Limpiar</button>
+            </div>
+            <div class="mcbList"></div>
+            <div class="mcbFooter">
+              <span class="mcbCount">0 seleccionados</span>
+              <button type="button" class="mcbClose">Cerrar</button>
+            </div>
+          </div>
+        </div>
+
 
         <!-- ✅ combobox multi: Propiedad (ocupación) -->
         <div class="mcb" id="mcbOccPropiedad" style="flex:1.2">
@@ -618,15 +565,99 @@
     </div>
   </section>
 
+
+  <!-- Resumen por huésped -->
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>Resumen por huésped</h2>
+        <div class="hint">
+          Filtra por <b>nombre</b> o <b>teléfono</b>. Se calcula con las filas ya filtradas por los parámetros actuales.
+          La clasificación (★) se basa en cantidad de reservas, monto y recurrencia.
+        </div>
+      </div>
+      <div class="hint" id="guestMeta">—</div>
+    </div>
+
+    <div class="bd">
+      <div class="guestRow">
+        <label style="flex:1.6">
+          <div class="hint">Buscar huésped (nombre o teléfono)</div>
+          <input id="guestQ" placeholder="Ej: Sofia / 528781110416" />
+        </label>
+        <label class="small">
+          <div class="hint">Top coincidencias</div>
+          <div class="hint">Da click en un chip para ver detalle</div>
+        </label>
+      </div>
+
+      <div class="guestMatches" id="guestMatches"></div>
+
+      <div class="kpis" style="margin-top:12px">
+        <div class="kpi">
+          <div class="lbl">Reservas (IDs únicos)</div>
+          <div class="val" id="g_kpiBookings">—</div>
+          <div class="meta">Cantidad total de estancias detectadas</div>
+        </div>
+
+        <div class="kpi">
+          <div class="lbl">Monto pagado (sum Gross)</div>
+          <div class="val" id="g_kpiGross">—</div>
+          <div class="meta">Suma GrossAmount (todas las líneas)</div>
+        </div>
+
+        <div class="kpi">
+          <div class="lbl">Alojamientos donde se hospedó</div>
+          <div class="val" id="g_kpiHouses">—</div>
+          <div class="meta">HouseName distintos</div>
+        </div>
+
+        <div class="kpi">
+          <div class="lbl">Clasificación</div>
+          <div class="val" id="g_kpiStars">—</div>
+          <div class="meta" id="g_kpiExplain">—</div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 6;">
+          <div class="lbl">Resumen por Source</div>
+          <div class="meta">Reservas (IDs) y monto por canal</div>
+          <div class="tableWrap" style="margin-top:10px">
+            <div class="scrollY" style="max-height:260px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Reservas (IDs)</th>
+                    <th>Monto (Gross)</th>
+                  </tr>
+                </thead>
+                <tbody id="guestSourceTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 6;">
+          <div class="lbl">Metodología de “huésped importante”</div>
+          <div class="meta" style="white-space:normal; line-height:1.4; margin-top:8px">
+            <b>Puntaje 0–100</b> = Reservas (0–40) + Monto (0–40) + Recurrencia (0–20).<br/>
+            • <b>Reservas</b>: 8 pts por reserva (máx 40).<br/>
+            • <b>Monto</b>: escala logarítmica (máx 40) para no “castigar” valores muy altos.<br/>
+            • <b>Recurrencia</b>: 5 pts por mes distinto con estancia (máx 20).<br/>
+            <b>Estrellas</b>: 1★ (0–19), 2★ (20–39), 3★ (40–59), 4★ (60–79), 5★ (80–100).<br/>
+            Se marca como <b>huésped importante</b> cuando obtiene <b>5★</b>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
   <!-- Tabla OTC -->
   <section class="card">
     <div class="hd">
       <div>
         <h2>Tabla OTC</h2>
-        <div class="row" style="margin-top:8px; gap:8px; flex-wrap:wrap">
-          <button id="btnAgg" class="ghost" type="button">Ver montos agregados</button>
-          <span class="hint">En modo agregado: 1 fila por <span class="mono">Id</span> (suma GrossAmount)</span>
-        </div>
         <div class="hint">Tabla + filtros instantáneos + overlap por fechas</div>
       </div>
     </div>
@@ -637,21 +668,21 @@
           <table>
             <thead>
               <tr>
-                <th data-key="Id" class="sortable">Id</th>
-                <th data-key="Property" class="sortable">Propiedad</th>
-                <th data-key="Source" class="sortable">Source</th>
-                <th data-key="Status" class="sortable">Status</th>
-                <th data-key="DateArrival" class="sortable">Arrival</th>
-                <th data-key="DateDeparture" class="sortable">Departure</th>
-                <th data-key="Nights" class="sortable">Nights</th>
-                <th data-key="HouseName" class="sortable">HouseName</th>
-                <th data-key="GuestName" class="sortable">GuestName</th>
-                <th data-key="GuestEmail" class="sortable">GuestEmail</th>
-                <th data-key="GuestPhone" class="sortable">GuestPhone</th>
-                <th data-key="GuestCountryCode" class="sortable">CountryCode</th>
-                <th data-key="LineItem" class="sortable">LineItem</th>
-                <th data-key="GrossAmount" class="sortable">GrossAmount</th>
-                <th data-key="Currency" class="sortable">Currency</th>
+                <th>Id</th>
+                <th>Propiedad</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th>Nights</th>
+                <th>HouseName</th>
+                <th>GuestName</th>
+                <th>GuestEmail</th>
+                <th>GuestPhone</th>
+                <th>GuestCountryCode</th>
+                <th>LineItem</th>
+                <th>GrossAmount</th>
+                <th>Currency</th>
               </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -674,10 +705,10 @@
 
   let rowsRaw = [];
   let rowsFiltered = [];
-  let otcAggMode = false; // false: line items, true: agregado por Id
-  let otcSort = { key: "DateArrival", dir: "desc" };
-  let occSort = { key: "HouseName", dir: "asc" };
-  let guestIndex = { byKey: new Map(), byBookingId: new Map(), list: [] }; // computed from rowsFiltered (agregado por Id)
+
+  // Guest summary state
+  let guestSelectedKey = null;
+  let guestScores = new Map();
 
   // Charts
   let chSourceBar = null;
@@ -990,19 +1021,12 @@
       .replaceAll('"',"&quot;")
       .replaceAll("'","&#039;");
   }
-  function unescapeHtml(s){
-    // solo para nuestros values
-    return String(s ?? "")
-      .replaceAll("&amp;","&")
-      .replaceAll("&lt;","<")
-      .replaceAll("&gt;",">")
-      .replaceAll("&quot;",'"')
-      .replaceAll("&#039;","'");
-  }
+  
 
   function normalizePhoneDigits(phone){
     const raw = safeStr(phone).trim();
     if(!raw) return "";
+    // Keep digits only for wa.me
     return raw.replace(/\D/g, "");
   }
 
@@ -1015,6 +1039,241 @@
     return `<a href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(raw)}</a>`;
   }
 
+
+  // ===== Guest summary helpers =====
+  function guestKeyFromRow(r){
+    const phoneDigits = normalizePhoneDigits(r.GuestPhone);
+    if(phoneDigits) return "p:" + phoneDigits;
+    const nm = safeStr(r.GuestName).trim().toLowerCase();
+    if(nm) return "n:" + nm;
+    return "u:unknown";
+  }
+
+  function guestDisplayFromKey(key){
+    if(!key) return "—";
+    if(key.startsWith("p:")) return key.slice(2);
+    if(key.startsWith("n:")) return key.slice(2);
+    return "—";
+  }
+
+  function monthKeyFromMMDDYYYY(s){
+    const d = parseMMDDYYYY(s);
+    if(!d) return null;
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth()+1).padStart(2,"0");
+    return `${y}-${m}`;
+  }
+
+  function computeGuestScore(stats){
+    // stats: {bookingsCount, grossSum, activeMonthsCount}
+    const bookingsPts = Math.min(40, stats.bookingsCount * 8);
+
+    const gross = Math.max(0, stats.grossSum || 0);
+    // log scale: 0 -> 0, 1k -> ~10, 10k -> ~20, 100k -> ~30, 1M -> ~40 (aprox)
+    const grossPts = Math.min(40, Math.log10(gross + 1) * 10);
+
+    const recPts = Math.min(20, stats.activeMonthsCount * 5);
+
+    const score = Math.max(0, Math.min(100, bookingsPts + grossPts + recPts));
+    const stars = Math.min(5, Math.max(1, Math.ceil(score / 20)));
+
+    return {
+      score,
+      stars,
+      important: stars >= 5,
+      breakdown: { bookingsPts, grossPts, recPts }
+    };
+  }
+
+  function starsText(n){
+    const k = Math.max(0, Math.min(5, Number(n)||0));
+    return "★".repeat(k) + "☆".repeat(5-k);
+  }
+
+  function buildGuestStats(rows){
+    // Dedup bookings by Id per guest for booking count.
+    const byKey = new Map();
+    // Track seen booking ids per key
+    const seenByKey = new Map();
+
+    for(const r of rows){
+      const key = guestKeyFromRow(r);
+
+      if(!byKey.has(key)){
+        byKey.set(key, {
+          key,
+          guestName: safeStr(r.GuestName).trim(),
+          guestPhone: normalizePhoneDigits(r.GuestPhone),
+          guestEmail: safeStr(r.GuestEmail).trim(),
+          grossSum: 0,
+          houses: new Set(),
+          sources: new Map(), // source -> {grossSum, bookingIds:Set}
+          months: new Set(),  // distinct months
+          bookingIds: new Set()
+        });
+        seenByKey.set(key, new Set());
+      }
+
+      const st = byKey.get(key);
+      st.grossSum += safeNum(r.GrossAmount);
+      if(r.HouseName) st.houses.add(safeStr(r.HouseName).trim());
+      const mk = monthKeyFromMMDDYYYY(r.DateArrival);
+      if(mk) st.months.add(mk);
+
+      const src = safeStr(r.Source).trim() || "—";
+      if(!st.sources.has(src)){
+        st.sources.set(src, { grossSum: 0, bookingIds: new Set() });
+      }
+      st.sources.get(src).grossSum += safeNum(r.GrossAmount);
+
+      const id = safeStr(r.Id);
+      if(id){
+        st.bookingIds.add(id);
+        st.sources.get(src).bookingIds.add(id);
+      }
+    }
+
+    // Finalize counts + score
+    const out = [];
+    for(const st of byKey.values()){
+      const bookingsCount = st.bookingIds.size;
+      const activeMonthsCount = st.months.size;
+      const scoreObj = computeGuestScore({ bookingsCount, grossSum: st.grossSum, activeMonthsCount });
+
+      out.push({
+        ...st,
+        bookingsCount,
+        activeMonthsCount,
+        score: scoreObj.score,
+        stars: scoreObj.stars,
+        important: scoreObj.important,
+        scoreBreakdown: scoreObj.breakdown
+      });
+    }
+
+    // Build score map for quick lookup
+    const scoreMap = new Map();
+    for(const g of out){
+      scoreMap.set(g.key, { stars: g.stars, important: g.important, score: g.score });
+    }
+
+    return { guests: out, scoreMap };
+  }
+
+  function matchGuest(guest, qLower, qDigits){
+    if(!qLower && !qDigits) return true;
+    const name = safeStr(guest.guestName).toLowerCase();
+    const phone = safeStr(guest.guestPhone);
+    if(qDigits){
+      return phone.includes(qDigits) || name.includes(qLower);
+    }
+    return name.includes(qLower) || phone.includes(qLower.replace(/\D/g,""));
+  }
+
+  function renderGuestSummary(){
+    const qEl = $("guestQ");
+    const qRaw = qEl ? qEl.value.trim() : "";
+    const qDigits = qRaw.replace(/\D/g,"");
+    const qLower = qRaw.toLowerCase();
+
+    const meta = $("guestMeta");
+    const matchesEl = $("guestMatches");
+    const tb = $("guestSourceTbody");
+
+    if(!matchesEl || !tb) return;
+
+    // Build guest stats from current filtered rows
+    const { guests, scoreMap } = buildGuestStats(rowsFiltered);
+    guestScores = scoreMap;
+
+    // Suggest top matches (by score) for the query
+    const filtered = guests
+      .filter(g => matchGuest(g, qLower, qDigits))
+      .sort((a,b)=> (b.score - a.score) || (b.bookingsCount - a.bookingsCount) || (b.grossSum - a.grossSum));
+
+    const top = filtered.slice(0, 12);
+
+    // Maintain selection if possible
+    if(!guestSelectedKey){
+      guestSelectedKey = top[0]?.key || null;
+    } else {
+      const still = guests.some(g => g.key === guestSelectedKey);
+      if(!still) guestSelectedKey = top[0]?.key || null;
+    }
+
+    // Render chips
+    matchesEl.innerHTML = top.map(g=>{
+      const isActive = g.key === guestSelectedKey;
+      const label = g.guestName || (g.guestPhone ? `Tel ${g.guestPhone}` : guestDisplayFromKey(g.key));
+      const sub = g.guestPhone ? g.guestPhone : "";
+      const star = g.important ? "⭐" : "";
+      return `
+        <div class="guestChip ${isActive ? "active":""}" data-key="${escapeHtml(g.key)}" title="${escapeHtml(label)}">
+          <span>${star}${escapeHtml(label || "—")}</span>
+          <span class="mono" style="color:var(--muted)">${escapeHtml(sub)}</span>
+          <span class="mono" style="color:var(--muted)">${escapeHtml(starsText(g.stars))}</span>
+        </div>
+      `;
+    }).join("") || `<span class="hint">No hay coincidencias para el filtro actual.</span>`;
+
+    // Click handlers
+    matchesEl.querySelectorAll(".guestChip").forEach(ch=>{
+      ch.addEventListener("click", ()=>{
+        const k = unescapeHtml(ch.getAttribute("data-key"));
+        guestSelectedKey = k;
+        renderGuestSummary();
+        // update table to show star icons consistent
+        renderTable();
+      });
+    });
+
+    const selected = guests.find(g => g.key === guestSelectedKey) || top[0] || null;
+
+    if(!selected){
+      $("g_kpiBookings").textContent = "—";
+      $("g_kpiGross").textContent = "—";
+      $("g_kpiHouses").textContent = "—";
+      $("g_kpiStars").textContent = "—";
+      $("g_kpiExplain").textContent = "—";
+      tb.innerHTML = "";
+      meta.textContent = `Huéspedes detectados: ${guests.length.toLocaleString("es-MX")}`;
+      return;
+    }
+
+    meta.textContent = `Huéspedes detectados: ${guests.length.toLocaleString("es-MX")} · Seleccionado: ${selected.guestName || selected.guestPhone || guestDisplayFromKey(selected.key)}`;
+
+    $("g_kpiBookings").textContent = selected.bookingsCount.toLocaleString("es-MX");
+    $("g_kpiGross").textContent = moneyMXN(selected.grossSum);
+    $("g_kpiHouses").textContent = String(selected.houses.size);
+    $("g_kpiStars").innerHTML = `<span class="stars">${escapeHtml(starsText(selected.stars))}</span>`;
+    const b = selected.scoreBreakdown || {};
+    $("g_kpiExplain").textContent = `Score ${Math.round(selected.score)}/100 · Reservas ${Math.round(b.bookingsPts||0)} · Monto ${Math.round(b.grossPts||0)} · Recurrencia ${Math.round(b.recPts||0)}`;
+
+    // Source breakdown table for selected guest
+    const sources = [...selected.sources.entries()].map(([src, v])=>({
+      src,
+      bookings: v.bookingIds.size,
+      gross: v.grossSum
+    })).sort((a,b)=> (b.gross - a.gross) || (b.bookings - a.bookings) || a.src.localeCompare(b.src));
+
+    tb.innerHTML = sources.map(s=>`
+      <tr>
+        <td>${escapeHtml(s.src)}</td>
+        <td class="mono">${s.bookings.toLocaleString("es-MX")}</td>
+        <td class="mono">${moneyMXN(s.gross)}</td>
+      </tr>
+    `).join("") || `<tr><td colspan="3" class="hint">Sin datos</td></tr>`;
+  }
+
+function unescapeHtml(s){
+    // solo para nuestros values
+    return String(s ?? "")
+      .replaceAll("&amp;","&")
+      .replaceAll("&lt;","<")
+      .replaceAll("&gt;",">")
+      .replaceAll("&quot;",'"')
+      .replaceAll("&#039;","'");
+  }
 
   function rebuildPropiedadMCBFromRowsRaw(){
     const props = [...new Set(rowsRaw.map(r => safeStr(r.Property).trim()).filter(Boolean))]
@@ -1073,271 +1332,24 @@
     const nights = rowsFiltered.reduce((a,r)=>a + safeNum(r.Nights), 0);
     $("kpiNights").textContent = nights.toLocaleString("es-MX");
 
-    const gross = rowsFiltered.reduce((a,r)=// ===== Table OTC =====
-  function aggregateByBookingId(rows){
-    const m = new Map(); // id -> aggRow
-    for(const r of rows){
-      const id = safeStr(r.Id);
-      if(!id) continue;
-      if(!m.has(id)){
-        m.set(id, {
-          ...r,
-          LineItem: "TOTAL",
-          GrossAmount: 0
-        });
-      }
-      const a = m.get(id);
-      a.GrossAmount += safeNum(r.GrossAmount);
-      // Keep first non-empty guest fields if missing
-      if(!a.GuestEmail) a.GuestEmail = r.GuestEmail;
-      if(!a.GuestPhone) a.GuestPhone = r.GuestPhone;
-      if(!a.GuestCountryCode) a.GuestCountryCode = r.GuestCountryCode;
-      if(!a.GuestName) a.GuestName = r.GuestName;
-      if(!a.HouseName) a.HouseName = r.HouseName;
-      if(!a.Property) a.Property = r.Property;
-      if(!a.Source) a.Source = r.Source;
-      if(!a.Status) a.Status = r.Status;
-      if(!a.DateArrival) a.DateArrival = r.DateArrival;
-      if(!a.DateDeparture) a.DateDeparture = r.DateDeparture;
-      if(!a.Nights) a.Nights = r.Nights;
-      if(!a.Currency) a.Currency = r.Currency;
-    }
-    return [...m.values()];
+    const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
+    $("kpiGross").textContent = moneyMXN(gross);
+
+    $("kpiRoomRate").textContent = moneyMXN(sumByLineItem("RoomRate"));
+    $("kpiFee").textContent      = moneyMXN(sumByLineItem("Fee"));
+    $("kpiTax").textContent      = moneyMXN(sumByLineItem("Tax"));
   }
 
-  function getComparableValue(row, key){
-    const k = String(key || "");
-    if(k === "Nights" || k === "GrossAmount") return safeNum(row[k]);
-    if(k === "DateArrival" || k === "DateDeparture"){
-      const d = parseMMDDYYYY(row[k]);
-      return d ? d.getTime() : 0;
-    }
-    return safeStr(row[k]).toLowerCase();
-  }
-
-  function sortRows(rows, sortState){
-    const { key, dir } = sortState || {};
-    if(!key) return rows;
-    const mult = (dir === "asc") ? 1 : -1;
-    return [...rows].sort((a,b)=>{
-      const va = getComparableValue(a, key);
-      const vb = getComparableValue(b, key);
-      if(va < vb) return -1*mult;
-      if(va > vb) return  1*mult;
-      // tie-break
-      const ia = safeStr(a.Id).toLowerCase();
-      const ib = safeStr(b.Id).toLowerCase();
-      return ia.localeCompare(ib) * mult;
-    });
-  }
-
-  function computeGuestIndexFromRows(rowsAgg){
-    const byKey = new Map();
-    const byBookingId = new Map();
-
-    function guestKeyOf(r){
-      const phone = normalizePhoneDigits(r.GuestPhone);
-      if(phone) return `p:${phone}`;
-      const name = safeStr(r.GuestName).trim().toLowerCase();
-      return name ? `n:${name}` : "n:—";
-    }
-
-    // First pass: group
-    for(const r of rowsAgg){
-      const key = guestKeyOf(r);
-      if(!byKey.has(key)){
-        byKey.set(key, {
-          key,
-          name: safeStr(r.GuestName).trim() || "—",
-          phone: normalizePhoneDigits(r.GuestPhone) || "",
-          phoneRaw: safeStr(r.GuestPhone).trim() || "",
-          email: safeStr(r.GuestEmail).trim() || "",
-          country_code: safeStr(r.GuestCountryCode).trim() || "",
-          bookingIds: new Set(),
-          amount: 0,
-          houses: new Set(),
-          props: new Set(),
-          months: new Set(),
-          lastDeparture: null,
-          sources: new Map(), // source -> {count, amount}
-        });
-      }
-      const g = byKey.get(key);
-      g.bookingIds.add(safeStr(r.Id));
-      g.amount += safeNum(r.GrossAmount);
-      if(r.HouseName) g.houses.add(safeStr(r.HouseName));
-      if(r.Property) g.props.add(safeStr(r.Property));
-      if(r.Source){
-        const s = safeStr(r.Source) || "—";
-        if(!g.sources.has(s)) g.sources.set(s, { count:0, amount:0 });
-        const ss = g.sources.get(s);
-        ss.count += 1;
-        ss.amount += safeNum(r.GrossAmount);
-      }
-      // month key from arrival
-      const dA = parseMMDDYYYY(r.DateArrival);
-      if(dA){
-        const mk = `${dA.getUTCFullYear()}-${String(dA.getUTCMonth()+1).padStart(2,"0")}`;
-        g.months.add(mk);
-      }
-      const dD = parseMMDDYYYY(r.DateDeparture);
-      if(dD){
-        if(!g.lastDeparture || dD.getTime() > g.lastDeparture.getTime()) g.lastDeparture = dD;
-      }
-      byBookingId.set(safeStr(r.Id), key);
-    }
-
-    // Second pass: scoring
-    const now = new Date();
-    const list = [];
-    for(const g of byKey.values()){
-      const bookings = g.bookingIds.size;
-      const amount = g.amount;
-      const recur = g.months.size;
-
-      const ptsBookings = Math.min(bookings/5, 1) * 40;
-      const ptsAmount = Math.min(amount/20000, 1) * 35;
-      const ptsRecur = Math.min(recur/4, 1) * 15;
-
-      let ptsRecency = 0;
-      if(g.lastDeparture){
-        const days = Math.max(0, (now.getTime() - g.lastDeparture.getTime()) / (1000*60*60*24));
-        const x = Math.max(0, 1 - (days/180));
-        ptsRecency = x * 10;
-      }
-
-      const score = Math.round(ptsBookings + ptsAmount + ptsRecur + ptsRecency);
-      let stars = 1;
-      if(score >= 85) stars = 5;
-      else if(score >= 70) stars = 4;
-      else if(score >= 55) stars = 3;
-      else if(score >= 35) stars = 2;
-
-      g.score = score;
-      g.stars = stars;
-      g.isImportant = (stars === 5);
-
-      list.push(g);
-    }
-
-    // Sort guests by score desc
-    list.sort((a,b)=> (b.score-a.score) || (b.bookingIds.size-a.bookingIds.size) || (b.amount-a.amount));
-
-    guestIndex = { byKey, byBookingId, list };
-    rebuildGuestPickers();
-    renderGuestSummary(); // refresh current selection
-  }
-
-  function rebuildGuestPickers(){
-    // Build datalist + select from guestIndex.list
-    const dl = $("guestDatalist");
-    const sel = $("guestSelect");
-    if(!dl || !sel) return;
-
-    const curSel = sel.value;
-
-    const opts = guestIndex.list.slice(0, 400); // limit for UI
-    dl.innerHTML = opts.map(g=>{
-      const label = [g.name, g.phoneRaw || g.phone, g.email].filter(Boolean).join(" · ");
-      return `<option value="${escapeHtml(label)}"></option>`;
-    }).join("");
-
-    sel.innerHTML = `<option value="">—</option>` + opts.map(g=>{
-      const phone = g.phoneRaw || (g.phone ? `+${g.phone}` : "");
-      const tag = g.isImportant ? " ⭐" : "";
-      const text = `${g.name}${phone ? " · " + phone : ""}${tag}`;
-      return `<option value="${escapeHtml(g.key)}">${escapeHtml(text)}</option>`;
-    }).join("");
-
-    sel.value = (curSel && [...guestIndex.byKey.keys()].includes(curSel)) ? curSel : "";
-    $("guestMeta").textContent = `${guestIndex.list.length.toLocaleString("es-MX")} huéspedes detectados`;
-  }
-
-  function pickGuestKeyFromSearch(str){
-    const q = safeStr(str).trim().toLowerCase();
-    if(!q) return "";
-    const digits = normalizePhoneDigits(q);
-    if(digits){
-      const key = `p:${digits}`;
-      if(guestIndex.byKey.has(key)) return key;
-    }
-    // try exact name match
-    const key2 = `n:${q}`;
-    if(guestIndex.byKey.has(key2)) return key2;
-
-    // fuzzy: contains
-    for(const g of guestIndex.list){
-      const hay = `${g.name} ${g.phoneRaw} ${g.phone} ${g.email}`.toLowerCase();
-      if(hay.includes(q)) return g.key;
-    }
-    return "";
-  }
-
-  function renderGuestSummary(){
-    const keyFromSelect = $("guestSelect")?.value || "";
-    const keyFromSearch = pickGuestKeyFromSearch($("guestSearch")?.value || "");
-    const key = keyFromSelect || keyFromSearch;
-
-    if(!key || !guestIndex.byKey.has(key)){
-      $("gRating").textContent = "—";
-      $("gScoreMeta").textContent = "—";
-      $("gBookings").textContent = "—";
-      $("gAmount").textContent = "—";
-      $("gHouses").textContent = "—";
-      $("gHousesList").textContent = "—";
-      $("gSourceTbody").innerHTML = "";
-      return;
-    }
-
-    const g = guestIndex.byKey.get(key);
-    $("gRating").textContent = `${"★".repeat(g.stars)}${"☆".repeat(5-g.stars)}`;
-    $("gScoreMeta").textContent = `Score: ${g.score}/100${g.isImportant ? " · Importante ⭐" : ""}`;
-
-    $("gBookings").textContent = g.bookingIds.size.toLocaleString("es-MX");
-    $("gAmount").textContent = moneyMXN(g.amount);
-
-    $("gHouses").textContent = g.houses.size.toLocaleString("es-MX");
-    const housesTxt = [...g.houses].slice(0,10).join(", ") + (g.houses.size>10 ? "…" : "");
-    $("gHousesList").textContent = housesTxt || "—";
-
-    // source table
-    const rows = [...g.sources.entries()].map(([Source, v])=>({ Source, Count: v.count, Amount: v.amount }))
-      .sort((a,b)=> (b.Amount-a.Amount) || (b.Count-a.Count) || a.Source.localeCompare(b.Source));
-
-    $("gSourceTbody").innerHTML = rows.map(r=>`
-      <tr>
-        <td>${escapeHtml(r.Source)}</td>
-        <td class="mono">${r.Count.toLocaleString("es-MX")}</td>
-        <td class="mono">${moneyMXN(r.Amount)}</td>
-      </tr>
-    `).join("");
-  }
-
+  // ===== Table OTC =====
   function renderTable(){
     const tb = $("tbody");
     tb.innerHTML = "";
-
-    // choose view
-    const rowsView = otcAggMode ? aggregateByBookingId(rowsFiltered) : rowsFiltered;
-
-    // compute guest index from aggregated view (always)
-    computeGuestIndexFromRows(aggregateByBookingId(rowsFiltered));
-
-    // sort
-    const rowsSorted = sortRows(rowsView, otcSort);
-
     const frag = document.createDocumentFragment();
-    for(const r of rowsSorted){
-      const id = safeStr(r.Id) || "—";
-      const guestKey = guestIndex.byBookingId.get(safeStr(r.Id));
-      const g = guestKey ? guestIndex.byKey.get(guestKey) : null;
-      const star = (g && g.isImportant) ? '<span class="s">⭐</span>' : '';
 
+    for(const r of rowsFiltered){
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="mono">
-          <span class="vipStar">${star}<span>${escapeHtml(id)}</span></span>
-        </td>
+        <td class="mono">${(guestScores.get(guestKeyFromRow(r))?.important ? "⭐ " : "")}${escapeHtml(safeStr(r.Id) || "—")}</td>
         <td>${escapeHtml(safeStr(r.Property) || "—")}</td>
         <td>${escapeHtml(safeStr(r.Source) || "—")}</td>
         <td>${escapeHtml(safeStr(r.Status) || "—")}</td>
@@ -1348,16 +1360,7 @@
         <td title="${escapeHtml(safeStr(r.GuestName))}">${escapeHtml(safeStr(r.GuestName) || "—")}</td>
         <td title="${escapeHtml(safeStr(r.GuestEmail))}">${escapeHtml(safeStr(r.GuestEmail) || "—")}</td>
         <td class="mono" title="${escapeHtml(safeStr(r.GuestPhone))}">${renderWhatsAppPhone(r.GuestPhone)}</td>
-        <td class="mono">${escapeHtml(safeStr(r.GuestCountryCode) || "—")}</td>
-        <td>${escapeHtml(safeStr(r.LineItem) || "—")}</td>
-        <td class="mono">${moneyMXN(r.GrossAmount)}</td>
-        <td class="mono">${escapeHtml(safeStr(r.Currency) || "—")}</td>
-      `;
-      frag.appendChild(tr);
-    }
-    tb.appendChild(frag);
-  }
-safeStr(r.GuestName) || "—")}</td>
+        <td class="mono" title="${escapeHtml(safeStr(r.GuestCountryCode))}">${escapeHtml(safeStr(r.GuestCountryCode) || "—")}</td>
         <td>${escapeHtml(safeStr(r.LineItem) || "—")}</td>
         <td class="mono">${moneyMXN(r.GrossAmount)}</td>
         <td class="mono">${escapeHtml(safeStr(r.Currency) || "—")}</td>
@@ -1495,9 +1498,12 @@ safeStr(r.GuestName) || "—")}</td>
     return out;
   }
 
-  function rebuildOccMCBsFromContext(availableProps, availableHouses){
+  function rebuildOccMCBsFromContext(availableProps, availableHouses, availableMonths){
     // Propiedad (ocupación)
     setMCBItems("mcbOccPropiedad", availableProps, true);
+
+    // Meses para promedio (ocupación)
+    setMCBItems("mcbOccAvgMonths", availableMonths, true);
 
     // Alojamientos
     setMCBItems("mcbOccHouses", availableHouses, true);
@@ -1564,8 +1570,7 @@ safeStr(r.GuestName) || "—")}</td>
     const availableHousesAll = [...houseSet].sort((a,b)=>a.localeCompare(b));
 
     // Rebuild occupancy MCBs with available items (keep selected if possible)
-    rebuildOccMCBsFromContext(availableProps, availableHousesAll);
-    setMCBItems("mcbOccAvgMonths", months.map(m=>m.key), true);
+    rebuildOccMCBsFromContext(availableProps, availableHousesAll, months.map(m=>m.key));
 
     // Apply occupancy-local property filter
     const occProps = getMCBSelected("mcbOccPropiedad").map(s=>s.toLowerCase());
@@ -1585,81 +1590,23 @@ safeStr(r.GuestName) || "—")}</td>
     const occHasHouse = occHousesSel.length > 0;
     const occHouseSet = new Set(occHousesSel);
 
-    const housesToShow0 = housesAvailable.filter(h => !occHasHouse || occHouseSet.has(h));
+    const housesToShow = housesAvailable.filter(h => !occHasHouse || occHouseSet.has(h));
 
-    // Promedio sobre meses seleccionados (si no seleccionas, usa todos)
-    const avgSel = getMCBSelected("mcbOccAvgMonths");
-    const avgKeys = new Set((avgSel && avgSel.length) ? avgSel : months.map(m=>m.key));
-
-    function pctFor(house, monthKey){
-      const hm = map.get(house) || new Map();
-      const mo = months.find(x=>x.key===monthKey);
-      if(!mo) return 0;
-      const ms = monthStartUTC(mo.y, mo.m0);
-      const me = monthEndUTCExclusive(mo.y, mo.m0);
-      const totalNightsMonth = daysBetweenUTC(ms, me);
-      const occ = hm.get(monthKey) || 0;
-      return totalNightsMonth > 0 ? (occ / totalNightsMonth) * 100 : 0;
-    }
-    function avgPct(house){
-      let num=0, den=0;
-      const hm = map.get(house) || new Map();
-      for(const mo of months){
-        if(!avgKeys.has(mo.key)) continue;
-        const ms = monthStartUTC(mo.y, mo.m0);
-        const me = monthEndUTCExclusive(mo.y, mo.m0);
-        const totalNightsMonth = daysBetweenUTC(ms, me);
-        den += totalNightsMonth;
-        num += (hm.get(mo.key) || 0);
-      }
-      return den>0 ? (num/den)*100 : 0;
-    }
-
-    // Sort houses by selected column
-    const housesToShow = [...housesToShow0].sort((a,b)=>{
-      const k = occSort.key;
-      const mult = (occSort.dir === "asc") ? 1 : -1;
-      if(k === "HouseName"){
-        return a.localeCompare(b) * mult;
-      }
-      if(k === "AVG"){
-        return (avgPct(a)-avgPct(b)) * mult;
-      }
-      // month key
-      return (pctFor(a,k) - pctFor(b,k)) * mult;
-    });
+    
+    // Promedio: meses seleccionados (si no hay selección, usa todos los meses visibles)
+    const avgMonthsSel = getMCBSelected("mcbOccAvgMonths");
+    const avgMonthKeys = (avgMonthsSel && avgMonthsSel.length) ? avgMonthsSel : months.map(m=>m.key);
+    const avgSet = new Set(avgMonthKeys);
+    const avgCount = avgSet.size;
 
     // Header
     const trh = document.createElement("tr");
     trh.innerHTML = `
-      <th class="houseCol sortable" data-key="HouseName">HouseName</th>
-      ${months.map(mo => `<th class="sortable" data-key="${escapeHtml(mo.key)}">${escapeHtml(mo.key)}</th>`).join("")}
-      <th class="sortable" data-key="AVG">Promedio</th>
+      <th class="houseCol">HouseName</th>
+      ${months.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
+      <th>Promedio (${avgCount} meses)</th>
     `;
     thead.appendChild(trh);
-
-    // bind sort handlers for occupancy table (headers rebuilt each render)
-    (function bindOccSort(){
-      const ths = thead.querySelectorAll("th.sortable");
-      ths.forEach(th=>{
-        th.addEventListener("click", ()=>{
-          const key = th.getAttribute("data-key");
-          if(!key) return;
-          if(occSort.key === key){
-            occSort.dir = (occSort.dir === "asc") ? "desc" : "asc";
-          }else{
-            occSort.key = key;
-            occSort.dir = (key === "HouseName") ? "asc" : "desc";
-          }
-          ths.forEach(x=>x.removeAttribute("data-dir"));
-          th.setAttribute("data-dir", occSort.dir);
-          renderOccupancyByMonth();
-        });
-      });
-      const th0 = thead.querySelector(`th.sortable[data-key="${occSort.key}"]`);
-      if(th0) th0.setAttribute("data-dir", occSort.dir);
-    })();
-;
 
     // Body
     const frag = document.createDocumentFragment();
@@ -1693,15 +1640,42 @@ safeStr(r.GuestName) || "—")}</td>
         `;
       }).join("");
 
-      const avg = avgPct(house);
-      const avgTxt = `${avg.toFixed(0)}%`;
-      tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}<td class="mono">${escapeHtml(avgTxt)}</td>`;
+      // Avg cell (ponderado por noches disponibles en meses seleccionados)
+let occSum = 0;
+let totalSum = 0;
+for(const mo of months){
+  if(!avgSet.has(mo.key)) continue;
+  const ms = monthStartUTC(mo.y, mo.m0);
+  const me = monthEndUTCExclusive(mo.y, mo.m0);
+  const totalNightsMonth = daysBetweenUTC(ms, me);
+  totalSum += totalNightsMonth;
+  occSum += (hm.get(mo.key) || 0);
+}
+const avgPct = totalSum > 0 ? (occSum / totalSum) * 100 : 0;
+const avgPctTxt = `${avgPct.toFixed(0)}%`;
+const avgOccTxt = `${occSum}/${totalSum} noches`;
+const avgCell = `
+  <td class="occCell">
+    <div class="occTop">
+      <span class="mono">${escapeHtml(avgOccTxt)}</span>
+      <span class="mono">${escapeHtml(avgPctTxt)}</span>
+    </div>
+    <div class="occMain">
+      <div class="bar" title="${escapeHtml(avgPctTxt)}">
+        <div style="width:${Math.max(0, Math.min(100, avgPct)).toFixed(1)}%"></div>
+      </div>
+    </div>
+  </td>
+`;
+
+tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCell}`;
+
       frag.appendChild(tr);
     }
     tbody.appendChild(frag);
 
     $("occMeta").textContent =
-      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length}`;
+      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length} · Promedio: ${avgCount} meses`;
 
     // Build series for line chart using housesToShow
     buildOccupancySeriesForChart(months, housesToShow, map);
@@ -1801,8 +1775,8 @@ safeStr(r.GuestName) || "—")}</td>
     // init multi-comboboxes
     initMCB("mcbPropiedad", { emptyLabel:"Todas", onChange: ()=> applyLocalFilters() });
     initMCB("mcbOccPropiedad", { emptyLabel:"Todas", onChange: ()=> renderOccupancyByMonth() });
-    initMCB("mcbOccHouses", { emptyLabel:"Todos", onChange: ()=> renderOccupancyByMonth() });
     initMCB("mcbOccAvgMonths", { emptyLabel:"Todos", onChange: ()=> renderOccupancyByMonth() });
+    initMCB("mcbOccHouses", { emptyLabel:"Todos", onChange: ()=> renderOccupancyByMonth() });
 
     // botones header
     $("btnReload").addEventListener("click", async ()=>{
@@ -1811,50 +1785,6 @@ safeStr(r.GuestName) || "—")}</td>
     });
     $("btnCsv").addEventListener("click", downloadCSV);
     $("btnDebug").addEventListener("click", loadDebug);
-
-    // Tabla OTC: toggle agregado
-    $("btnAgg").addEventListener("click", ()=>{
-      otcAggMode = !otcAggMode;
-      $("btnAgg").textContent = otcAggMode ? "Ver line items" : "Ver montos agregados";
-      renderTable();
-    });
-
-    // Resumen por huésped
-    $("guestSearch")?.addEventListener("input", ()=>{
-      // si el usuario escribe, limpiamos select para priorizar el texto
-      if($("guestSelect")) $("guestSelect").value = "";
-      renderGuestSummary();
-    });
-    $("guestSelect")?.addEventListener("change", ()=>{
-      // si el usuario elige, dejamos el search tal cual, pero manda render
-      renderGuestSummary();
-    });
-
-
-    // Sort: Tabla OTC (click en encabezados)
-    (function bindOTCSort(){
-      const table = $("tbody")?.closest("table");
-      if(!table) return;
-      const ths = table.querySelectorAll("thead th.sortable");
-      ths.forEach(th=>{
-        th.addEventListener("click", ()=>{
-          const key = th.getAttribute("data-key");
-          if(!key) return;
-          if(otcSort.key === key){
-            otcSort.dir = (otcSort.dir === "asc") ? "desc" : "asc";
-          }else{
-            otcSort.key = key;
-            otcSort.dir = "asc";
-          }
-          ths.forEach(x=>x.removeAttribute("data-dir"));
-          th.setAttribute("data-dir", otcSort.dir);
-          renderTable();
-        });
-      });
-      // default indicator
-      const th0 = table.querySelector(`thead th.sortable[data-key="${otcSort.key}"]`);
-      if(th0) th0.setAttribute("data-dir", otcSort.dir);
-    })();
 
     // filtros instantáneos: cuando cambias fechas, se hace fetch inmediato (porque cambia el universo)
     // debounce para no spamear el backend
