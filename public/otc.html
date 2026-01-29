@@ -325,6 +325,19 @@ a.waLink, a.mailLink{
 }
 a.waLink span, a.mailLink span{ line-height:1.05 !important; }
 
+
+    /* --- Pair charts: Source + Status side-by-side --- */
+    .kpiPair{
+      grid-column: 1 / -1;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 900px){
+      .kpiPair{ grid-template-columns: 1fr; }
+    }
+    .kpiPair .kpi .mini{ height: 180px; }
+
 </style>
 </head>
 
@@ -486,17 +499,20 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
 </div>
 </div>
 
-        <div class="kpi" style="grid-column: span 3;">
+        
+        <div class="kpiPair">
+          <div class="kpi" >
           <div class="lbl">Monto por Source</div>
           <div class="meta">Barras (sum GrossAmount, top 12) + etiquetas</div>
           <div class="mini"><canvas id="chSourceBar"></canvas></div>
         </div>
-
-        <div class="kpi" style="grid-column: span 3;">
+          <div class="kpi" >
           <div class="lbl">Monto por Status</div>
           <div class="meta">Barras (sum GrossAmount, top 12) + etiquetas</div>
           <div class="mini"><canvas id="chStatusBar"></canvas></div>
         </div>
+        </div>
+
       </div>
     </div>
   </section>
@@ -1215,32 +1231,36 @@ function unescapeHtml(s){
 
     chSourceBar = new Chart($("chSourceBar"), {
       type: "bar",
+      
       data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
       options: {
         responsive:true,
         maintainAspectRatio:false,
+        indexAxis:'y',
         plugins:{
           legend:{ display:false },
           tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
           barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
-        scales:{ y:{ beginAtZero:true } }
+        scales:{ x:{ beginAtZero:true }, y:{ ticks:{ autoSkip:false } } }
       },
       plugins: [barValueLabels]
     });
 
     chStatusBar = new Chart($("chStatusBar"), {
       type: "bar",
+      
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
         responsive:true,
         maintainAspectRatio:false,
+        indexAxis:'y',
         plugins:{
           legend:{ display:false },
           tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
           barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
-        scales:{ y:{ beginAtZero:true } }
+        scales:{ x:{ beginAtZero:true }, y:{ ticks:{ autoSkip:false } } }
       },
       plugins: [barValueLabels]
     });
