@@ -289,7 +289,17 @@
       color:var(--muted);
       font-size:12px;
     }
-  </style>
+  
+  /* --- Huéspedes: Datos de contacto (mejoras) --- */
+  #contactLine { line-height: 1.25; }
+  .contactTitle { font-size: 1.25rem; font-weight: 800; margin-bottom: 6px; }
+  .contactRow { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  a.waLink { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius: 999px; text-decoration:none; font-weight:700; }
+  a.waLink:hover { filter: brightness(1.05); }
+  .waIcon { width:18px; height:18px; display:inline-block; }
+  a.mailLink { text-decoration:none; font-weight:700; padding:6px 10px; border-radius: 999px; }
+
+</style>
 </head>
 
 <body>
@@ -2173,10 +2183,23 @@ function selectGuest(key){
     $("kpiNights").textContent = String(selected.totalNights);
     $("kpiHouses").textContent = String(selected.houses.size);
     $("kpiFirstLast").innerHTML = "<div><b>Primera:</b> " + fmtYMD(selected.firstArrivalTs) + "</div><div><b>Última:</b> " + fmtYMD(selected.lastArrivalTs) + "</div>";
-    const contactBits = [];
-    if(selected.GuestEmail) contactBits.push(\`Email: \${selected.GuestEmail}\`);
-    if(selected.GuestPhone) contactBits.push(\`Tel: \${selected.GuestPhone}\`);
-    $("contactLine").textContent = contactBits.join(" · ") || "—";
+    const name = selected.GuestName || "Huésped";
+    const phoneRaw = selected.GuestPhone || "";
+    const emailRaw = selected.GuestEmail || "";
+
+    const phoneDigits = waDigits(phoneRaw);
+    const phoneHtml = phoneRaw
+      ? `<a class="waLink" href="https://wa.me/${phoneDigits}" target="_blank" rel="noopener noreferrer" title="Enviar mensaje por WhatsApp">           ${waIconSvg}<span>${phoneRaw}</span>         </a>`
+      : "";
+
+    const emailHtml = emailRaw
+      ? `<a class="mailLink" href="mailto:${emailRaw}" title="Enviar correo">${emailRaw}</a>`
+      : "";
+
+    $("contactLine").innerHTML = `
+      <div class="contactTitle">${name}</div>
+      <div class="contactRow">${phoneHtml}${emailHtml}</div>
+    `;
 
     renderSourcesChart(selected);
     renderBookingsTable(selected);
