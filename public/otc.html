@@ -1666,7 +1666,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       const gross = g.totalGross;
 
       
-      // Score final (0-1): 60% Reservas + 40% Monto (sin recencia/diversidad)
+      // Score final (0-1): 60% Reservas + 40% Monto (sin 
             const sBookings = Math.log1p(bN) / Math.log1p(maxBookings);
             const sGross = Math.log1p(gross) / Math.log1p(maxGross);
       const score01 = (0.60*sBookings) + (0.40*sGross);
@@ -2319,3 +2319,9 @@ function selectGuest(key){
 </script>
 </body>
 </html>
+
+// ---- Metodología de evaluación (actualizada) ----
+// Score = 0.6 * scoreReservas + 0.4 * scoreMonto
+function calcularScoreHuesped(scoreReservas, scoreMonto){
+  return (0.6 * scoreReservas) + (0.4 * scoreMonto);
+}
