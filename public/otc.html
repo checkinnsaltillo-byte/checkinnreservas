@@ -657,6 +657,31 @@
     catch{ return "$" + n.toFixed(2); }
   }
 
+  function fmtYMD(ts){
+    if(!ts) return "—";
+    try{ return new Date(ts).toISOString().slice(0,10); }
+    catch{ return "—"; }
+  }
+
+
+  function semaforoColor(score){
+    var s = Math.max(0, Math.min(100, Number(score)||0));
+    var r = Math.round(255 * (100 - s) / 100);
+    var g = Math.round(180 * s / 100);
+    return "rgb(" + r + "," + g + ",60)";
+  }
+
+  function renderStars(stars, score){
+    var n = Math.max(0, Math.min(5, Number(stars)||0));
+    var c = semaforoColor(score);
+    var out = "";
+    for(var i=0;i<5;i++){
+      var col = (i < n) ? c : "rgba(159,176,208,.55)";
+      out += '<span style="color:' + col + '">★</span>';
+    }
+    return out;
+  }
+
   function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
   function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
 
@@ -1640,18 +1665,11 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       const bN = g.bookings.length;
       const gross = g.totalGross;
 
-      // Recencia: 1 si fue hoy/reciente, decae a ~0 con 365 días
-      const daysSince = g.lastArrivalTs ? Math.max(0, (now - g.lastArrivalTs)/dayMs) : 9999;
-      const recency = Math.exp(-daysSince / 180); // half-ish around 125d, suave
-
-      // Diversidad (alojamientos distintos): 0..1 (log)
-      const diversity = Math.min(1, Math.log1p(g.houses.size) / Math.log1p(6));
-
-      const sBookings = Math.log1p(bN) / Math.log1p(maxBookings);
-      const sGross = Math.log1p(gross) / Math.log1p(maxGross);
-
-      // Score final: puedes ajustar pesos
-      const score01 = (0.45*sBookings) + (0.40*sGross) + (0.10*recency) + (0.05*diversity);
+      
+      // Score final (0-1): 60% Reservas + 40% Monto (sin recencia/diversidad)
+            const sBookings = Math.log1p(bN) / Math.log1p(maxBookings);
+            const sGross = Math.log1p(gross) / Math.log1p(maxGross);
+      const score01 = (0.60*sBookings) + (0.40*sGross);
       const score = Math.max(0, Math.min(100, Math.round(score01 * 100)));
 
       let stars = 1;
@@ -1908,9 +1926,9 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
           <div class="meta">HouseName únicos</div>
         </div>
         <div class="kpi">
-          <div class="lbl">Recencia</div>
-          <div class="val" id="kpiRecency">—</div>
-          <div class="meta">Días desde última llegada</div>
+          <div class="lbl">Primera / última reserva</div>
+          <div class="val" id="kpiFirstLast" style="font-size:13px; line-height:1.35">—</div>
+          <div class="meta">Fechas de llegada (DateArrival)</div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
@@ -1924,7 +1942,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
           <div class="meta mono" id="contactLine" style="margin-top:8px">—</div>
           <div class="hint" style="margin-top:10px">
             Metodología de estrellas:
-            <br/>Score (0-100) = 45% Reservas + 40% Monto + 10% Recencia + 5% Diversidad.
+            <br/>Score (0-100) = 60% Reservas + 40% Monto.
             <br/>★★★★★ ≥ 85 · ★★★★ ≥ 70 · ★★★ ≥ 55 · ★★ ≥ 40 · ★ resto.
           </div>
         </div>
@@ -2072,14 +2090,13 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     if(!selected) return;
 
     $("pillSelected").textContent = labelForGuest(selected);
-    $("kpiStars").textContent = starText(selected.stars);
+    $("kpiStars").innerHTML = renderStars(selected.stars, selected.score);
     $("kpiScore").textContent = \`Score: \${selected.score}/100\`;
     $("kpiBookings").textContent = String(selected.bookings.length);
     $("kpiGross").textContent = moneyMXN(selected.totalGross);
     $("kpiNights").textContent = String(selected.totalNights);
     $("kpiHouses").textContent = String(selected.houses.size);
-    $("kpiRecency").textContent = String(selected.daysSinceLast ?? "—");
-
+    $("kpiFirstLast").innerHTML = "<div><b>Primera:</b> " + fmtYMD(selected.firstArrivalTs) + "</div><div><b>Última:</b> " + fmtYMD(selected.lastArrivalTs) + "</div>";
     const contactBits = [];
     if(selected.GuestEmail) contactBits.push(\`Email: \${selected.GuestEmail}\`);
     if(selected.GuestPhone) contactBits.push(\`Tel: \${selected.GuestPhone}\`);
