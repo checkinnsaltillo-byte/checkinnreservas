@@ -1979,5 +1979,87 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     });
   })();
 </script>
+
+<!-- ===================== -->
+<!-- Resumen por huésped -->
+<!-- ===================== -->
+<section class="card" id="guestSummarySection">
+  <h3>Resumen por huésped</h3>
+  <label>Selecciona huésped</label>
+  <input list="guestList" id="guestSelect" placeholder="Nombre o teléfono" />
+  <datalist id="guestList"></datalist>
+
+  <div class="kpis">
+    <span id="gs_reservas">Reservas: –</span> |
+    <span id="gs_monto">Monto: –</span> |
+    <span id="gs_props">Alojamientos: –</span> |
+    <span id="gs_score">Clasificación: –</span>
+  </div>
+
+  <table class="table">
+    <thead><tr><th>Source</th><th>Reservas</th><th>Monto</th></tr></thead>
+    <tbody id="gs_source_rows"></tbody>
+  </table>
+</section>
+
+<script>
+(function(){
+  function norm(s){
+    return (s||"").toString().normalize("NFD").replace(/\p{Diacritic}/gu,"").toLowerCase();
+  }
+
+  function buildGuests(rows){
+    const m = {};
+    rows.forEach(r=>{
+      const name = r.GuestName || "";
+      const phone = (r.GuestPhone||"").replace(/\D/g,"");
+      const key = norm(name)+"|"+phone;
+      if(!m[key]) m[key]={name,phone,rows:[]};
+      m[key].rows.push(r);
+    });
+    return Object.values(m);
+  }
+
+  function scoreGuest(g){
+    const reservas = new Set(g.rows.map(r=>r.Id)).size;
+    const monto = g.rows.reduce((a,r)=>a+(+r.GrossAmount||0),0);
+    const months = new Set(g.rows.map(r=>(r.CheckIn||"").slice(0,7))).size;
+    const score = Math.min(40,reservas*8)+Math.min(40,Math.log10(monto+1)*10)+Math.min(20,months*5);
+    return Math.round(score);
+  }
+
+  window.initGuestSummary = function(rows){
+    const guests = buildGuests(rows);
+    const dl = document.getElementById("guestList");
+    dl.innerHTML = guests.map(g=>`<option value="${g.name} ${g.phone}">`).join("");
+
+    const sel = document.getElementById("guestSelect");
+    sel.oninput = ()=>{
+      const v = norm(sel.value);
+      const g = guests.find(x=>norm(x.name+" "+x.phone).includes(v));
+      if(!g) return;
+      const reservas = new Set(g.rows.map(r=>r.Id)).size;
+      const monto = g.rows.reduce((a,r)=>a+(+r.GrossAmount||0),0);
+      const props = new Set(g.rows.map(r=>r.HouseName)).size;
+      const score = scoreGuest(g);
+      const stars = "★★★★★☆☆☆☆☆".slice(5-Math.min(5,Math.ceil(score/20)),10);
+
+      document.getElementById("gs_reservas").textContent = "Reservas: "+reservas;
+      document.getElementById("gs_monto").textContent = "Monto: $"+monto.toFixed(0);
+      document.getElementById("gs_props").textContent = "Alojamientos: "+props;
+      document.getElementById("gs_score").textContent = "Clasificación: "+stars;
+
+      const bySrc={};
+      g.rows.forEach(r=>{
+        bySrc[r.Source]=bySrc[r.Source]||{c:0,m:0};
+        bySrc[r.Source].c++; bySrc[r.Source].m+=(+r.GrossAmount||0);
+      });
+      document.getElementById("gs_source_rows").innerHTML =
+        Object.entries(bySrc).map(([s,o])=>`<tr><td>${s}</td><td>${o.c}</td><td>$${o.m.toFixed(0)}</td></tr>`).join("");
+    };
+  };
+})();
+</script>
+
 </body>
 </html>
