@@ -266,7 +266,29 @@
       color:var(--muted);
       font-size:12px;
     }
-  </style>
+  
+    .kpiGross{
+      border:1px solid rgba(76,201,240,.55);
+      background: linear-gradient(180deg, rgba(76,201,240,.14), rgba(15,18,24,.25));
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .kpiGross .val{ font-size:28px; letter-spacing:.2px; }
+    .subkpis{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap:8px;
+    }
+    .subkpi{
+      padding:8px 10px;
+      border-radius:12px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .subkpi .sublbl{ font-size:11px; color:var(--muted); }
+    .subkpi .subval{ font-size:14px; font-weight:700; margin-top:3px; }
+
+</style>
 </head>
 
 <body>
@@ -390,30 +412,40 @@
           <div class="meta">Suma Nights</div>
         </div>
 
+
         <div class="kpi">
+          <div class="lbl">Huéspedes únicos</div>
+          <div class="val" id="kpiGuests">—</div>
+          <div class="meta">Por teléfono (si existe) o nombre</div>
+        </div>
+
+        <div class="kpi">
+          <div class="lbl">Precio / noche (prom)</div>
+          <div class="val" id="kpiAvgNight">—</div>
+          <div class="meta">Gross total ÷ noches (por reserva)</div>
+        </div>
+
+
+        <div class="kpi kpiGross" style="grid-column: span 2;">
           <div class="lbl">Gross (sum)</div>
           <div class="val" id="kpiGross">—</div>
           <div class="meta">Suma GrossAmount</div>
-        </div>
 
-        <div class="kpi">
-          <div class="lbl">RoomRate (sum)</div>
-          <div class="val" id="kpiRoomRate">—</div>
-          <div class="meta">LineItem = RoomRate</div>
+          <div class="subkpis">
+            <div class="subkpi">
+              <div class="sublbl">RoomRate</div>
+              <div class="subval" id="kpiRoomRate">—</div>
+            </div>
+            <div class="subkpi">
+              <div class="sublbl">Fee</div>
+              <div class="subval" id="kpiFee">—</div>
+            </div>
+            <div class="subkpi">
+              <div class="sublbl">Tax</div>
+              <div class="subval" id="kpiTax">—</div>
+            </div>
+          </div>
         </div>
-
-        <div class="kpi">
-          <div class="lbl">Fee (sum)</div>
-          <div class="val" id="kpiFee">—</div>
-          <div class="meta">LineItem = Fee</div>
-        </div>
-
-        <div class="kpi">
-          <div class="lbl">Tax (sum)</div>
-          <div class="val" id="kpiTax">—</div>
-          <div class="meta">LineItem = Tax</div>
-        </div>
-
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Monto por Source</div>
           <div class="meta">Barras (sum GrossAmount, top 12) + etiquetas</div>
@@ -765,6 +797,8 @@
       .sort((a,b)=>a.localeCompare(b));
     selSt.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     selSt.value = statuses.includes(curSt) ? curSt : "";
+    // ✅ Predeterminado: Booked (sin bloquear otras categorías)
+    if(!selSt.value && statuses.includes("Booked")) selSt.value = "Booked";
   }
 
   // ===== Multi-combobox implementation =====
@@ -983,19 +1017,48 @@ function unescapeHtml(s){
   function renderKPIs(){
     $("pillFiltered").textContent = `${rowsFiltered.length.toLocaleString("es-MX")} filas`;
 
-    const uniq = new Set(rowsFiltered.map(r => safeStr(r.Id))).size;
-    $("kpiBookings").textContent = uniq.toLocaleString("es-MX");
+    // Agregación por reserva (Id) para evitar duplicados por line-item
+    const bookingMap = new Map(); // id -> {gross, nights, guestKey}
+    let grossTotal = 0;
+    for(const r of rowsFiltered){
+      const id = safeStr(r.Id);
+      if(!id) continue;
+      if(!bookingMap.has(id)){
+        bookingMap.set(id, { gross:0, nights: safeNum(r.Nights), guestKey: guestKeyFromRow(r) });
+      }
+      const b = bookingMap.get(id);
+      b.gross += safeNum(r.GrossAmount);
+      grossTotal += safeNum(r.GrossAmount);
+    }
 
-    const nights = rowsFiltered.reduce((a,r)=>a + safeNum(r.Nights), 0);
-    $("kpiNights").textContent = nights.toLocaleString("es-MX");
+    const bookings = bookingMap.size;
+    $("kpiBookings").textContent = bookings.toLocaleString("es-MX");
 
-    const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
-    $("kpiGross").textContent = moneyMXN(gross);
+    // Noches: suma por reserva (no por line-item)
+    let nightsTotal = 0;
+    const guestSet = new Set();
+    for(const b of bookingMap.values()){
+      nightsTotal += safeNum(b.nights);
+      if(b.guestKey) guestSet.add(b.guestKey);
+    }
+    $("kpiNights").textContent = nightsTotal.toLocaleString("es-MX");
 
-    $("kpiRoomRate").textContent = moneyMXN(sumByLineItem("RoomRate"));
-    $("kpiFee").textContent      = moneyMXN(sumByLineItem("Fee"));
-    $("kpiTax").textContent      = moneyMXN(sumByLineItem("Tax"));
-  }
+    // Gross: suma total de line-items (equivalente a suma por reserva)
+    $("kpiGross").textContent = moneyMXN(grossTotal);
+
+    // Sumandos (por line-item)
+    const roomRate = sumByLineItem("RoomRate");
+    const fee      = sumByLineItem("Fee");
+    const tax      = sumByLineItem("Tax");
+    $("kpiRoomRate").textContent = moneyMXN(roomRate);
+    $("kpiFee").textContent      = moneyMXN(fee);
+    $("kpiTax").textContent      = moneyMXN(tax);
+
+    // Nuevos KPIs
+    $("kpiGuests").textContent = guestSet.size.toLocaleString("es-MX");
+    const avgNight = (nightsTotal>0) ? (grossTotal / nightsTotal) : 0;
+    $("kpiAvgNight").textContent = nightsTotal>0 ? moneyMXN(avgNight) : "—";
+  }  }
 
   // ===== Table OTC =====
   function renderTable(){
@@ -1049,10 +1112,10 @@ function unescapeHtml(s){
       const color = pluginOptions?.color || "rgba(232,238,252,.9)";
       const fontSize = pluginOptions?.fontSize || 11;
 
+      const indexAxis = chart?.options?.indexAxis || "x"; // "y" => barras horizontales
+
       ctx.save();
       ctx.fillStyle = color;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
       ctx.font = `${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
 
       chart.data.datasets.forEach((dataset, di)=>{
@@ -1061,7 +1124,18 @@ function unescapeHtml(s){
           const v = dataset.data[i];
           if(v === null || v === undefined) return;
           const p = el.tooltipPosition();
-          ctx.fillText(fmt(v), p.x, p.y - offset);
+
+          if(indexAxis === "y"){
+            // Horizontal: texto a la derecha de la barra
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(fmt(v), p.x + offset, p.y);
+          }else{
+            // Vertical: texto arriba de la barra
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.fillText(fmt(v), p.x, p.y - offset);
+          }
         });
       });
 
@@ -1095,6 +1169,7 @@ function unescapeHtml(s){
       type: "bar",
       data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
       options: {
+        indexAxis:"y",
         responsive:true,
         maintainAspectRatio:false,
         plugins:{
@@ -1102,7 +1177,7 @@ function unescapeHtml(s){
           tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
           barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
-        scales:{ y:{ beginAtZero:true } }
+        scales:{ x:{ beginAtZero:true }, y:{ ticks:{ autoSkip:false } } }
       },
       plugins: [barValueLabels]
     });
@@ -1111,6 +1186,7 @@ function unescapeHtml(s){
       type: "bar",
       data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
       options: {
+        indexAxis:"y",
         responsive:true,
         maintainAspectRatio:false,
         plugins:{
@@ -1118,7 +1194,7 @@ function unescapeHtml(s){
           tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
           barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
         },
-        scales:{ y:{ beginAtZero:true } }
+        scales:{ x:{ beginAtZero:true }, y:{ ticks:{ autoSkip:false } } }
       },
       plugins: [barValueLabels]
     });
@@ -1384,7 +1460,32 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
         maintainAspectRatio:false,
         interaction:{ mode:"nearest", intersect:false },
         plugins:{
-          legend:{ display:true, position:"bottom", labels:{ boxWidth:10 } },
+          legend:{
+            display:true,
+            position:"bottom",
+            labels:{ boxWidth:10 },
+            onClick:(e, legendItem, legend)=>{
+              const chart = legend.chart;
+              const di = legendItem.datasetIndex;
+              const ds = chart.data.datasets;
+              const cur = chart.__highlightIndex;
+              chart.__highlightIndex = (cur === di) ? null : di;
+
+              ds.forEach((d, i)=>{
+                if(chart.__highlightIndex === null){
+                  d.borderWidth = 1;
+                  d.borderDash = [];
+                }else if(i === chart.__highlightIndex){
+                  d.borderWidth = 3;
+                  d.borderDash = [];
+                }else{
+                  d.borderWidth = 1;
+                  d.borderDash = [6,6];
+                }
+              });
+              chart.update();
+            }
+          },
           tooltip:{ callbacks:{ label:(ctx)=>` ${ctx.dataset.label}: ${ctx.raw}%` } }
         },
         scales:{
@@ -1507,6 +1608,8 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
           totalNights: 0,
           firstArrivalTs: null,
           lastArrivalTs: null,
+          firstArrival: "",
+          lastArrival: "",
         });
       }
       const g = guests.get(b.guestKey);
@@ -1524,8 +1627,10 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 
       const ts = parseDateForSort(b.DateArrival);
       if(ts){
-        if(g.firstArrivalTs == null || ts < g.firstArrivalTs) g.firstArrivalTs = ts;
-        if(g.lastArrivalTs == null || ts > g.lastArrivalTs) g.lastArrivalTs = ts;
+        if(g.firstArrivalTs == null || ts < g.firstArrivalTs){ g.firstArrivalTs = ts; g.firstArrival = b.DateArrival || "";
+        }
+        if(g.lastArrivalTs == null || ts > g.lastArrivalTs){ g.lastArrivalTs = ts; g.lastArrival = b.DateArrival || "";
+        }
       }
 
       // Si hay un "mejor" nombre (más largo) úsalo
@@ -1541,41 +1646,32 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     const maxBookings = Math.max(1, ...arr.map(g=>g.bookings.length));
     const maxGross = Math.max(1, ...arr.map(g=>g.totalGross));
 
-    const now = Date.now();
-    const dayMs = 86400000;
-
     for(const g of arr){
       const bN = g.bookings.length;
       const gross = g.totalGross;
 
-      // Recencia: 1 si fue hoy/reciente, decae a ~0 con 365 días
-      const daysSince = g.lastArrivalTs ? Math.max(0, (now - g.lastArrivalTs)/dayMs) : 9999;
-      const recency = Math.exp(-daysSince / 180); // half-ish around 125d, suave
-
-      // Diversidad (alojamientos distintos): 0..1 (log)
-      const diversity = Math.min(1, Math.log1p(g.houses.size) / Math.log1p(6));
-
       const sBookings = Math.log1p(bN) / Math.log1p(maxBookings);
       const sGross = Math.log1p(gross) / Math.log1p(maxGross);
 
-      // Score final: puedes ajustar pesos
-      const score01 = (0.45*sBookings) + (0.40*sGross) + (0.10*recency) + (0.05*diversity);
-      const score = Math.max(0, Math.min(100, Math.round(score01 * 100)));
+      // Score final (0-100): 60% Reservas + 40% Monto
+      const score01 = (0.60*sBookings) + (0.40*sGross);
+      const score = Math.max(0, Math.min(100, Math.round(score01*100)));
 
-      let stars = 1;
-      if(score >= 85) stars = 5;
-      else if(score >= 70) stars = 4;
-      else if(score >= 55) stars = 3;
-      else if(score >= 40) stars = 2;
+      // Estrellas (1..5)
+      const stars = score >= 85 ? 5 : score >= 70 ? 4 : score >= 55 ? 3 : score >= 40 ? 2 : 1;
+
+      // días desde última llegada (informativo)
+      const now = Date.now();
+      const dayMs = 86400000;
+      const daysSince = g.lastArrivalTs ? Math.round(Math.max(0, (now - g.lastArrivalTs)/dayMs)) : null;
 
       g.score = score;
       g.stars = stars;
-      g.daysSinceLast = Math.round(daysSince);
+      g.daysSinceLast = daysSince;
     }
 
-    // 4) orden default: mejores primero
+    // Ordena por score desc (para el listado)
     arr.sort((a,b)=> (b.score - a.score) || (b.totalGross - a.totalGross) || (b.bookings.length - a.bookings.length));
-
     return arr;
   }
 
@@ -1816,23 +1912,29 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
           <div class="meta">HouseName únicos</div>
         </div>
         <div class="kpi">
-          <div class="lbl">Recencia</div>
-          <div class="val" id="kpiRecency">—</div>
-          <div class="meta">Días desde última llegada</div>
+          <div class="lbl">Primera reserva</div>
+          <div class="val" id="kpiFirst">—</div>
+          <div class="meta">Arrival más antigua</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Última reserva</div>
+          <div class="val" id="kpiLast">—</div>
+          <div class="meta">Arrival más reciente</div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Reservas por Source</div>
-          <div class="meta">Distribución por canal</div>
+          <div class="meta">Distribución por canal (barras horizontales + etiquetas)</div>
           <div style="height:260px; margin-top:8px;"><canvas id="chSources"></canvas></div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Datos de contacto</div>
-          <div class="meta mono" id="contactLine" style="margin-top:8px">—</div>
+          <div id="contactName" style="font-size:20px; font-weight:900; margin-top:8px;">—</div>
+          <div class="meta mono" id="contactLine" style="margin-top:6px">—</div>
           <div class="hint" style="margin-top:10px">
             Metodología de estrellas:
-            <br/>Score (0-100) = 45% Reservas + 40% Monto + 10% Recencia + 5% Diversidad.
+            <br/>Score (0-100) = 60% Reservas + 40% Monto.
             <br/>★★★★★ ≥ 85 · ★★★★ ≥ 70 · ★★★ ≥ 55 · ★★ ≥ 40 · ★ resto.
           </div>
         </div>
@@ -1874,6 +1976,41 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 <script>
   const $ = (id)=>document.getElementById(id);
 
+  const barValueLabels = {
+    id: "barValueLabels",
+    afterDatasetsDraw(chart, args, pluginOptions){
+      const { ctx } = chart;
+      const fmt = pluginOptions?.format || ((v)=>String(v));
+      const offset = pluginOptions?.offset ?? 6;
+      const color = pluginOptions?.color || "rgba(232,238,252,.9)";
+      const fontSize = pluginOptions?.fontSize || 11;
+      const indexAxis = chart?.options?.indexAxis || "x";
+
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = `${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+
+      chart.data.datasets.forEach((dataset, di)=>{
+        const meta = chart.getDatasetMeta(di);
+        meta.data.forEach((el, i)=>{
+          const v = dataset.data[i];
+          if(v === null || v === undefined) return;
+          const p = el.tooltipPosition();
+          if(indexAxis === "y"){
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(fmt(v), p.x + offset, p.y);
+          }else{
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.fillText(fmt(v), p.x, p.y - offset);
+          }
+        });
+      });
+      ctx.restore();
+    }
+  };
+
   function moneyMXN(v){
     const n = Number(v);
     if(!Number.isFinite(n)) return "—";
@@ -1902,6 +2039,23 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
   let profiles = (window.opener && window.opener.__guestProfiles) ? window.opener.__guestProfiles : [];
   let selected = null;
   let chSources = null;
+  function clearGuestView(){
+    selected = null;
+    $("pillSelected").textContent = "—";
+    $("kpiStars").innerHTML = "—";
+    $("kpiScore").textContent = "—";
+    $("kpiBookings").textContent = "—";
+    $("kpiGross").textContent = "—";
+    $("kpiNights").textContent = "—";
+    $("kpiHouses").textContent = "—";
+    $("kpiFirst").textContent = "—";
+    $("kpiLast").textContent = "—";
+    $("contactName").textContent = "—";
+    $("contactLine").innerHTML = "—";
+    if(chSources){ chSources.destroy(); chSources = null; }
+    $("tbBookings").innerHTML = "";
+  }
+
 
   function labelForGuest(g){
     const nm = g.GuestName && g.GuestName !== "—" ? g.GuestName : "(Sin nombre)";
@@ -1977,21 +2131,40 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 
   function selectGuest(key){
     selected = profiles.find(g=>g.guestKey === key) || null;
-    if(!selected) return;
+    if(!selected){ clearGuestView(); return; }
 
     $("pillSelected").textContent = labelForGuest(selected);
-    $("kpiStars").textContent = starText(selected.stars);
-    $("kpiScore").textContent = \`Score: \${selected.score}/100\`;
+
+    // Estrellas con color tipo semáforo (rojo → verde)
+    const hue = Math.round(10 + (selected.score/100)*110); // 10 rojo, 120 verde
+    const filled = "★★★★★".slice(0, Math.max(0, Math.min(5, selected.stars||0)));
+    const empty  = "☆☆☆☆☆".slice(0, 5 - filled.length);
+    $("kpiStars").innerHTML = `<span style="color:hsl(${hue} 90% 55%); text-shadow:0 0 12px rgba(0,0,0,.25)">${filled}</span><span style="color:rgba(255,255,255,.25)">${empty}</span>`;
+    $("kpiScore").textContent = `Score: ${selected.score}/100`;
+
     $("kpiBookings").textContent = String(selected.bookings.length);
     $("kpiGross").textContent = moneyMXN(selected.totalGross);
     $("kpiNights").textContent = String(selected.totalNights);
     $("kpiHouses").textContent = String(selected.houses.size);
-    $("kpiRecency").textContent = String(selected.daysSinceLast ?? "—");
 
-    const contactBits = [];
-    if(selected.GuestEmail) contactBits.push(\`Email: \${selected.GuestEmail}\`);
-    if(selected.GuestPhone) contactBits.push(\`Tel: \${selected.GuestPhone}\`);
-    $("contactLine").textContent = contactBits.join(" · ") || "—";
+    // Primera y última reserva (Arrival)
+    $("kpiFirst").textContent = selected.firstArrival || "—";
+    $("kpiLast").textContent  = selected.lastArrival || "—";
+
+    // Contacto: nombre grande + teléfono a WhatsApp
+    $("contactName").textContent = selected.GuestName || "—";
+
+    const bits = [];
+    if(selected.GuestEmail) bits.push(`Email: ${escapeHtml(selected.GuestEmail)}`);
+
+    const phoneDigits = onlyDigits(selected.GuestPhone);
+    if(phoneDigits){
+      const wa = `https://wa.me/${phoneDigits}`;
+      bits.push(`Tel: <a href="${wa}" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline">${escapeHtml(selected.GuestPhone)}</a>`);
+    }else{
+      if(selected.GuestPhone) bits.push(`Tel: ${escapeHtml(selected.GuestPhone)}`);
+    }
+    $("contactLine").innerHTML = bits.join(" · ") || "—";
 
     renderSourcesChart(selected);
     renderBookingsTable(selected);
@@ -2009,12 +2182,15 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       options:{
         responsive:true,
         maintainAspectRatio:false,
+        indexAxis:"y",
         plugins:{
           legend:{ display:false },
-          tooltip:{ callbacks:{ label:(ctx)=> \` \${ctx.raw} reservas\` } }
+          tooltip:{ callbacks:{ label:(ctx)=> ` ${ctx.raw} reservas` } },
+          barValueLabels:{ format:(v)=>String(v), offset:8, fontSize:12 }
         },
-        scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
-      }
+        scales:{ x:{ beginAtZero:true, ticks:{ precision:0 } }, y:{ ticks:{ autoSkip:false } } }
+      },
+      plugins:[barValueLabels]
     });
   }
 
@@ -2068,11 +2244,8 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     $("btnClose").addEventListener("click", ()=> window.close());
     $("btnRefresh").addEventListener("click", ()=> refreshFromOpener());
 
-    // Selecciona el mejor por defecto (top score)
-    if(profiles.length){
-      selectGuest(profiles[0].guestKey);
-      input.value = labelForGuest(profiles[0]);
-    }
+    // ✅ No seleccionar ningún huésped por defecto
+    clearGuestView();
   })();
 <\/script>
 </body>
