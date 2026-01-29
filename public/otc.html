@@ -801,6 +801,11 @@
       .sort((a,b)=>a.localeCompare(b));
     selSt.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     selSt.value = statuses.includes(curSt) ? curSt : "";
+    // Default: Booked (solo si aún no eliges nada)
+    if(!curSt){
+      const bookedOpt = statuses.find(s => s.toLowerCase() === "booked");
+      if(bookedOpt) selSt.value = bookedOpt;
+    }
   }
 
   // ===== Multi-combobox implementation =====
@@ -2155,11 +2160,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     $("btnClose").addEventListener("click", ()=> window.close());
     $("btnRefresh").addEventListener("click", ()=> refreshFromOpener());
 
-    // Selecciona el mejor por defecto (top score)
-    if(profiles.length){
-      selectGuest(profiles[0].guestKey);
-      input.value = labelForGuest(profiles[0]);
-    }
+    // Sin selección por defecto: el usuario elige en el combo
   })();
 <\/script>
 </body>
