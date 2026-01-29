@@ -106,6 +106,7 @@
     .kpi .lbl{font-size:12px; color:var(--muted)}
     .kpi .val{margin-top:6px; font-size:18px; font-weight:900; letter-spacing:.3px}
     .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
+  .kpi .mini{margin-top:8px; height:110px; width:100%;}
     .kpi .mini{margin-top:8px; height:110px; width:100%}
 
     
@@ -352,47 +353,6 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
       font-weight: 800;
     }
 
-
-/* === Huéspedes (popup): normalizar tipografía y botones tipo KPI === */
-body{ font-size:14px; }
-.kpi{ font-size:13px; }
-.kpi .lbl{ font-size:12px; }
-#contactLine .contactActions{ display:flex; gap:10px; flex-wrap:wrap; }
-#contactLine a.kpiBtn{
-  display:block;
-  padding:12px 14px;
-  border-radius:14px;
-  text-decoration:none;
-  font-weight:700;
-  line-height:1.25;
-  border:1px solid rgba(255,255,255,.14);
-  background: linear-gradient(180deg, #0f2542, #0b1a2e);
-  color:#e5e7eb;
-}
-#contactLine a.kpiBtn:hover{ background: linear-gradient(180deg, #153459, #0f2542); }
-#contactLine a.kpiBtn .mono{ font-weight:800; }
-
-
-/* === Huéspedes: KPIs de contacto (WhatsApp / Email) === */
-#guestContactKPIs{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap:10px;
-  margin-top:8px;
-}
-#guestContactKPIs .kpi{
-  cursor:pointer;
-}
-#guestContactKPIs .kpi .lbl{
-  font-size:12px;
-  opacity:.9;
-}
-#guestContactKPIs .kpi .val{
-  font-size:14px;
-  font-weight:800;
-  line-height:1.2;
-}
-
 </style>
 </head>
 
@@ -507,17 +467,6 @@ body{ font-size:14px; }
       <div class="kpis">
         <div class="kpi">
           <div class="lbl">Reservas únicas</div>
-    <div id="guestContactKPIs">
-      <div class="kpi" id="kpiWhatsapp">
-        <div class="lbl">WhatsApp</div>
-        <div class="val" id="kpiWhatsappVal">—</div>
-      </div>
-      <div class="kpi" id="kpiEmail">
-        <div class="lbl">Correo electrónico</div>
-        <div class="val" id="kpiEmailVal">—</div>
-      </div>
-    </div>
-
           <div class="val" id="kpiBookings">—</div>
           <div class="meta">IDs distintos</div>
         </div>
@@ -2226,10 +2175,10 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
           <div class="meta">Fechas de llegada (DateArrival)</div>
         </div>
 
-        <div class="kpi" style="grid-column: span 3;">
+        <div class="kpi" id="kpiSourcesMini">
           <div class="lbl">Reservas por Source</div>
           <div class="meta">Distribución por canal</div>
-          <div style="height:260px; margin-top:8px;"><canvas id="chSources"></canvas></div>
+          <div class="mini" style="height:110px; margin-top:8px;"><canvas id="chSources"></canvas></div>
         </div>
 
         <div class="kpi" style="grid-column: span 3;">
@@ -2464,8 +2413,8 @@ function selectGuest(key){
       emailHtml = '<a class="mailLink" href="mailto:' + esc(emailRaw) + '" title="Enviar correo">' + esc(emailRaw) + '</a>';
     }
 
-    updateGuestContactKPIs(name, phoneRaw, phoneDigits, emailRaw);
-$("contactLine").innerHTML = '<div class="contactTitle">' + esc(name) + '</div>' + '<div class="contactActions">' + (phoneRaw ? '<a class="kpiBtn" href="https://wa.me/' + phoneDigits + '" target="_blank" rel="noopener noreferrer" title="Enviar WhatsApp">Enviar WhatsApp al <span class="mono">' + esc(phoneRaw) + '</span></a>' : '') + (emailRaw ? '<a class="kpiBtn" href="mailto:' + esc(emailRaw) + '" title="Enviar correo">Enviar E-mail al <span class="mono">' + esc(emailRaw) + '</span></a>' : '') + '</div>';
+    $("contactLine").innerHTML = '<div class="contactTitle">' + esc(name) + '</div>'
+      + '<div class="contactRow">' + phoneHtml + emailHtml + '</div>';
 renderSourcesChart(selected);
     renderBookingsTable(selected);
   }
@@ -2486,6 +2435,30 @@ renderSourcesChart(selected);
     labels.sort((a,b)=> (g.sources.get(b).count - g.sources.get(a).count));
     const data = labels.map(k=> g.sources.get(k).count);
 
+    // plugin: value labels (horizontal bar)
+    const barValueLabelsGuest = {
+      id: "barValueLabelsGuest",
+      afterDatasetsDraw(chart){
+        const { ctx } = chart;
+        ctx.save();
+        ctx.fillStyle = "rgba(232,238,252,.95)";
+        ctx.font = "11px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.textBaseline = "middle";
+
+        const ds = chart.data.datasets[0];
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((el, i)=>{
+          const v = ds.data[i];
+          if(v === null || v === undefined) return;
+          const p = el.tooltipPosition();
+          // In horizontal bars, tooltipPosition() is near end of bar; nudge a bit right.
+          ctx.textAlign = "left";
+          ctx.fillText(String(v), p.x + 6, p.y);
+        });
+        ctx.restore();
+      }
+    };
+
     if(chSources) chSources.destroy();
     chSources = new Chart($("chSources"), {
       type:"bar",
@@ -2493,12 +2466,17 @@ renderSourcesChart(selected);
       options:{
         responsive:true,
         maintainAspectRatio:false,
+        indexAxis: "y",
         plugins:{
           legend:{ display:false },
-          tooltip:{ callbacks:{ label:(ctx)=> \` \${ctx.raw} reservas\` } }
+          tooltip:{ callbacks:{ label:(ctx)=> ` ${ctx.raw} reservas` } }
         },
-        scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
-      }
+        scales:{
+          x:{ beginAtZero:true, ticks:{ precision:0, font:{ size:10 } } },
+          y:{ ticks:{ autoSkip:false, font:{ size:10 } } }
+        }
+      },
+      plugins:[barValueLabelsGuest]
     });
   }
 
@@ -2615,26 +2593,6 @@ renderSourcesChart(selected);
       alert(String(e.message || e));
     });
   })();
-
-// === Huéspedes: KPIs de contacto ===
-function updateGuestContactKPIs(name, phoneRaw, phoneDigits, emailRaw){
-  const kpiW = document.getElementById("kpiWhatsapp");
-  const kpiWV = document.getElementById("kpiWhatsappVal");
-  const kpiE = document.getElementById("kpiEmail");
-  const kpiEV = document.getElementById("kpiEmailVal");
-
-  if(kpiWV){
-    kpiWV.textContent = phoneRaw ? ("Enviar WhatsApp a " + phoneRaw) : "—";
-    kpiW.style.opacity = phoneRaw ? 1 : .5;
-    kpiW.onclick = phoneRaw ? ()=>window.open("https://wa.me/" + phoneDigits, "_blank") : null;
-  }
-  if(kpiEV){
-    kpiEV.textContent = emailRaw ? ("Enviar E-mail a " + emailRaw) : "—";
-    kpiE.style.opacity = emailRaw ? 1 : .5;
-    kpiE.onclick = emailRaw ? ()=>window.location.href=("mailto:" + emailRaw) : null;
-  }
-}
-
 </script>
 </body>
 </html>
