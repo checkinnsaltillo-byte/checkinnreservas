@@ -1740,7 +1740,6 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Huéspedes · Resumen</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>
 <style>
   :root{
     --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
@@ -1867,6 +1866,18 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
   tbody tr:hover{ background:rgba(76,201,240,.06); }
   .scrollY{ max-height: 420px; overflow:auto; }
 </style>
+<script>
+  // Load Chart.js without document.write-inserted parser-blocking script warnings
+  (function(){
+    var s = document.createElement('script');
+    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+    s.async = true;
+    s.onload = function(){ window.dispatchEvent(new Event("chartjs:ready")); };
+    s.onerror = function(){ console.warn("Chart.js no cargó. Algunas gráficas podrían no mostrarse."); window.dispatchEvent(new Event("chartjs:ready")); };
+    document.head.appendChild(s);
+  })();
+<\/script>
+
 </head>
 <body>
 <header>
@@ -2014,6 +2025,13 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     try{ return new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(n); }
     catch{ return "$" + n.toFixed(2); }
   }
+
+  function fmtYMD(ts){
+    if(!ts) return "—";
+    try{ return new Date(ts).toISOString().slice(0,10); }
+    catch(e){ return "—"; }
+  }
+
 
   function safeStr(v){ return (v===null || v===undefined) ? "" : String(v); }
 
@@ -2181,7 +2199,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     }
   }
 
-  (function init(){
+  function startApp(){
     const combo = $("comboGuest");
     const input = $("guestInput");
 
@@ -2202,7 +2220,9 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
     $("btnRefresh").addEventListener("click", ()=> refreshFromOpener());
 
     // Sin selección por defecto: el usuario elige en el combo
-  })();
+  }
+  if(window.Chart) startApp();
+  else window.addEventListener('chartjs:ready', startApp, { once:true });
 <\/script>
 </body>
 </html>`;
