@@ -962,6 +962,24 @@
     return String(Math.abs(h));
   }
 
+  function semaforoColor(score){
+    var s = Math.max(0, Math.min(100, Number(score)||0));
+    var r = Math.round(180 * (1 - s/100));
+    var g = Math.round(180 * (s/100));
+    return "rgb(" + r + "," + g + ",60)";
+  }
+
+  function renderStars(stars, score){
+    var n = Math.max(0, Math.min(5, Number(stars)||0));
+    var c = semaforoColor(score);
+    var out = "";
+    for(var i=0;i<5;i++){
+      var col = (i < n) ? c : "rgba(159,176,208,.55)";
+      out += '<span style="color:' + col + '">★</span>';
+    }
+    return out;
+  }
+
   function escapeHtml(s){
     return String(s ?? "")
       .replaceAll("&","&amp;")
@@ -1715,7 +1733,6 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Huéspedes · Resumen</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>
 <style>
   :root{
     --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
