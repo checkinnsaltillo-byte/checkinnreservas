@@ -2127,7 +2127,41 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       .replaceAll("'","&#039;");
   }
 
-  function selectGuest(key){
+  
+  // --- Stars (semáforo) ---
+  function semaforoColor(score){
+    var s = Math.max(0, Math.min(100, Number(score)||0));
+    if(s <= 50){
+      var t = s/50; // 0..1
+      var r = 220;
+      var g = Math.round(60 + t*(200-60)); // 60 -> 200
+      var b = 60;
+      return "rgb(" + r + "," + g + "," + b + ")";
+    }else{
+      var t2 = (s-50)/50; // 0..1
+      var r2 = Math.round(220 + t2*(70-220)); // 220 -> 70
+      var g2 = 200;
+      var b2 = 70;
+      return "rgb(" + r2 + "," + g2 + "," + b2 + ")";
+    }
+  }
+
+  function renderStars(stars, score){
+    var n = Math.max(0, Math.min(5, Math.round(Number(stars)||0)));
+    var fill = semaforoColor(score);
+    var html = '<span class="stars" aria-label="calificación">';
+    for(var i=1;i<=5;i++){
+      if(i<=n){
+        html += '<span class="star" style="color:'+fill+'; text-shadow:0 0 12px rgba(0,0,0,.25)">★</span>';
+      }else{
+        html += '<span class="star" style="color:rgba(159,176,208,.35)">★</span>';
+      }
+    }
+    html += '</span>';
+    return html;
+  }
+
+function selectGuest(key){
     selected = profiles.find(g=>g.guestKey === key) || null;
     if(!selected) return;
 
