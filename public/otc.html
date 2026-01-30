@@ -509,6 +509,13 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
   transform: translateX(20px);
 }
 
+
+/* === Ocupación: heatmap semaforizado en barras === */
+.occBar{ height:14px; border-radius:999px; background: color-mix(in srgb, var(--line) 60%, transparent); overflow:hidden; }
+.occFill{ height:100%; border-radius:999px; }
+.occCellWrap{ display:flex; flex-direction:column; gap:6px; }
+.occPct{ font-size:12px; font-weight:900; }
+
 </style>
 </head>
 
@@ -1521,6 +1528,15 @@ function unescapeHtml(s){
     if(mcb) mcb.style.opacity = on ? "1" : ".55";
   }
 
+
+  // ===== Ocupación: color semaforizado (0% rojo -> 100% verde) =====
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+  function occHeatColor(pct){
+    const p = clamp(pct, 0, 100);
+    const hue = (p * 1.2); // 0..120
+    return `hsl(${hue} 85% 50%)`;
+  }
+
 function renderOccupancyByMonth(){
     toggleOccAvgMonthsUI();
     const fromISO = $("from").value;
@@ -1681,7 +1697,7 @@ function renderOccupancyByMonth(){
               <span class="mono">${escapeHtml(pctTxt)}</span>
             </div>
             <div class="occMain">
-              <div class="bar" title="${escapeHtml(pctTxt)}">
+              <div class="occBar" title="${escapeHtml(pctTxt)}">
                 <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></div>
               </div>
             </div>
@@ -1710,7 +1726,7 @@ const avgCell = showAllMonths ? `
       <span class="mono">${escapeHtml(avgPctTxt)}</span>
     </div>
     <div class="occMain">
-      <div class="bar" title="${escapeHtml(avgPctTxt)}">
+      <div class="occBar" title="${escapeHtml(avgPctTxt)}">
         <div style="width:${Math.max(0, Math.min(100, avgPct)).toFixed(1)}%"></div>
       </div>
     </div>
@@ -1726,7 +1742,7 @@ const avgCell = showAllMonths ? `
         : "—";
       const semHtml = `<span class="occBadge ${sem.cls}" title="${escapeHtml(semTitle)}">${sem.dot} ${escapeHtml(sem.txt)}</span>`;
 
-tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol">${semHtml}</td>${rowCells}${avgCell}`;
+tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol"></td>${rowCells}${avgCell}`;
 
       frag.appendChild(tr);
     }
@@ -1759,7 +1775,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol
               <span class="mono">${escapeHtml(pctTxt)}</span>
             </div>
             <div class="occMain">
-              <div class="bar" title="${escapeHtml(pctTxt)}">
+              <div class="occBar" title="${escapeHtml(pctTxt)}">
                 <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></div>
               </div>
             </div>
