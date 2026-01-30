@@ -40,6 +40,18 @@
       font-size:13px; outline:none;
     }
     button{cursor:pointer}
+
+  /* --- Botones estilo toolbar (similar a principal) --- */
+  button{ cursor:pointer; }
+  button:hover{ border-color:#2b3c63; }
+  button.primary{
+    background:linear-gradient(180deg, rgba(76,201,240,.18), rgba(67,97,238,.10));
+    border-color:rgba(76,201,240,.35);
+  }
+  button.ghost{ background:transparent; }
+  .contactBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .contactBtns button{ padding:8px 10px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:inherit; font-weight:700; font-size:12px; }
+
     button:hover{border-color:#2b3c63}
     button.primary{
       background:linear-gradient(180deg, rgba(76,201,240,.18), rgba(67,97,238,.10));
@@ -2413,8 +2425,23 @@ function selectGuest(key){
       emailHtml = '<a class="mailLink" href="mailto:' + esc(emailRaw) + '" title="Enviar correo">' + esc(emailRaw) + '</a>';
     }
 
-    $("contactLine").innerHTML = '<div class="contactTitle">' + esc(name) + '</div>'
-      + '<div class="contactRow">' + phoneHtml + emailHtml + '</div>';
+    $("contactLine").innerHTML =
+  '<div class="contactTitle">' + esc(name) + '</div>' +
+  '<div class="contactRow">' +
+    (phoneRaw ? '<span class="mono">Tel: ' + esc(phoneRaw) + '</span>' : '') +
+    (emailRaw ? (phoneRaw ? ' <span class="muted">·</span> ' : '') + '<span class="mono">Email: ' + esc(emailRaw) + '</span>' : '') +
+  '</div>' +
+  '<div class="contactBtns">' +
+    (phoneRaw ? '<button id="btnGuestWA" class="ghost" type="button">Enviar WhatsApp</button>' : '') +
+    (emailRaw ? '<button id="btnGuestMail" class="ghost" type="button">Enviar E-mail</button>' : '') +
+  '</div>';
+
+setTimeout(function(){
+  var bW = document.getElementById("btnGuestWA");
+  if(bW){ bW.onclick = function(){ window.open("https://wa.me/" + phoneDigits, "_blank"); }; }
+  var bM = document.getElementById("btnGuestMail");
+  if(bM){ bM.onclick = function(){ window.location.href = "mailto:" + emailRaw; }; }
+}, 0);
 renderSourcesChart(selected);
     renderBookingsTable(selected);
   }
