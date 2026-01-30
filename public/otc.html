@@ -8,19 +8,35 @@
 
   <style>
     :root{
+      --bg1:#070b15; --bg2:#0b1220;
       --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
+    --accentAvg:#ff3b30;
+      --cardA: rgba(15,26,48,.98); --cardB: rgba(11,18,32,.98);
+      --shadow: 0 12px 28px rgba(0,0,0,.35);
+      --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    [data-theme="light"]{
+      --bg1:#f6f8ff; --bg2:#eef2ff;
+      --panel:#ffffff; --text:#0b1220; --muted:#475569; --line:#d6deef;
+    --accentAvg:#ef4444;
+      --cardA: rgba(255,255,255,.95); --cardB: rgba(248,250,255,.95);
+      --shadow: 0 10px 24px rgba(2,6,23,.10);
+    }
+    :root{
+      --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
+    --accentAvg:#ff3b30;
       --shadow: 0 12px 28px rgba(0,0,0,.35);
       --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
     *{box-sizing:border-box}
     body{
       margin:0; font-family:var(--font);
-      background:linear-gradient(180deg,#070b15 0%, #0b1220 40%, #070b15 100%);
+      background:linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 40%, var(--bg1) 100%);
       color:var(--text);
     }
     header{
       position:sticky; top:0; z-index:60;
-      background:rgba(7,11,21,.75); backdrop-filter: blur(10px);
+      background:color-mix(in srgb, var(--bg1) 75%, transparent); backdrop-filter: blur(10px);
       border-bottom:1px solid var(--line);
     }
     .wrap{max-width:1280px; margin:0 auto; padding:16px 18px;}
@@ -70,7 +86,7 @@
     .dot.busy{background:#fbbf24}
 
     .card{
-      background:linear-gradient(180deg, rgba(15,26,48,.98), rgba(11,18,32,.98));
+      background:linear-gradient(180deg, var(--cardA), var(--cardB));
       border:1px solid var(--line);
       border-radius:var(--r);
       box-shadow:var(--shadow);
@@ -365,6 +381,12 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
       font-weight: 800;
     }
 
+
+  /* --- Variación de fondos por sección (cards) --- */
+  .cardA{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, rgba(76,201,240,.18)), var(--cardB)); }
+  .cardB{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, rgba(67,97,238,.18)), var(--cardB)); }
+  .cardC{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, rgba(74,222,128,.16)), var(--cardB)); }
+
 </style>
 </head>
 
@@ -387,6 +409,8 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
         <button id="btnCsv">Descargar CSV</button>
         <button id="btnDebug" class="ghost">Debug</button>
         <button id="btnGuests" class="ghost">Huéspedes</button>
+        <button id="themeToggle" class="ghost" title="Cambiar modo claro/oscuro">Modo: Oscuro</button>
+
       </div>
     </div>
   </div>
@@ -395,7 +419,7 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
 <main class="wrap">
 
   <!-- Parámetros -->
-  <section class="card" style="overflow:visible;">
+  <section class="card cardA" style="overflow:visible;">
     <div class="hd">
       <div>
         <h2>Parámetros</h2>
@@ -702,7 +726,34 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
 
 <script>
   // Si abres desde GitHub Pages, define aquí tu Cloud Run:
-  // const API_BASE = "https://checkinnreservas-1044570371371.northamerica-south1.run.app";
+  // 
+  // ===== Theme (claro / oscuro) =====
+  function getTheme(){
+    return localStorage.getItem("theme") || "dark";
+  }
+  function setTheme(t){
+    const theme = (t === "light") ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+    const btn = document.getElementById("themeToggle");
+    if(btn) btn.textContent = (theme === "light") ? "Modo: Claro" : "Modo: Oscuro";
+    // Ajustar defaults de Chart.js (texto / grillas) y re-render
+    if(window.Chart){
+      const text = getComputedStyle(document.documentElement).getPropertyValue("--text").trim() || "#e8eefc";
+      const muted = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#9fb0d0";
+      const line = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "#1e2b4a";
+      Chart.defaults.color = text;
+      Chart.defaults.borderColor = line;
+      Chart.defaults.plugins.legend.labels.color = text;
+      Chart.defaults.scale.grid.color = line;
+      Chart.defaults.scale.ticks.color = muted;
+    }
+    // Re-render charts to adopt colors
+    try{ renderMiniChartsByAmount(); }catch(e){}
+    try{ renderOccLineChart(); }catch(e){}
+  }
+
+const API_BASE = "https://checkinnreservas-1044570371371.northamerica-south1.run.app";
   const API_BASE = "";
 
   let rowsRaw = [];
@@ -1634,7 +1685,7 @@ tbody.appendChild(frag);
         tension:0.25,
         pointRadius:0,
         borderWidth: isAvg ? 4 : 1,
-        borderColor: isAvg ? "#ff3b30" : undefined,
+        borderColor: isAvg ? (getComputedStyle(document.documentElement).getPropertyValue("--accentAvg").trim() || "#ff3b30") : undefined,
         borderDash: isAvg ? [] : undefined
       };
     });
@@ -1675,7 +1726,7 @@ tbody.appendChild(frag);
                 if(isAvg){
                   ds.borderWidth = 4;
                   ds.borderDash = [];
-                  ds.borderColor = "#ff3b30";
+                  ds.borderColor = (getComputedStyle(document.documentElement).getPropertyValue("--accentAvg").trim() || "#ff3b30");
                   return;
                 }
 
@@ -1937,6 +1988,20 @@ tbody.appendChild(frag);
 <title>Huéspedes · Resumen</title>
 <style>
   :root{
+      --bg1:#070b15; --bg2:#0b1220;
+      --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
+      --cardA: rgba(15,26,48,.98); --cardB: rgba(11,18,32,.98);
+      --shadow: 0 12px 28px rgba(0,0,0,.35);
+      --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    [data-theme="light"]{
+      --bg1:#f6f8ff; --bg2:#eef2ff;
+      --panel:#ffffff; --text:#0b1220; --muted:#475569; --line:#d6deef;
+    --accentAvg:#ef4444;
+      --cardA: rgba(255,255,255,.95); --cardB: rgba(248,250,255,.95);
+      --shadow: 0 10px 24px rgba(2,6,23,.10);
+    }
+    :root{
     --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
     --shadow: 0 12px 28px rgba(0,0,0,.35);
     --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -1944,12 +2009,12 @@ tbody.appendChild(frag);
   *{box-sizing:border-box}
   body{
     margin:0; font-family:var(--font);
-    background:linear-gradient(180deg,#070b15 0%, #0b1220 40%, #070b15 100%);
+    background:linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 40%, var(--bg1) 100%);
     color:var(--text);
   }
   header{
     position:sticky; top:0; z-index:60;
-    background:rgba(7,11,21,.78); backdrop-filter: blur(10px);
+    background:color-mix(in srgb, var(--bg1) 78%, transparent); backdrop-filter: blur(10px);
     border-bottom:1px solid var(--line);
   }
   .wrap{max-width:1280px; margin:0 auto; padding:16px 18px;}
@@ -1974,7 +2039,7 @@ tbody.appendChild(frag);
     border-color:rgba(76,201,240,.35);
   }
   .card{
-    background:linear-gradient(180deg, rgba(15,26,48,.98), rgba(11,18,32,.98));
+    background:linear-gradient(180deg, var(--cardA), var(--cardB));
     border:1px solid var(--line);
     border-radius:var(--r);
     box-shadow:var(--shadow);
@@ -2086,6 +2151,15 @@ a.waLink, a.mailLink{
 }
 a.waLink span, a.mailLink span{ line-height:1.05 !important; }
 
+  /* --- Huéspedes: título grande con nombre --- */
+  #guestTitleBig{
+    font-size:30px;
+    font-weight:950;
+    letter-spacing:-0.02em;
+    line-height:1.05;
+    margin:0;
+  }
+
 </style>
 <script>
   // Load Chart.js without document.write-inserted parser-blocking script warnings
@@ -2147,10 +2221,10 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     </div>
   </section>
 
-  <section class="card">
+  <section class="card cardB">
     <div class="hd">
       <div>
-        <h2>Indicadores del huésped</h2>
+        <h2 id="guestTitleBig">Indicadores del huésped</h2>
         <div class="hint">Reservas, monto, alojamientos, sources y clasificación (estrellas).</div>
       </div>
     </div>
@@ -2213,7 +2287,7 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     </div>
   </section>
 
-  <section class="card">
+  <section class="card cardC">
     <div class="hd">
       <div>
         <h2>Historial de reservas (del universo actual)</h2>
@@ -2277,6 +2351,22 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     const s = "★★★★★".slice(0, Math.max(0, Math.min(5, n||0)));
     const e = "☆☆☆☆☆".slice(0, 5 - s.length);
     return s + e;
+  }
+
+  function applyGuestTheme(){
+    const theme = (localStorage.getItem("theme") || "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+    if(window.Chart){
+      const cs = getComputedStyle(document.documentElement);
+      const text = cs.getPropertyValue("--text").trim() || "#e8eefc";
+      const muted = cs.getPropertyValue("--muted").trim() || "#9fb0d0";
+      const line = cs.getPropertyValue("--line").trim() || "#1e2b4a";
+      Chart.defaults.color = text;
+      Chart.defaults.borderColor = line;
+      Chart.defaults.plugins.legend.labels.color = text;
+      Chart.defaults.scale.grid.color = line;
+      Chart.defaults.scale.ticks.color = muted;
+    }
   }
 
   let profiles = (window.opener && window.opener.__guestProfiles) ? window.opener.__guestProfiles : [];
@@ -2545,6 +2635,7 @@ renderSourcesChart(selected);
   }
 
   function startApp(){
+    applyGuestTheme();
     const combo = $("comboGuest");
     const input = $("guestInput");
 
@@ -2582,6 +2673,10 @@ renderSourcesChart(selected);
     $("baseUrl").textContent = API_BASE || "same-origin";
     setDefaultDates();
 
+    // Theme init
+    setTheme(getTheme());
+
+
     // init multi-comboboxes
     initMCB("mcbPropiedad", { emptyLabel:"Todas", onChange: ()=> applyLocalFilters() });
     initMCB("mcbOccPropiedad", { emptyLabel:"Todas", onChange: ()=> renderOccupancyByMonth() });
@@ -2596,6 +2691,11 @@ renderSourcesChart(selected);
     $("btnCsv").addEventListener("click", downloadCSV);
     $("btnDebug").addEventListener("click", loadDebug);
     $("btnGuests").addEventListener("click", openGuestsWindow);
+
+    $("themeToggle").addEventListener("click", ()=>{
+      const cur = getTheme();
+      setTheme(cur === "dark" ? "light" : "dark");
+    });
 
     // filtros instantáneos: cuando cambias fechas, se hace fetch inmediato (porque cambia el universo)
     // debounce para no spamear el backend
