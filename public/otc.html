@@ -1745,7 +1745,29 @@ tbody.appendChild(frag);
     occSeries = { months: months.map(m=>m.key), houses, pctByHouse };
   }
 
-  function renderOccLineChart(){
+  
+  // ===== Ocupación (líneas): colores automáticos + resaltado persistente =====
+  function autoColorOcc(i, total){
+    const t = Math.max(1, total || 12);
+    const hue = (210 + (i * (360 / t))) % 360;  // inicia en azul
+    return `hsl(${hue} 78% 55%)`;
+  }
+  function withAlpha(color, a){
+    if(!color) return color;
+    const c = String(color).trim();
+    const m = c.match(/^hsl\(([^)]+)\)$/i);
+    if(m){
+      return `hsla(${m[1]} / ${a})`;
+    }
+    const m2 = c.match(/^rgb\(([^)]+)\)$/i);
+    if(m2){
+      return `rgba(${m2[1]}, ${a})`;
+    }
+    // already rgba/hsla or hex -> fallback no change
+    return c;
+  }
+
+function renderOccLineChart(){
     const canvas = $("occLineChart");
     if(!canvas){
       if(chOccLines){ chOccLines.destroy(); chOccLines = null; }
@@ -1765,10 +1787,16 @@ tbody.appendChild(frag);
         data,
         tension:0.25,
         pointRadius:0,
-        borderWidth: isAvg ? 4 : 1,
-        borderColor: isAvg ? (getComputedStyle(document.documentElement).getPropertyValue("--accentAvg").trim() || "#ff3b30") : undefined,
-        borderDash: isAvg ? [] : undefined
+        borderWidth: isAvg ? 4 : 1.5,
+        borderColor: null, // se asigna abajo
+        borderDash: []
       };
+    });
+
+    /* asigna colores automáticos */
+    datasets.forEach((ds,i)=>{
+      ds.$baseColor = autoColorOcc(i, datasets.length);
+      ds.borderColor = ds.$baseColor;
     });
 
     if(chOccLines) chOccLines.destroy();
@@ -1801,7 +1829,8 @@ tbody.appendChild(frag);
 
               chart.data.datasets.forEach((ds, i)=>{
                 ds.hidden = false;
-                ds.$origBorderColor = ds.$origBorderColor || ds.borderColor;
+                ds.$baseColor = ds.$baseColor || ds.borderColor || autoColorOcc(i, chart.data.datasets.length);
+                ds.$origBorderColor = ds.$origBorderColor || ds.$baseColor;
 
                 const isAvg = (i === avgIdx) || (ds.label === avgLabel);
                 if(isAvg){
@@ -1812,17 +1841,17 @@ tbody.appendChild(frag);
                 }
 
                 if(chart.$highlightIndex === null){
-                  ds.borderWidth = 1;
+                  ds.borderWidth = 1.5;
                   ds.borderDash = [];
-                  ds.borderColor = ds.$origBorderColor;
+                  ds.borderColor = ds.$baseColor || ds.$origBorderColor;
                 }else if(i === chart.$highlightIndex){
-                  ds.borderWidth = 3;
+                  ds.borderWidth = 4;
                   ds.borderDash = [];
-                  ds.borderColor = ds.$origBorderColor;
+                  ds.borderColor = ds.$baseColor || ds.$origBorderColor;
                 }else{
-                  ds.borderWidth = 1;
+                  ds.borderWidth = 1.5;
                   ds.borderDash = [6,4];
-                  ds.borderColor = "rgba(159,176,208,.35)";
+                  ds.borderColor = withAlpha(ds.$baseColor || ds.borderColor, 0.18);
                 }
               });
 
