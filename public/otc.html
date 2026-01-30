@@ -251,6 +251,24 @@
     }
 
 
+
+    /* --- Semáforo ocupación (mes target, días transcurridos) --- */
+    #occTable thead th.semaCol{ min-width: 170px; }
+    #occTable td.semaCol{ min-width: 170px; }
+    .occBadge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      font-weight:800; font-size:12px;
+      border:1px solid transparent;
+      box-shadow: 0 1px 0 rgba(0,0,0,.08);
+      user-select:none;
+    }
+    .occBadgeGreen{ background:#dcfce7; border-color:#22c55e; color:#064e3b; }
+    .occBadgeLime{ background:#ecfccb; border-color:#84cc16; color:#365314; }
+    .occBadgeAmber{ background:#fffbeb; border-color:#f59e0b; color:#78350f; }
+    .occBadgeRose{ background:#fff1f2; border-color:#fb7185; color:#881337; }
+    .occBadgeSky{ background:#e0f2fe; border-color:#38bdf8; color:#0c4a6e; }
+
     .occCell{ min-width: 210px; white-space: normal; line-height: 1.25; }
     .occTop{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--muted); }
     .occMain{ margin-top:6px; display:flex; align-items:center; gap:10px; }
@@ -1469,6 +1487,29 @@ function unescapeHtml(s){
     const toISO = $("to").value;
     const months = monthsBetween(fromISO, toISO);
 
+    // --- Semáforo de ocupación (mes más reciente / último seleccionado) ---
+    const targetMo = months.length ? months[months.length-1] : null; // {key,y,m0}
+    const now = new Date();
+    const nowY = now.getUTCFullYear();
+    const nowM0 = now.getUTCMonth();
+    const nowD = now.getUTCDate();
+    const daysInTarget = targetMo ? (new Date(Date.UTC(targetMo.y, targetMo.m0+1, 0))).getUTCDate() : 0;
+    const isCurrentTarget = targetMo ? (targetMo.y === nowY && targetMo.m0 === nowM0) : false;
+    const daysElapsed = targetMo ? (isCurrentTarget ? Math.min(nowD, daysInTarget) : daysInTarget) : 0;
+    const targetCutoffEx = targetMo ? (isCurrentTarget
+        ? new Date(Date.UTC(targetMo.y, targetMo.m0, 1 + daysElapsed, 0,0,0))
+        : monthEndUTCExclusive(targetMo.y, targetMo.m0)
+      ) : null;
+
+    function occSemaforo(pct){
+      const p = isFinite(pct) ? pct : -1;
+      if(p < 0) return { cls:"occBadgeSky", dot:"🔵", txt:"—" };
+      if(p >= 90) return { cls:"occBadgeGreen", dot:"🟢", txt:`${p.toFixed(0)}%` };
+      if(p >= 75) return { cls:"occBadgeLime", dot:"🟡", txt:`${p.toFixed(0)}%` };
+      if(p >= 55) return { cls:"occBadgeAmber", dot:"🟠", txt:`${p.toFixed(0)}%` };
+      return { cls:"occBadgeRose", dot:"🔴", txt:`${p.toFixed(0)}%` };
+    }
+
     const thead = $("occThead");
     const tbody = $("occTbody");
     thead.innerHTML = "";
@@ -1499,6 +1540,7 @@ function unescapeHtml(s){
 
     // nights per house/month
     const map = new Map(); // house -> Map(monthKey -> nights)
+    const mapElapsedTarget = new Map(); // house -> nights (solo mes target y solo días transcurridos)
     const propertyByHouse = new Map();
     const houseSet = new Set();
     const propSet = new Set();
@@ -1517,6 +1559,15 @@ function unescapeHtml(s){
         if(!map.has(b.house)) map.set(b.house, new Map());
         const hm = map.get(b.house);
         hm.set(mo.key, (hm.get(mo.key) || 0) + n);
+      }
+
+      // también calcula ocupación del mes target, pero solo hasta el día de la consulta (días transcurridos)
+      if(targetMo && targetCutoffEx && daysElapsed > 0){
+        const msT = monthStartUTC(targetMo.y, targetMo.m0);
+        const nT = intersectNights(b.start, b.endEx, msT, targetCutoffEx);
+        if(nT > 0){
+          mapElapsedTarget.set(b.house, (mapElapsedTarget.get(b.house) || 0) + nT);
+        }
       }
     }
 
@@ -1558,6 +1609,7 @@ function unescapeHtml(s){
     const trh = document.createElement("tr");
     trh.innerHTML = `
       <th class="houseCol">HouseName</th>
+      <th class="semaCol">Semáforo (${escapeHtml(targetMo ? targetMo.key : "—")})</th>
       ${months.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
       <th>Promedio (${avgCount} meses)</th>
     `;
@@ -1623,7 +1675,16 @@ const avgCell = `
   </td>
 `;
 
-tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCell}`;
+// Semáforo (mes más reciente, días transcurridos)
+      const occSoFar = targetMo ? (mapElapsedTarget.get(house) || 0) : 0;
+      const pctSoFar = (targetMo && daysElapsed > 0) ? (occSoFar / daysElapsed) * 100 : NaN;
+      const sem = occSemaforo(Math.max(0, Math.min(100, pctSoFar)));
+      const semTitle = (targetMo && daysElapsed > 0)
+        ? `${targetMo.key} · ${occSoFar}/${daysElapsed} noches (hasta hoy) · ${sem.txt}`
+        : "—";
+      const semHtml = `<span class="occBadge ${sem.cls}" title="${escapeHtml(semTitle)}">${sem.dot} ${escapeHtml(sem.txt)}</span>`;
+
+tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol">${semHtml}</td>${rowCells}${avgCell}`;
 
       frag.appendChild(tr);
     }
@@ -1685,7 +1746,17 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
       const tdAvgA = document.createElement("td");
       tdAvgA.innerHTML = `<span class="mono">${avgPctAll.toFixed(0)}%</span>`;
 
-      trA.innerHTML = `<td class="houseCol">${escapeHtml(AVG_NAME)}</td>` + avgCells;
+      // Semáforo del promedio (mes target, días transcurridos)
+      const sumSoFar = targetMo ? housesToShow.reduce((acc,h)=> acc + (mapElapsedTarget.get(h)||0), 0) : 0;
+      const avgSoFar = housesToShow.length ? (sumSoFar / housesToShow.length) : 0;
+      const pctAvgSoFar = (targetMo && daysElapsed > 0) ? (avgSoFar / daysElapsed) * 100 : NaN;
+      const semA = occSemaforo(Math.max(0, Math.min(100, pctAvgSoFar)));
+      const semATitle = (targetMo && daysElapsed > 0)
+        ? `${targetMo.key} · ${avgSoFar.toFixed(1)}/${daysElapsed} noches (prom. hasta hoy) · ${semA.txt}`
+        : "—";
+      const semAHtml = `<span class="occBadge ${semA.cls}" title="${escapeHtml(semATitle)}">${semA.dot} ${escapeHtml(semA.txt)}</span>`;
+
+      trA.innerHTML = `<td class="houseCol">${escapeHtml(AVG_NAME)}</td><td class="semaCol">${semAHtml}</td>` + avgCells;
       trA.appendChild(tdAvgA);
       frag.appendChild(trA);
     }
@@ -1693,7 +1764,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCe
 tbody.appendChild(frag);
 
     $("occMeta").textContent =
-      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length} · Promedio: ${avgCount} meses`;
+      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length} · Promedio: ${avgCount} meses` + (targetMo ? ` · Semáforo: ${targetMo.key} (días transcurridos: ${daysElapsed})` : "");
 
     // Build series for line chart using housesToShow
     buildOccupancySeriesForChart(months, housesToShow, map);
