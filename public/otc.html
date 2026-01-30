@@ -1901,24 +1901,36 @@ function renderOccLineChart(){
   
   // ===== Huéspedes: perfil + clasificación =====
   
-  function isInvalidGuestLabel(name){
-    if(!name) return true;
-    const n = String(name).trim();
-    return n === "N/A from Airbnb . N/A from Airbnb" || /^N\/A\s+from\s+Airbnb/i.test(n);
-  }
-
-
   // ===== EXCLUDE INVALID AIRBNB N/A GUESTS (GLOBAL) =====
   function isInvalidGuest(name){
     if(!name) return true;
-    const n = String(name).trim();
-    return (
-      n === "N/A from Airbnb . N/A from Airbnb" ||
-      n === "N/A from Airbnb - N/A from Airbnb" ||
-      n === "N/A from Airbnb" ||
-      /^N\/A\s+from\s+Airbnb/i.test(n)
-    );
+    const raw = String(name);
+    const n = raw
+      .toLowerCase()
+      .replace(/[·•⋅\.]/g, " ")      // middle dots / dots
+      .replace(/[\-_]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if(n.includes("n/a from airbnb")) return true;
+    if(n === "n/a" || n === "na") return true;
+    return false;
   }
+
+
+  function scrubInvalidGuestsFromDOM(){
+    const combo = document.getElementById("guestCombo");
+    if(combo){
+      [...combo.options].forEach(opt=>{
+        if(isInvalidGuest(opt.textContent)) opt.remove();
+      });
+    }
+    // Remove rows/items that contain the invalid guest text
+    document.querySelectorAll("li, .guestRow, tr, .row").forEach(el=>{
+      const t = (el.textContent||"").trim();
+      if(t && isInvalidGuest(t)) el.remove();
+    });
+  }
+
 
 function normalizeText(s){
     return safeStr(s)
