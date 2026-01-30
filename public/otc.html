@@ -485,6 +485,30 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     color: white;
   }
 
+
+/* ===== Switch (toggle) ===== */
+.switch input{ display:none; }
+.switchTrack{
+  width:44px; height:24px; border-radius:999px;
+  background: color-mix(in srgb, var(--line) 65%, transparent);
+  border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  position:relative; flex:0 0 auto;
+}
+.switchThumb{
+  width:20px; height:20px; border-radius:999px;
+  background: linear-gradient(180deg, var(--cardA), var(--cardB));
+  position:absolute; top:1px; left:1px;
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
+  transition: transform .18s ease;
+}
+.switch input:checked + .switchTrack{
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.switch input:checked + .switchTrack .switchThumb{
+  transform: translateX(20px);
+}
+
 </style>
 </head>
 
@@ -689,7 +713,15 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
           </select>
         </label>
 
-        
+        <label class="small" style="min-width:220px">
+          <div class="hint">Columnas</div>
+          <label class="switch" style="display:flex;align-items:center;gap:10px;margin-top:6px">
+            <input id="occShowAllMonths" type="checkbox">
+            <span class="switchTrack"><span class="switchThumb"></span></span>
+            <span id="occShowAllMonthsLbl" class="small" style="font-weight:800">Mostrar todos los meses</span>
+          </label>
+        </label>
+
         <div class="mcb" id="mcbOccAvgMonths" style="flex:1.2">
           <div class="hint">Promedio (mes-año)</div>
           <button class="mcbBtn" type="button">
@@ -1482,13 +1514,23 @@ function unescapeHtml(s){
     setMCBItems("mcbOccAvgMonths", availableMonths, true);
   }
 
-  function renderOccupancyByMonth(){
+  
+  function toggleOccAvgMonthsUI(){
+    const on = $("occShowAllMonths")?.checked;
+    const mcb = $("mcbOccAvgMonths");
+    if(mcb) mcb.style.opacity = on ? "1" : ".55";
+  }
+
+function renderOccupancyByMonth(){
+    toggleOccAvgMonthsUI();
     const fromISO = $("from").value;
     const toISO = $("to").value;
     const months = monthsBetween(fromISO, toISO);
 
     // --- Semáforo de ocupación (mes más reciente / último seleccionado) ---
     const targetMo = months.length ? months[months.length-1] : null; // {key,y,m0}
+    const showAllMonths = $("occShowAllMonths") ? $("occShowAllMonths").checked : false;
+    const monthsShown = (showAllMonths ? months : (targetMo ? [targetMo] : months)); // {key,y,m0}
     const now = new Date();
     const nowY = now.getUTCFullYear();
     const nowM0 = now.getUTCMonth();
@@ -1610,8 +1652,8 @@ function unescapeHtml(s){
     trh.innerHTML = `
       <th class="houseCol">HouseName</th>
       <th class="semaCol">Semáforo (${escapeHtml(targetMo ? targetMo.key : "—")})</th>
-      ${months.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
-      <th>Promedio (${avgCount} meses)</th>
+      ${monthsShown.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
+      ${showAllMonths ? `<th>Promedio (${avgCount} meses)</th>` : ``}
     `;
     thead.appendChild(trh);
 
@@ -1621,7 +1663,7 @@ function unescapeHtml(s){
       const tr = document.createElement("tr");
       const hm = map.get(house) || new Map();
 
-      const rowCells = months.map(mo=>{
+      const rowCells = monthsShown.map(mo=>{
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
@@ -1661,7 +1703,7 @@ for(const mo of months){
 const avgPct = totalSum > 0 ? (occSum / totalSum) * 100 : 0;
 const avgPctTxt = `${avgPct.toFixed(0)}%`;
 const avgOccTxt = `${occSum}/${totalSum} noches`;
-const avgCell = `
+const avgCell = showAllMonths ? `
   <td class="occCell">
     <div class="occTop">
       <span class="mono">${escapeHtml(avgOccTxt)}</span>
@@ -1673,7 +1715,7 @@ const avgCell = `
       </div>
     </div>
   </td>
-`;
+` : ``;
 
 // Semáforo (mes más reciente, días transcurridos)
       const occSoFar = targetMo ? (mapElapsedTarget.get(house) || 0) : 0;
@@ -1694,7 +1736,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol
       const AVG_NAME = "Promedio de los alojamientos";
       const trA = document.createElement("tr");
       trA.className = "occAvgRow";
-      const avgCells = months.map(mo=>{
+      const avgCells = monthsShown.map(mo=>{
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
