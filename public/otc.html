@@ -8,63 +8,56 @@
 
   <style>
         :root{
-      /* === Theme: Dark (Ocean Neon) === */
-      --bg1:#071327;          /* deep ocean */
-      --bg2:#0a1e3b;
+      /* === Theme: Dark (Slate/Indigo) === */
+      --bg1:#0b1020;
+      --bg2:#0f172a;
 
-      --panel:#0c2550;        /* panels */
-      --text:#f4f7ff;         /* high contrast */
-      --muted:#c7d2fe;        /* soft lavender */
+      --panel:#111a33;
+      --text:#e7eefc;
+      --muted:#a7b3d1;
 
-      --line: rgba(129,140,248,.28);
+      --line: rgba(148,163,184,.22);
 
-      /* section tints (vivid but harmonic) */
-      --tint-params: rgba(34,211,238,.14);   /* cyan */
-      --tint-kpis:   rgba(99,102,241,.16);   /* indigo */
-      --tint-charts: rgba(244,63,94,.10);    /* rose */
-      --tint-table:  rgba(34,197,94,.14);    /* emerald */
+      /* section tints */
+      --tint-params: rgba(56,189,248,.10);  /* sky */
+      --tint-kpis:   rgba(99,102,241,.10);  /* indigo */
+      --tint-charts: rgba(244,114,182,.08); /* pink */
+      --tint-table:  rgba(34,197,94,.10);   /* green */
 
-      --cardA: rgba(12,37,80,.96);
-      --cardB: rgba(10,30,59,.96);
+      --cardA: rgba(17,26,51,.96);
+      --cardB: rgba(15,23,42,.96);
 
-      --shadow: 0 16px 38px rgba(2,6,23,.55);
+      --shadow: 0 14px 34px rgba(0,0,0,.38);
       --r:16px;
       --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 
       --accentAvg:#fb7185; /* rose */
-      --accent:#22d3ee;    /* cyan accent */
     }
-    [data-theme="light"]{
-      /* === Theme: Light (Fresh Sky) === */
-      --bg1:#f7fbff;
-      --bg2:#eef6ff;
+  [data-theme="light"]{
+      /* === Theme: Light (Snow/Indigo) === */
+      --bg1:#f6f7fb;
+      --bg2:#eef2ff;
 
       --panel:#ffffff;
-      --text:#0b1b3a;
-      --muted:#29406b;
+      --text:#0b1220;
+      --muted:#4b5563;
 
-      --line: rgba(37,99,235,.18);
+      --line: rgba(15,23,42,.10);
 
-      --tint-params: rgba(14,165,233,.14);
-      --tint-kpis:   rgba(79,70,229,.12);
-      --tint-charts: rgba(244,63,94,.10);
-      --tint-table:  rgba(34,197,94,.12);
+      /* section tints */
+      --tint-params: rgba(14,165,233,.08);
+      --tint-kpis:   rgba(79,70,229,.08);
+      --tint-charts: rgba(236,72,153,.06);
+      --tint-table:  rgba(34,197,94,.08);
 
-      --cardA: rgba(255,255,255,.98);
-      --cardB: rgba(245,250,255,.98);
+      --cardA: rgba(255,255,255,.96);
+      --cardB: rgba(249,250,255,.96);
 
-      --shadow: 0 16px 34px rgba(2,6,23,.12);
+      --shadow: 0 14px 30px rgba(2,6,23,.10);
 
       --accentAvg:#e11d48;
-      --accent:#2563eb;
     }
-    :root{
-      --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
-    --accentAvg:#ff3b30;
-      --shadow: 0 12px 28px rgba(0,0,0,.35);
-      --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-    }
-    *{box-sizing:border-box}
+*{box-sizing:border-box}
     body{
       margin:0; font-family:var(--font);
       background:linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 40%, var(--bg1) 100%);
@@ -474,37 +467,6 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     color: white;
   }
 
-
-/* === MAIN THEME ALIGN (match Huéspedes window) === */
-body{
-  background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg1) 100%);
-}
-.card{
-  background: linear-gradient(180deg, var(--cardA), var(--cardB));
-  border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
-}
-
-
-/* === Ocupación: fila de promedio sticky === */
-.occScroll{
-  max-height: 420px;
-  overflow:auto;
-  border-radius: 14px;
-}
-.occTable thead th{
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, transparent), color-mix(in srgb, var(--panel) 82%, transparent));
-}
-.occTable tr.sticky-avg-row td{
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, var(--tint-kpis)), color-mix(in srgb, var(--panel) 78%, var(--tint-kpis)));
-  font-weight: 900;
-}
-
 </style>
 </head>
 
@@ -678,7 +640,1730 @@ body{
           <div class="kpi" >
           <div class="lbl">Monto por Status</div>
           <div class="meta">Barras (sum GrossAmount, top 12) + etiquetas</div>
-          
+          <div class="mini"><canvas id="chStatusBar"></canvas></div>
+        </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Ocupación -->
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>Ocupación por alojamiento (por mes)</h2>
+        <div class="hint">
+          Se calcula con Arrival–Departure, deduplicando por <span class="mono">Id</span>.
+          Vista tabla o líneas. Los filtros son combobox multiselección con checks.
+        </div>
+      </div>
+      <div class="hint" id="occMeta">—</div>
+    </div>
+
+    <div class="bd">
+      <div class="row" style="margin-bottom:10px">
+        <label class="small">
+          <div class="hint">Vista</div>
+          <select id="occView">
+            <option value="table">Tabla</option>
+            <option value="line">Gráfica de líneas (% ocupación)</option>
+          </select>
+        </label>
+
+        
+        <div class="mcb" id="mcbOccAvgMonths" style="flex:1.2">
+          <div class="hint">Promedio (mes-año)</div>
+          <button class="mcbBtn" type="button">
+            <span class="mcbLabel">Todos</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="mcbPanel">
+            <input class="mcbSearch" type="text" placeholder="Buscar mes..." />
+            <div class="mcbTools">
+              <button type="button" class="mcbAll">Seleccionar todo</button>
+              <button type="button" class="mcbNone">Limpiar</button>
+            </div>
+            <div class="mcbList"></div>
+            <div class="mcbFooter">
+              <span class="mcbCount">0 seleccionados</span>
+              <button type="button" class="mcbClose">Cerrar</button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ✅ combobox multi: Propiedad (ocupación) -->
+        <div class="mcb" id="mcbOccPropiedad" style="flex:1.2">
+          <div class="hint">Propiedad</div>
+          <button class="mcbBtn" type="button">
+            <span class="mcbLabel">Todas</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="mcbPanel">
+            <input class="mcbSearch" type="text" placeholder="Buscar propiedad..." />
+            <div class="mcbTools">
+              <button type="button" class="mcbAll">Seleccionar todo</button>
+              <button type="button" class="mcbNone">Limpiar</button>
+            </div>
+            <div class="mcbList"></div>
+            <div class="mcbFooter">
+              <span class="mcbCount">0 seleccionados</span>
+              <button type="button" class="mcbClose">Cerrar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ combobox multi: Alojamientos -->
+        <div class="mcb" id="mcbOccHouses" style="flex:2">
+          <div class="hint">Alojamientos (HouseName)</div>
+          <button class="mcbBtn" type="button">
+            <span class="mcbLabel">Todos</span>
+            <span class="caret">▾</span>
+          </button>
+          <div class="mcbPanel">
+            <input class="mcbSearch" type="text" placeholder="Buscar alojamiento..." />
+            <div class="mcbTools">
+              <button type="button" class="mcbAll">Seleccionar todo</button>
+              <button type="button" class="mcbNone">Limpiar</button>
+            </div>
+            <div class="mcbList"></div>
+            <div class="mcbFooter">
+              <span class="mcbCount">0 seleccionados</span>
+              <button type="button" class="mcbClose">Cerrar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="hint" style="flex:2; align-self:end">
+          Tip: si no seleccionas nada, se asume “todos”.
+        </div>
+      </div>
+
+      <!-- Line chart -->
+      <div id="occLineWrap" class="tableWrap" style="display:none;">
+        <div style="height:420px; padding:10px;">
+          <canvas id="occLineChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div id="occTableWrap" class="tableWrap">
+        <div class="occScroll">
+          <table id="occTable">
+            <thead id="occThead"></thead>
+            <tbody id="occTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tabla OTC -->
+  <section class="card">
+    <div class="hd">
+      <div>
+        <h2>Tabla OTC</h2>
+        <div class="hint">Tabla + filtros instantáneos + overlap por fechas</div>
+      </div>
+    </div>
+
+    <div class="bd">
+      <div class="tableWrap">
+        <div class="scrollY">
+          <table>
+            <thead>
+              <tr>
+                <th>Id</th>
+                <th>Propiedad</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th>Nights</th>
+                <th>HouseName</th>
+                <th>GuestName</th>
+                <th>GuestEmail</th>
+                <th>GuestPhone</th>
+                <th>GuestCountryCode</th>
+                <th>LineItem</th>
+                <th>GrossAmount</th>
+                <th>Currency</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Export CSV usa: <span class="mono">/api/otc.csv</span>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Si abres desde GitHub Pages, define aquí tu Cloud Run:
+  // 
+  // ===== Theme (claro / oscuro) =====
+  function getTheme(){
+    return localStorage.getItem("theme") || "dark";
+  }
+  function setTheme(t){
+    const theme = (t === "light") ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+    const btn = document.getElementById("themeToggle");
+    if(btn) btn.textContent = (theme === "light") ? "Modo: Claro" : "Modo: Oscuro";
+    // Ajustar defaults de Chart.js (texto / grillas) y re-render
+    if(window.Chart){
+      const text = getComputedStyle(document.documentElement).getPropertyValue("--text").trim() || "#e8eefc";
+      const muted = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#9fb0d0";
+      const line = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "#1e2b4a";
+      Chart.defaults.color = text;
+      Chart.defaults.borderColor = line;
+      Chart.defaults.plugins.legend.labels.color = text;
+      Chart.defaults.scale.grid.color = line;
+      Chart.defaults.scale.ticks.color = muted;
+    }
+    // Re-render charts to adopt colors
+    try{ renderMiniChartsByAmount(); }catch(e){}
+    try{ renderOccLineChart(); }catch(e){}
+  }
+
+const API_BASE = "https://checkinnreservas-1044570371371.northamerica-south1.run.app";
+  // (eliminado duplicado API_BASE)
+
+
+  let rowsRaw = [];
+  let rowsFiltered = [];
+
+  // Charts
+  let chSourceBar = null;
+  let chStatusBar = null;
+  let chOccLines = null;
+
+  // Ocupación series cache
+  let occSeries = null; // { months:[...], houses:[...], pctByHouse: Map(house -> [pct...]) }
+
+  // Multi-combobox state: id -> {items:[...], selected:Set, onChange(fn), labelEl, listEl, searchEl, countEl}
+  const mcb = new Map();
+
+  const $ = (id) => document.getElementById(id);
+
+  function setStatus(kind, text){
+    const el = $("apiStatus");
+    const dot = el.querySelector(".dot");
+    dot.classList.remove("ok","err","busy");
+    dot.classList.add(kind);
+    el.lastElementChild.textContent = text;
+  }
+
+  function moneyMXN(v){
+    const n = Number(v);
+    if(!Number.isFinite(n)) return "—";
+    try{ return new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(n); }
+    catch{ return "$" + n.toFixed(2); }
+  }
+
+  function fmtYMD(ts){
+    if(!ts) return "—";
+    try{ return new Date(ts).toISOString().slice(0,10); }
+    catch{ return "—"; }
+  }
+
+
+  function semaforoColor(score){
+    var s = Math.max(0, Math.min(100, Number(score)||0));
+    var r = Math.round(255 * (100 - s) / 100);
+    var g = Math.round(180 * s / 100);
+    return "rgb(" + r + "," + g + ",60)";
+  }
+
+  function renderStars(stars, score){
+    var n = Math.max(0, Math.min(5, Number(stars)||0));
+    var c = semaforoColor(score);
+    var out = "";
+    for(var i=0;i<5;i++){
+      var col = (i < n) ? c : "rgba(159,176,208,.55)";
+      out += '<span style="color:' + col + '">★</span>';
+    }
+    return out;
+  }
+
+  function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
+  function safeNum(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
+
+  // ===== Propiedad derivada de HouseName =====
+  function propertyFromHouse(house){
+    let s = safeStr(house).trim();
+    if(!s) return "—";
+    s = s.replace(/\s*\([^)]*\)\s*$/g, "").trim();        // quita paréntesis final
+    if (s.includes("#")) s = s.split("#")[0].trim();      // corta en #
+    s = s.split(" - ")[0].split(" – ")[0].trim();         // cortes extra
+    s = s.replace(/\s{2,}/g, " ").trim();
+    return s || "—";
+  }
+
+  // Arrival/Departure vienen como "MM/DD/YYYY"
+  function parseMMDDYYYY(s){
+    const t = safeStr(s).trim();
+    if(!t) return null;
+    const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(!m) return null;
+    const mm = Number(m[1]), dd = Number(m[2]), yyyy = Number(m[3]);
+    if(!mm || !dd || !yyyy) return null;
+    return new Date(Date.UTC(yyyy, mm-1, dd, 0, 0, 0));
+  }
+  function parseISODateInput(s){
+    const t = safeStr(s).trim();
+    if(!t) return null;
+    const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!m) return null;
+    const yyyy = Number(m[1]), mm = Number(m[2]), dd = Number(m[3]);
+    return new Date(Date.UTC(yyyy, mm-1, dd, 0, 0, 0));
+  }
+
+  // overlap: [aStart, aEnd) toca [bStart, bEnd) si aStart < bEnd && bStart < aEnd
+  function overlaps(arrivalMMDD, departureMMDD, fromISO, toISO){
+    const aStart = parseMMDDYYYY(arrivalMMDD);
+    const aEnd   = parseMMDDYYYY(departureMMDD);
+    const bStart = parseISODateInput(fromISO);
+    const bEnd   = parseISODateInput(toISO);
+    if(!aStart || !aEnd || !bStart || !bEnd) return true;
+
+    const bEndEx = new Date(bEnd.getTime());
+    bEndEx.setUTCDate(bEndEx.getUTCDate() + 1); // end exclusivo (to inclusive)
+    return (aStart < bEndEx) && (bStart < aEnd);
+  }
+
+  function qs(){
+    const from = $("from").value;
+    const to = $("to").value;
+    return new URLSearchParams({ from, to }).toString();
+  }
+
+  function normalizeRow(r){
+    const house = r.HouseName;
+    const prop = propertyFromHouse(house);
+    return {
+      Id: r.Id,
+      Property: prop,
+      Source: r.Source,
+      Status: r.Status,
+      DateArrival: r.DateArrival,
+      DateDeparture: r.DateDeparture,
+      Nights: safeNum(r.Nights),
+      HouseName: r.HouseName,
+      GuestName: r.GuestName,
+      GuestEmail: r.GuestEmail,
+      GuestPhone: r.GuestPhone,
+      GuestCountryCode: r.GuestCountryCode,
+      LineItem: r.LineItem,
+      GrossAmount: safeNum(r.GrossAmount),
+      Currency: r.Currency,
+      _raw: r
+    };
+  }
+
+  async function fetchOTC(){
+    setStatus("busy", "Cargando...");
+    $("metaLine").textContent = "—";
+
+    const url = `${API_BASE}/api/otc?${qs()}`;
+    const res = await fetch(url, { headers: { "Accept":"application/json" } });
+    const data = await res.json();
+
+    if(!res.ok || !data?.ok){
+      setStatus("err", "Error");
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+
+    rowsRaw = (data.rows || []).map(normalizeRow);
+    setStatus("ok", `OK · ${rowsRaw.length} filas`);
+
+    const metaBits = [
+      `bookingsFetched=${data.bookingsFetched ?? "?"}`,
+      `pagesUsed=${data.pagesUsed ?? "?"}`,
+      `effectivePageSize=${data.effectivePageSize ?? "?"}`,
+      `totalCount=${data.totalCount ?? "?"}`
+    ];
+    $("metaLine").textContent = metaBits.join(" · ");
+
+    rebuildSingleSelects();
+    rebuildPropiedadMCBFromRowsRaw();
+    applyLocalFilters(); // instant
+  }
+
+  async function loadDebug(){
+    setStatus("busy", "Debug...");
+    const url = `${API_BASE}/api/debug/bookings`;
+    const res = await fetch(url, { headers: { "Accept":"application/json" } });
+    const data = await res.json();
+    if(!res.ok || !data?.ok){
+      setStatus("err","Debug error");
+      alert(data?.error || `HTTP ${res.status}`);
+      return;
+    }
+    setStatus("ok","Debug OK");
+    alert(
+      [
+        "Debug paginación Lodgify",
+        `effectivePageSize: ${data.effectivePageSize}`,
+        `pagesUsed: ${data.pagesUsed}`,
+        `totalCount: ${data.totalCount}`,
+        `bookingsFetched: ${data.bookingsFetched}`,
+        `arrivalMin: ${data.arrivalMin}`,
+        `arrivalMax: ${data.arrivalMax}`,
+      ].join("\n")
+    );
+  }
+
+  function rebuildSingleSelects(){
+    // Source
+    const selS = $("selSource");
+    const curS = selS.value;
+    const sources = [...new Set(rowsRaw.map(r => safeStr(r.Source).trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+    selS.innerHTML = `<option value="">Todos</option>` + sources.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    selS.value = sources.includes(curS) ? curS : "";
+
+    // Status
+    const selSt = $("selStatus");
+    const curSt = selSt.value;
+    const statuses = [...new Set(rowsRaw.map(r => safeStr(r.Status).trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+    selSt.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    selSt.value = statuses.includes(curSt) ? curSt : "";
+    // Default: Booked (solo si aún no eliges nada)
+    if(!curSt){
+      const bookedOpt = statuses.find(s => s.toLowerCase() === "booked");
+      if(bookedOpt) selSt.value = bookedOpt;
+    }
+  }
+
+  // ===== Multi-combobox implementation =====
+  function initMCB(containerId, { emptyLabel="Todas", onChange=()=>{} }={}){
+    const root = $(containerId);
+    const btn = root.querySelector(".mcbBtn");
+    const labelEl = root.querySelector(".mcbLabel");
+    const panel = root.querySelector(".mcbPanel");
+    const listEl = root.querySelector(".mcbList");
+    const searchEl = root.querySelector(".mcbSearch");
+    const countEl = root.querySelector(".mcbCount");
+    const btnAll = root.querySelector(".mcbAll");
+    const btnNone = root.querySelector(".mcbNone");
+    const btnClose = root.querySelector(".mcbClose");
+
+    const state = {
+      items: [],
+      selected: new Set(),
+      emptyLabel,
+      onChange,
+      root, btn, labelEl, panel, listEl, searchEl, countEl
+    };
+    mcb.set(containerId, state);
+
+    function open(){ root.classList.add("open"); searchEl.focus(); }
+    function close(){ root.classList.remove("open"); }
+
+    btn.addEventListener("click", (e)=>{
+      e.preventDefault();
+      root.classList.contains("open") ? close() : open();
+    });
+
+    btnClose.addEventListener("click", (e)=>{ e.preventDefault(); close(); });
+
+    document.addEventListener("click", (e)=>{
+      if(!root.contains(e.target)) close();
+    });
+
+    searchEl.addEventListener("input", ()=> renderMCB(containerId));
+
+    btnAll.addEventListener("click", (e)=>{
+      e.preventDefault();
+      state.selected = new Set(state.items);
+      updateMCBLabel(containerId);
+      renderMCB(containerId);
+      state.onChange(getMCBSelected(containerId));
+    });
+
+    btnNone.addEventListener("click", (e)=>{
+      e.preventDefault();
+      state.selected = new Set();
+      updateMCBLabel(containerId);
+      renderMCB(containerId);
+      state.onChange(getMCBSelected(containerId));
+    });
+  }
+
+  function setMCBItems(containerId, items, keepSelected=true){
+    const state = mcb.get(containerId);
+    state.items = [...items];
+    if(!keepSelected){
+      state.selected = new Set();
+    } else {
+      // limpia selecciones inexistentes
+      const next = new Set();
+      for(const v of state.selected){
+        if(state.items.includes(v)) next.add(v);
+      }
+      state.selected = next;
+    }
+    updateMCBLabel(containerId);
+    renderMCB(containerId);
+  }
+
+  function getMCBSelected(containerId){
+    return [...(mcb.get(containerId)?.selected || [])];
+  }
+
+  function updateMCBLabel(containerId){
+    const state = mcb.get(containerId);
+    const n = state.selected.size;
+    if(n === 0){
+      state.labelEl.textContent = state.emptyLabel;
+    } else if (n === 1){
+      state.labelEl.textContent = [...state.selected][0];
+    } else {
+      state.labelEl.textContent = `${n} seleccionados`;
+    }
+    state.countEl.textContent = `${n} seleccionados`;
+  }
+
+  function renderMCB(containerId){
+    const state = mcb.get(containerId);
+    const q = state.searchEl.value.trim().toLowerCase();
+
+    const filtered = state.items.filter(v => v.toLowerCase().includes(q));
+    state.listEl.innerHTML = filtered.map(v=>{
+      const checked = state.selected.has(v) ? "checked" : "";
+      const id = `${containerId}__${hashId(v)}`;
+      return `
+        <div class="mcbItem">
+          <label for="${id}">
+            <input id="${id}" type="checkbox" ${checked} data-value="${escapeHtml(v)}" />
+            <span>${escapeHtml(v)}</span>
+          </label>
+        </div>
+      `;
+    }).join("") || `<div class="mcbItem"><span class="hint">Sin resultados</span></div>`;
+
+    // listeners a los checks
+    state.listEl.querySelectorAll('input[type="checkbox"]').forEach(chk=>{
+      chk.addEventListener("change", ()=>{
+        const v = chk.getAttribute("data-value");
+        const val = unescapeHtml(v);
+        if(chk.checked) state.selected.add(val);
+        else state.selected.delete(val);
+        updateMCBLabel(containerId);
+        state.onChange(getMCBSelected(containerId));
+      });
+    });
+
+    updateMCBLabel(containerId);
+  }
+
+  function hashId(s){
+    // hash simple para ids
+    let h = 0;
+    for (let i=0; i<s.length; i++) h = ((h<<5)-h) + s.charCodeAt(i) | 0;
+    return String(Math.abs(h));
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+  
+
+  function normalizePhoneDigits(phone){
+    const raw = safeStr(phone).trim();
+    if(!raw) return "";
+    // Keep digits only for wa.me
+    return raw.replace(/\D/g, "");
+  }
+
+  function renderWhatsAppPhone(phone){
+    const raw = safeStr(phone).trim();
+    if(!raw) return "—";
+    const digits = normalizePhoneDigits(raw);
+    if(!digits) return escapeHtml(raw);
+    const href = `https://wa.me/${digits}`;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(raw)}</a>`;
+  }
+
+function unescapeHtml(s){
+    // solo para nuestros values
+    return String(s ?? "")
+      .replaceAll("&amp;","&")
+      .replaceAll("&lt;","<")
+      .replaceAll("&gt;",">")
+      .replaceAll("&quot;",'"')
+      .replaceAll("&#039;","'");
+  }
+
+  function rebuildPropiedadMCBFromRowsRaw(){
+    const props = [...new Set(rowsRaw.map(r => safeStr(r.Property).trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+    setMCBItems("mcbPropiedad", props, true);
+  }
+
+  // ===== Filters =====
+  function applyLocalFilters(){
+    const q = $("q").value.trim().toLowerCase();
+    const src = $("selSource").value.trim().toLowerCase();
+    const st = $("selStatus").value.trim().toLowerCase();
+    const fromISO = $("from").value;
+    const toISO = $("to").value;
+
+    const propsSelected = getMCBSelected("mcbPropiedad").map(x=>x.toLowerCase());
+    const hasPropFilter = propsSelected.length > 0;
+
+    rowsFiltered = rowsRaw.filter(r=>{
+      if(fromISO && toISO){
+        if(!overlaps(r.DateArrival, r.DateDeparture, fromISO, toISO)) return false;
+      }
+      if(hasPropFilter){
+        const rp = safeStr(r.Property).toLowerCase();
+        if(!propsSelected.includes(rp)) return false;
+      }
+      if(src && safeStr(r.Source).toLowerCase() !== src) return false;
+      if(st && safeStr(r.Status).toLowerCase() !== st) return false;
+
+      if(!q) return true;
+      const hay = [r.Id,r.Property,r.Source,r.Status,r.HouseName,r.GuestName,r.LineItem,r.Currency].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+
+    renderKPIs();
+    renderMiniChartsByAmount();
+    renderOccupancyByMonth();
+    renderTable();
+  }
+
+  // ===== KPIs =====
+  function sumByLineItem(name){
+    const key = String(name || "").toLowerCase();
+    return rowsFiltered.reduce((acc, r)=>{
+      if(safeStr(r.LineItem).toLowerCase() === key) return acc + safeNum(r.GrossAmount);
+      return acc;
+    }, 0);
+  }
+
+    function renderKPIs(){
+    $("pillFiltered").textContent = `${rowsFiltered.length.toLocaleString("es-MX")} filas`;
+
+    const uniqBookings = new Set(rowsFiltered.map(r => safeStr(r.Id))).size;
+    $("kpiBookings").textContent = uniqBookings.toLocaleString("es-MX");
+
+    const nights = rowsFiltered.reduce((a,r)=>a + safeNum(r.Nights), 0);
+    $("kpiNights").textContent = nights.toLocaleString("es-MX");
+
+    const gross = rowsFiltered.reduce((a,r)=>a + safeNum(r.GrossAmount), 0);
+    $("kpiGross").textContent = moneyMXN(gross);
+
+    // Huéspedes únicos (prioriza teléfono; si no hay, usa nombre+email normalizados)
+    const norm = (s)=> safeStr(s)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/\s+/g," ").trim();
+
+    const guestKeys = new Set();
+    for(const r of rowsFiltered){
+      const phone = normalizePhoneDigits(r.GuestPhone);
+      if(phone && phone.length >= 7) guestKeys.add("p:" + phone);
+      else{
+        const nm = norm(r.GuestName);
+        const em = norm(r.GuestEmail);
+        if(nm || em) guestKeys.add("n:" + nm + "|e:" + em);
+      }
+    }
+    $("kpiGuests").textContent = guestKeys.size.toLocaleString("es-MX");
+
+    const avgNight = nights > 0 ? (gross / nights) : 0;
+    $("kpiAvgNight").textContent = nights > 0 ? moneyMXN(avgNight) : "—";
+
+    $("kpiRoomRate").textContent = moneyMXN(sumByLineItem("RoomRate"));
+    $("kpiFee").textContent      = moneyMXN(sumByLineItem("Fee"));
+    $("kpiTax").textContent      = moneyMXN(sumByLineItem("Tax"));
+  }
+
+  // ===== Table OTC =====
+  function renderTable(){
+    const tb = $("tbody");
+    tb.innerHTML = "";
+    const frag = document.createDocumentFragment();
+
+    for(const r of rowsFiltered){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="mono">${escapeHtml(safeStr(r.Id) || "—")}</td>
+        <td>${escapeHtml(safeStr(r.Property) || "—")}</td>
+        <td>${escapeHtml(safeStr(r.Source) || "—")}</td>
+        <td>${escapeHtml(safeStr(r.Status) || "—")}</td>
+        <td class="mono">${escapeHtml(safeStr(r.DateArrival) || "—")}</td>
+        <td class="mono">${escapeHtml(safeStr(r.DateDeparture) || "—")}</td>
+        <td class="mono">${safeNum(r.Nights) || 0}</td>
+        <td title="${escapeHtml(safeStr(r.HouseName))}">${escapeHtml(safeStr(r.HouseName) || "—")}</td>
+        <td title="${escapeHtml(safeStr(r.GuestName))}">${escapeHtml(safeStr(r.GuestName) || "—")}</td>
+        <td title="${escapeHtml(safeStr(r.GuestEmail))}">${escapeHtml(safeStr(r.GuestEmail) || "—")}</td>
+        <td class="mono" title="${escapeHtml(safeStr(r.GuestPhone))}">${renderWhatsAppPhone(r.GuestPhone)}</td>
+        <td class="mono" title="${escapeHtml(safeStr(r.GuestCountryCode))}">${escapeHtml(safeStr(r.GuestCountryCode) || "—")}</td>
+        <td>${escapeHtml(safeStr(r.LineItem) || "—")}</td>
+        <td class="mono">${moneyMXN(r.GrossAmount)}</td>
+        <td class="mono">${escapeHtml(safeStr(r.Currency) || "—")}</td>
+      `;
+      frag.appendChild(tr);
+    }
+    tb.appendChild(frag);
+  }
+
+  // ===== Mini charts with bar labels =====
+  function buildSum(field){
+    const m = new Map();
+    for(const r of rowsFiltered){
+      const k = safeStr(r[field]).trim() || "—";
+      m.set(k, (m.get(k) || 0) + safeNum(r.GrossAmount));
+    }
+    const labels = [...m.keys()].sort((a,b)=> (m.get(b)-m.get(a)));
+    const data = labels.map(k => m.get(k));
+    return { labels, data };
+  }
+
+  // Plugin: etiquetas encima de cada barra (sin librerías extra)
+  const barValueLabels = {
+    id: "barValueLabels",
+    afterDatasetsDraw(chart, args, pluginOptions){
+      const { ctx } = chart;
+      const fmt = pluginOptions?.format || ((v)=>String(v));
+      const offset = pluginOptions?.offset ?? 6;
+      const color = pluginOptions?.color || "rgba(232,238,252,.9)";
+      const fontSize = pluginOptions?.fontSize || 11;
+
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.font = `${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+
+      chart.data.datasets.forEach((dataset, di)=>{
+        const meta = chart.getDatasetMeta(di);
+        meta.data.forEach((el, i)=>{
+          const v = dataset.data[i];
+          if(v === null || v === undefined) return;
+          const p = el.tooltipPosition();
+          ctx.fillText(fmt(v), p.x, p.y - offset);
+        });
+      });
+
+      ctx.restore();
+    }
+  };
+
+  function renderMiniChartsByAmount(){
+    const src = buildSum("Source");
+    const st  = buildSum("Status");
+
+    const srcLabels = src.labels.slice(0,12);
+    const srcData   = src.data.slice(0,12);
+
+    const stLabels = st.labels.slice(0,12);
+    const stData   = st.data.slice(0,12);
+
+    if(chSourceBar) chSourceBar.destroy();
+    if(chStatusBar) chStatusBar.destroy();
+
+    const fmtMoneyShort = (v)=>{
+      const n = Number(v)||0;
+      // abreviación simple (K/M)
+      const abs = Math.abs(n);
+      if(abs >= 1_000_000) return (n/1_000_000).toFixed(1) + "M";
+      if(abs >= 1_000) return (n/1_000).toFixed(1) + "K";
+      return String(Math.round(n));
+    };
+
+    chSourceBar = new Chart($("chSourceBar"), {
+      type: "bar",
+      
+      data: { labels: srcLabels, datasets: [{ label:"Monto", data: srcData }] },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        indexAxis:'y',
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
+          barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
+        },
+        scales:{ x:{ beginAtZero:true }, y:{ ticks:{ autoSkip:false } } }
+      },
+      plugins: [barValueLabels]
+    });
+
+    chStatusBar = new Chart($("chStatusBar"), {
+      type: "bar",
+      
+      data: { labels: stLabels, datasets: [{ label:"Monto", data: stData }] },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        indexAxis:'y',
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ enabled:true, callbacks:{ label: (ctx)=> ` ${moneyMXN(ctx.raw)}` } },
+          barValueLabels: { format: fmtMoneyShort, offset: 6, fontSize: 11 }
+        },
+        scales:{ x:{ beginAtZero:true }, y:{ ticks:{ autoSkip:false } } }
+      },
+      plugins: [barValueLabels]
+    });
+  }
+
+  // ===== Occupancy helpers =====
+  function monthStartUTC(y, m0){ return new Date(Date.UTC(y, m0, 1, 0, 0, 0)); }
+  function monthEndUTCExclusive(y, m0){ return new Date(Date.UTC(y, m0+1, 1, 0, 0, 0)); }
+  function daysBetweenUTC(a, b){
+    const ms = b.getTime() - a.getTime();
+    return Math.max(0, Math.round(ms / 86400000));
+  }
+  function intersectNights(aStart, aEndEx, bStart, bEndEx){
+    const s = (aStart > bStart) ? aStart : bStart;
+    const e = (aEndEx < bEndEx) ? aEndEx : bEndEx;
+    return daysBetweenUTC(s, e);
+  }
+  function monthsBetween(fromISO, toISO){
+    const a = parseISODateInput(fromISO);
+    const b = parseISODateInput(toISO);
+    if(!a || !b) return [];
+
+    const out = [];
+    let y = a.getUTCFullYear();
+    let m = a.getUTCMonth();
+    const y2 = b.getUTCFullYear();
+    const m2 = b.getUTCMonth();
+
+    while (y < y2 || (y === y2 && m <= m2)){
+      out.push({ y, m0: m, key: `${y}-${String(m+1).padStart(2,"0")}` });
+      m++;
+      if(m > 11){ m = 0; y++; }
+    }
+    return out;
+  }
+
+  function rebuildOccMCBsFromContext(availableProps, availableHouses, availableMonths){
+    // Propiedad (ocupación)
+    setMCBItems("mcbOccPropiedad", availableProps, true);
+
+    // Meses para promedio (ocupación)
+    setMCBItems("mcbOccAvgMonths", availableMonths, true);
+  }
+
+  function renderOccupancyByMonth(){
+    const fromISO = $("from").value;
+    const toISO = $("to").value;
+    const months = monthsBetween(fromISO, toISO);
+
+    const thead = $("occThead");
+    const tbody = $("occTbody");
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+
+    if(!months.length){
+      $("occMeta").textContent = "Selecciona Desde/Hasta para calcular ocupación.";
+      occSeries = null;
+      renderOccLineChart();
+      return;
+    }
+
+    // Deduplicar por Id para no contar múltiples line items
+    const bookings = new Map(); // id -> {house, property, startUTC, endUTCEx}
+    for(const r of rowsFiltered){
+      const id = safeStr(r.Id);
+      if(!id) continue;
+      if(bookings.has(id)) continue;
+
+      const start = parseMMDDYYYY(r.DateArrival);
+      const endEx = parseMMDDYYYY(r.DateDeparture);
+      const house = safeStr(r.HouseName).trim() || "—";
+      const prop  = safeStr(r.Property).trim() || propertyFromHouse(house);
+
+      if(!start || !endEx) continue;
+      bookings.set(id, { house, property: prop, start, endEx });
+    }
+
+    // nights per house/month
+    const map = new Map(); // house -> Map(monthKey -> nights)
+    const propertyByHouse = new Map();
+    const houseSet = new Set();
+    const propSet = new Set();
+
+    for(const b of bookings.values()){
+      houseSet.add(b.house);
+      propertyByHouse.set(b.house, b.property);
+      propSet.add(b.property);
+
+      for(const mo of months){
+        const ms = monthStartUTC(mo.y, mo.m0);
+        const me = monthEndUTCExclusive(mo.y, mo.m0);
+        const n = intersectNights(b.start, b.endEx, ms, me);
+        if(n <= 0) continue;
+
+        if(!map.has(b.house)) map.set(b.house, new Map());
+        const hm = map.get(b.house);
+        hm.set(mo.key, (hm.get(mo.key) || 0) + n);
+      }
+    }
+
+    // Available props/houses for occupancy filters (según rowsFiltered)
+    const availableProps = [...propSet].sort((a,b)=>a.localeCompare(b));
+    const availableHousesAll = [...houseSet].sort((a,b)=>a.localeCompare(b));
+
+    // Rebuild occupancy MCBs with available items (keep selected if possible)
+    rebuildOccMCBsFromContext(availableProps, availableHousesAll, months.map(m=>m.key));
+
+    // Apply occupancy-local property filter
+    const occProps = getMCBSelected("mcbOccPropiedad").map(s=>s.toLowerCase());
+    const occHasProp = occProps.length > 0;
+
+    let housesAvailable = availableHousesAll.filter(h=>{
+      if(!occHasProp) return true;
+      const p = safeStr(propertyByHouse.get(h)).toLowerCase();
+      return occProps.includes(p);
+    }).sort((a,b)=>a.localeCompare(b));
+
+    // Update houses list to only those matching property selection (keeping selection)
+    setMCBItems("mcbOccHouses", housesAvailable, true);
+
+    // Apply occupancy-local house filter
+    const occHousesSel = getMCBSelected("mcbOccHouses");
+    const occHasHouse = occHousesSel.length > 0;
+    const occHouseSet = new Set(occHousesSel);
+
+    const housesToShow = housesAvailable.filter(h => !occHasHouse || occHouseSet.has(h));
+
+    
+    // Promedio: meses seleccionados (si no hay selección, usa todos los meses visibles)
+    const avgMonthsSel = getMCBSelected("mcbOccAvgMonths");
+    const avgMonthKeys = (avgMonthsSel && avgMonthsSel.length) ? avgMonthsSel : months.map(m=>m.key);
+    const avgSet = new Set(avgMonthKeys);
+    const avgCount = avgSet.size;
+
+    // Header
+    const trh = document.createElement("tr");
+    trh.innerHTML = `
+      <th class="houseCol">HouseName</th>
+      ${months.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
+      <th>Promedio (${avgCount} meses)</th>
+    `;
+    thead.appendChild(trh);
+
+    // Body
+    const frag = document.createDocumentFragment();
+    for(const house of housesToShow){
+      const tr = document.createElement("tr");
+      const hm = map.get(house) || new Map();
+
+      const rowCells = months.map(mo=>{
+        const ms = monthStartUTC(mo.y, mo.m0);
+        const me = monthEndUTCExclusive(mo.y, mo.m0);
+        const totalNightsMonth = daysBetweenUTC(ms, me);
+
+        const occ = hm.get(mo.key) || 0;
+        const pct = totalNightsMonth > 0 ? (occ / totalNightsMonth) * 100 : 0;
+
+        const pctTxt = `${pct.toFixed(0)}%`;
+        const occTxt = `${occ}/${totalNightsMonth} noches`;
+
+        return `
+          <td class="occCell">
+            <div class="occTop">
+              <span class="mono">${escapeHtml(occTxt)}</span>
+              <span class="mono">${escapeHtml(pctTxt)}</span>
+            </div>
+            <div class="occMain">
+              <div class="bar" title="${escapeHtml(pctTxt)}">
+                <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></div>
+              </div>
+            </div>
+          </td>
+        `;
+      }).join("");
+
+      // Avg cell (ponderado por noches disponibles en meses seleccionados)
+let occSum = 0;
+let totalSum = 0;
+for(const mo of months){
+  if(!avgSet.has(mo.key)) continue;
+  const ms = monthStartUTC(mo.y, mo.m0);
+  const me = monthEndUTCExclusive(mo.y, mo.m0);
+  const totalNightsMonth = daysBetweenUTC(ms, me);
+  totalSum += totalNightsMonth;
+  occSum += (hm.get(mo.key) || 0);
+}
+const avgPct = totalSum > 0 ? (occSum / totalSum) * 100 : 0;
+const avgPctTxt = `${avgPct.toFixed(0)}%`;
+const avgOccTxt = `${occSum}/${totalSum} noches`;
+const avgCell = `
+  <td class="occCell">
+    <div class="occTop">
+      <span class="mono">${escapeHtml(avgOccTxt)}</span>
+      <span class="mono">${escapeHtml(avgPctTxt)}</span>
+    </div>
+    <div class="occMain">
+      <div class="bar" title="${escapeHtml(avgPctTxt)}">
+        <div style="width:${Math.max(0, Math.min(100, avgPct)).toFixed(1)}%"></div>
+      </div>
+    </div>
+  </td>
+`;
+
+tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCell}`;
+
+      frag.appendChild(tr);
+    }
+    
+    // --- Row extra: Promedio de los alojamientos (por mes) ---
+    if(housesToShow.length){
+      const AVG_NAME = "Promedio de los alojamientos";
+      const trA = document.createElement("tr");
+      trA.className = "occAvgRow";
+      const avgCells = months.map(mo=>{
+        const ms = monthStartUTC(mo.y, mo.m0);
+        const me = monthEndUTCExclusive(mo.y, mo.m0);
+        const totalNightsMonth = daysBetweenUTC(ms, me);
+
+        let sumOcc = 0;
+        for(const h of housesToShow){
+          const hm2 = map.get(h) || new Map();
+          sumOcc += (hm2.get(mo.key) || 0);
+        }
+        const avgOcc = housesToShow.length ? (sumOcc / housesToShow.length) : 0;
+        const pct = totalNightsMonth > 0 ? (avgOcc / totalNightsMonth) * 100 : 0;
+
+        const pctTxt = `${pct.toFixed(0)}%`;
+        const occTxt = `${avgOcc.toFixed(1)}/${totalNightsMonth} noches`;
+
+        return `
+          <td class="occCell">
+            <div class="occTop">
+              <span class="mono">${escapeHtml(occTxt)}</span>
+              <span class="mono">${escapeHtml(pctTxt)}</span>
+            </div>
+            <div class="occMain">
+              <div class="bar" title="${escapeHtml(pctTxt)}">
+                <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></div>
+              </div>
+            </div>
+          </td>
+        `;
+      }).join("");
+
+      // Avg cell (mismos meses seleccionados en promedio X meses)
+      let sumOccAll = 0;
+      let totalSumAll = 0;
+      for(const mo of months){
+        if(!avgSet.has(mo.key)) continue;
+        const ms = monthStartUTC(mo.y, mo.m0);
+        const me = monthEndUTCExclusive(mo.y, mo.m0);
+        const totalNightsMonth = daysBetweenUTC(ms, me);
+        totalSumAll += totalNightsMonth;
+
+        let sumOccMo = 0;
+        for(const h of housesToShow){
+          const hm2 = map.get(h) || new Map();
+          sumOccMo += (hm2.get(mo.key) || 0);
+        }
+        sumOccAll += (housesToShow.length ? (sumOccMo / housesToShow.length) : 0);
+      }
+      const avgPctAll = totalSumAll > 0 ? (sumOccAll / totalSumAll) * 100 : 0;
+      const tdAvgA = document.createElement("td");
+      tdAvgA.innerHTML = `<span class="mono">${avgPctAll.toFixed(0)}%</span>`;
+
+      trA.innerHTML = `<td class="houseCol">${escapeHtml(AVG_NAME)}</td>` + avgCells;
+      trA.appendChild(tdAvgA);
+      frag.appendChild(trA);
+    }
+
+tbody.appendChild(frag);
+
+    $("occMeta").textContent =
+      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length} · Promedio: ${avgCount} meses`;
+
+    // Build series for line chart using housesToShow
+    buildOccupancySeriesForChart(months, housesToShow, map);
+    renderOccLineChart();
+    syncOccView();
+  }
+
+  function buildOccupancySeriesForChart(months, housesArr, mapHouseMonth){
+    const pctByHouse = new Map();
+
+    // normal series for each house
+    for(const house of housesArr){
+      const arr = [];
+      const hm = mapHouseMonth.get(house) || new Map();
+      for(const mo of months){
+        const ms = monthStartUTC(mo.y, mo.m0);
+        const me = monthEndUTCExclusive(mo.y, mo.m0);
+        const totalNightsMonth = daysBetweenUTC(ms, me);
+        const occ = hm.get(mo.key) || 0;
+        const pct = totalNightsMonth > 0 ? (occ / totalNightsMonth) * 100 : 0;
+        arr.push(+pct.toFixed(2));
+      }
+      pctByHouse.set(house, arr);
+    }
+
+    // --- Serie extra: Promedio de los alojamientos (por mes) ---
+    const AVG_NAME = "Promedio de los alojamientos";
+    if(housesArr && housesArr.length){
+      const arrAvg = [];
+      for(const mo of months){
+        const ms = monthStartUTC(mo.y, mo.m0);
+        const me = monthEndUTCExclusive(mo.y, mo.m0);
+        const totalNightsMonth = daysBetweenUTC(ms, me);
+
+        let sumOcc = 0;
+        for(const h of housesArr){
+          const hm = mapHouseMonth.get(h) || new Map();
+          sumOcc += (hm.get(mo.key) || 0);
+        }
+        const avgOcc = sumOcc / housesArr.length;
+        const pct = totalNightsMonth > 0 ? (avgOcc / totalNightsMonth) * 100 : 0;
+        arrAvg.push(+pct.toFixed(2));
+      }
+      pctByHouse.set(AVG_NAME, arrAvg);
+    }
+
+    // Orden: Promedio primero (siempre resaltado), luego el resto
+    const houses = ["Promedio de los alojamientos", ...housesArr.filter(h=>h!=="Promedio de los alojamientos")];
+    occSeries = { months: months.map(m=>m.key), houses, pctByHouse };
+  }
+
+  function renderOccLineChart(){
+    const canvas = $("occLineChart");
+    if(!canvas){
+      if(chOccLines){ chOccLines.destroy(); chOccLines = null; }
+      return;
+    }
+    if(!occSeries){
+      if(chOccLines){ chOccLines.destroy(); chOccLines = null; }
+      return;
+    }
+
+    const labels = occSeries.months;
+    const datasets = occSeries.houses.map(h=>{
+      const data = occSeries.pctByHouse.get(h) || labels.map(()=>0);
+      const isAvg = (h === "Promedio de los alojamientos");
+      return {
+        label:h,
+        data,
+        tension:0.25,
+        pointRadius:0,
+        borderWidth: isAvg ? 4 : 1,
+        borderColor: isAvg ? (getComputedStyle(document.documentElement).getPropertyValue("--accentAvg").trim() || "#ff3b30") : undefined,
+        borderDash: isAvg ? [] : undefined
+      };
+    });
+
+    if(chOccLines) chOccLines.destroy();
+    chOccLines = new Chart(canvas, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{ mode:"nearest", intersect:false },
+        plugins:{
+          legend:{
+            display:true,
+            position:"bottom",
+            labels:{ boxWidth:10 },
+            onClick:(e, legendItem, legend)=>{
+              const chart = legend.chart;
+              const idx = legendItem.datasetIndex;
+
+              const avgLabel = "Promedio de los alojamientos";
+              const avgIdx = chart.data.datasets.findIndex(d=>d.label===avgLabel);
+
+              // Si clickean el promedio, solo quita cualquier highlight (pero el promedio se queda rojo/grueso)
+              if(idx === avgIdx){
+                chart.$highlightIndex = null;
+              }else{
+                const cur = chart.$highlightIndex;
+                chart.$highlightIndex = (cur === idx) ? null : idx;
+              }
+
+              chart.data.datasets.forEach((ds, i)=>{
+                ds.hidden = false;
+                ds.$origBorderColor = ds.$origBorderColor || ds.borderColor;
+
+                const isAvg = (i === avgIdx) || (ds.label === avgLabel);
+                if(isAvg){
+                  ds.borderWidth = 4;
+                  ds.borderDash = [];
+                  ds.borderColor = (getComputedStyle(document.documentElement).getPropertyValue("--accentAvg").trim() || "#ff3b30");
+                  return;
+                }
+
+                if(chart.$highlightIndex === null){
+                  ds.borderWidth = 1;
+                  ds.borderDash = [];
+                  ds.borderColor = ds.$origBorderColor;
+                }else if(i === chart.$highlightIndex){
+                  ds.borderWidth = 3;
+                  ds.borderDash = [];
+                  ds.borderColor = ds.$origBorderColor;
+                }else{
+                  ds.borderWidth = 1;
+                  ds.borderDash = [6,4];
+                  ds.borderColor = "rgba(159,176,208,.35)";
+                }
+              });
+
+              chart.update();
+            }
+          },
+          tooltip:{ callbacks:{ label:(ctx)=>` ${ctx.dataset.label}: ${ctx.raw}%` } }
+        },
+        scales:{
+          y:{ beginAtZero:true, max:100, ticks:{ callback:(v)=>`${v}%` } }
+        }
+      }
+    });
+  }
+
+  function syncOccView(){
+    const view = $("occView")?.value || "table";
+    const lineWrap = $("occLineWrap");
+    const tableWrap = $("occTableWrap");
+    if(!lineWrap || !tableWrap) return;
+
+    if(view === "line"){
+      lineWrap.style.display = "";
+      tableWrap.style.display = "none";
+    }else{
+      lineWrap.style.display = "none";
+      tableWrap.style.display = "";
+    }
+  }
+
+  function downloadCSV(){
+    const url = `${API_BASE}/api/otc.csv?${qs()}`;
+    window.location.href = url;
+  }
+
+  function setDefaultDates(){
+    // ✅ 1 de enero de 2025 → hoy
+    const today = new Date();
+    const pad = (x)=>String(x).padStart(2,"0");
+    const ymdLocal = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+    const d1 = new Date(2025, 0, 1); // local
+    $("from").value = ymdLocal(d1);
+    $("to").value = ymdLocal(today);
+  }
+
+  
+  // ===== Huéspedes: perfil + clasificación =====
+  function normalizeText(s){
+    return safeStr(s)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")  // quita acentos
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function guestKeyFromRow(r){
+    const phoneDigits = normalizePhoneDigits(r.GuestPhone);
+    if(phoneDigits && phoneDigits.length >= 7) return `p:${phoneDigits}`;
+    const nm = normalizeText(r.GuestName);
+    const em = normalizeText(r.GuestEmail);
+    if(nm) return `n:${nm}|e:${em}`;
+    if(em) return `e:${em}`;
+    return `u:${safeStr(r.Id) || Math.random()}`;
+  }
+
+  function parseDateForSort(mmddyyyy){
+    const d = parseMMDDYYYY(mmddyyyy);
+    return d ? d.getTime() : 0;
+  }
+
+  function buildGuestProfiles(rows){
+    // 1) agrupar por booking Id para obtener monto total por reserva (sum line-items)
+    const bookingMap = new Map(); // id -> bookingAgg
+    for(const r of rows){
+      const id = safeStr(r.Id);
+      if(!id) continue;
+
+      if(!bookingMap.has(id)){
+        bookingMap.set(id, {
+          id,
+          guestKey: guestKeyFromRow(r),
+          GuestName: safeStr(r.GuestName).trim(),
+          GuestEmail: safeStr(r.GuestEmail).trim(),
+          GuestPhone: safeStr(r.GuestPhone).trim(),
+          GuestCountryCode: safeStr(r.GuestCountryCode).trim(),
+          Property: safeStr(r.Property).trim(),
+          HouseName: safeStr(r.HouseName).trim(),
+          Source: safeStr(r.Source).trim(),
+          Status: safeStr(r.Status).trim(),
+          DateArrival: safeStr(r.DateArrival).trim(),
+          DateDeparture: safeStr(r.DateDeparture).trim(),
+          Nights: safeNum(r.Nights),
+          Gross: 0,
+        });
+      }
+      const b = bookingMap.get(id);
+      b.Gross += safeNum(r.GrossAmount);
+      // En caso de datos vacíos en un line-item, conserva el mejor
+      if(!b.GuestName && r.GuestName) b.GuestName = safeStr(r.GuestName).trim();
+      if(!b.GuestEmail && r.GuestEmail) b.GuestEmail = safeStr(r.GuestEmail).trim();
+      if(!b.GuestPhone && r.GuestPhone) b.GuestPhone = safeStr(r.GuestPhone).trim();
+      if(!b.Property && r.Property) b.Property = safeStr(r.Property).trim();
+      if(!b.HouseName && r.HouseName) b.HouseName = safeStr(r.HouseName).trim();
+      if(!b.Source && r.Source) b.Source = safeStr(r.Source).trim();
+      if(!b.Status && r.Status) b.Status = safeStr(r.Status).trim();
+      if(!b.DateArrival && r.DateArrival) b.DateArrival = safeStr(r.DateArrival).trim();
+      if(!b.DateDeparture && r.DateDeparture) b.DateDeparture = safeStr(r.DateDeparture).trim();
+    }
+
+    // 2) agrupar por huésped (guestKey)
+    const guests = new Map(); // guestKey -> profile
+    for(const b of bookingMap.values()){
+      if(!guests.has(b.guestKey)){
+        guests.set(b.guestKey, {
+          guestKey: b.guestKey,
+          GuestName: b.GuestName || "—",
+          GuestEmail: b.GuestEmail || "",
+          GuestPhone: b.GuestPhone || "",
+          GuestCountryCode: b.GuestCountryCode || "",
+          bookings: [],
+          sources: new Map(), // Source -> {count, gross}
+          houses: new Set(),
+          properties: new Set(),
+          totalGross: 0,
+          totalNights: 0,
+          firstArrivalTs: null,
+          lastArrivalTs: null,
+        });
+      }
+      const g = guests.get(b.guestKey);
+      g.bookings.push(b);
+      g.totalGross += safeNum(b.Gross);
+      g.totalNights += safeNum(b.Nights);
+      if(b.HouseName) g.houses.add(b.HouseName);
+      if(b.Property) g.properties.add(b.Property);
+
+      const src = b.Source || "—";
+      if(!g.sources.has(src)) g.sources.set(src, { count: 0, gross: 0 });
+      const s = g.sources.get(src);
+      s.count += 1;
+      s.gross += safeNum(b.Gross);
+
+      const ts = parseDateForSort(b.DateArrival);
+      if(ts){
+        if(g.firstArrivalTs == null || ts < g.firstArrivalTs) g.firstArrivalTs = ts;
+        if(g.lastArrivalTs == null || ts > g.lastArrivalTs) g.lastArrivalTs = ts;
+      }
+
+      // Si hay un "mejor" nombre (más largo) úsalo
+      const curr = safeStr(g.GuestName).trim();
+      const cand = safeStr(b.GuestName).trim();
+      if(cand && (curr === "—" || cand.length > curr.length)) g.GuestName = cand;
+      if(!g.GuestPhone && b.GuestPhone) g.GuestPhone = b.GuestPhone;
+      if(!g.GuestEmail && b.GuestEmail) g.GuestEmail = b.GuestEmail;
+    }
+
+    // 3) scoring relativo (0-100) y estrellas
+    const arr = [...guests.values()];
+    const maxBookings = Math.max(1, ...arr.map(g=>g.bookings.length));
+    const maxGross = Math.max(1, ...arr.map(g=>g.totalGross));
+
+    const now = Date.now();
+    const dayMs = 86400000;
+
+    for(const g of arr){
+      const bN = g.bookings.length;
+      const gross = g.totalGross;
+
+      
+      // Score final (0-1): 60% Reservas + 40% Monto (sin 
+            const sBookings = Math.log1p(bN) / Math.log1p(maxBookings);
+            const sGross = Math.log1p(gross) / Math.log1p(maxGross);
+      const score01 = (0.60*sBookings) + (0.40*sGross);
+      const score = Math.max(0, Math.min(100, Math.round(score01 * 100)));
+
+      let stars = 1;
+      if(score >= 85) stars = 5;
+      else if(score >= 70) stars = 4;
+      else if(score >= 55) stars = 3;
+      else if(score >= 40) stars = 2;
+
+      g.score = score;
+      g.stars = stars;
+    }
+
+    // 4) orden default: mejores primero
+    arr.sort((a,b)=> (b.score - a.score) || (b.totalGross - a.totalGross) || (b.bookings.length - a.bookings.length));
+
+    return arr;
+  }
+
+  function starText(n){
+    const s = "★★★★★".slice(0, Math.max(0, Math.min(5, n||0)));
+    const e = "☆☆☆☆☆".slice(0, 5 - s.length);
+    return s + e;
+  }
+
+  function fmtYMD(ts){
+    if(!ts) return "—";
+    try{ return new Date(ts).toISOString().slice(0,10); }
+    catch{ return "—"; }
+  }
+
+  function semaforoColor(score){
+    var s = Math.max(0, Math.min(100, Number(score)||0));
+    var r = Math.round(255 * (100 - s) / 100);
+    var g = Math.round(180 * s / 100);
+    return "rgb(" + r + "," + g + ",60)";
+  }
+
+  function renderStars(stars, score){
+    var n = Math.max(0, Math.min(5, Number(stars)||0));
+    var c = semaforoColor(score);
+    var out = "";
+    for(var i=0;i<5;i++){
+      var col = (i < n) ? c : "rgba(159,176,208,.55)";
+      out += '<span style="color:' + col + '">★</span>';
+    }
+    return out;
+  }
+
+
+  function openGuestsWindow(){
+    const rows = rowsFiltered; // ✅ usa el universo actual (Parámetros + filtros)
+    const profiles = buildGuestProfiles(rows);
+
+    // Guardamos para que la ventana pueda "refrescar" sin re-copiar todo (opener access)
+    window.__guestProfiles = profiles;
+
+    const w = window.open("", "guestSummary", "width=1180,height=820,noopener=no");
+    if(!w){
+      alert("No se pudo abrir la ventana (posible bloqueo de popups). Permite popups para este sitio.");
+      return;
+    }
+
+    const doc = w.document;
+
+    const html = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Huéspedes · Resumen</title>
+<style>
+  :root{
+      /* === Theme: Dark (Slate/Indigo) === */
+      --bg1:#0b1020;
+      --bg2:#0f172a;
+
+      --panel:#111a33;
+      --text:#e7eefc;
+      --muted:#a7b3d1;
+
+      --line: rgba(148,163,184,.22);
+
+      /* section tints */
+      --tint-params: rgba(56,189,248,.10);  /* sky */
+      --tint-kpis:   rgba(99,102,241,.10);  /* indigo */
+      --tint-charts: rgba(244,114,182,.08); /* pink */
+      --tint-table:  rgba(34,197,94,.10);   /* green */
+
+      --cardA: rgba(17,26,51,.96);
+      --cardB: rgba(15,23,42,.96);
+
+      --shadow: 0 14px 34px rgba(0,0,0,.38);
+      --r:16px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+
+      --accentAvg:#fb7185; /* rose */
+    }
+  [data-theme="light"]{
+      /* === Theme: Light (Snow/Indigo) === */
+      --bg1:#f6f7fb;
+      --bg2:#eef2ff;
+
+      --panel:#ffffff;
+      --text:#0b1220;
+      --muted:#4b5563;
+
+      --line: rgba(15,23,42,.10);
+
+      /* section tints */
+      --tint-params: rgba(14,165,233,.08);
+      --tint-kpis:   rgba(79,70,229,.08);
+      --tint-charts: rgba(236,72,153,.06);
+      --tint-table:  rgba(34,197,94,.08);
+
+      --cardA: rgba(255,255,255,.96);
+      --cardB: rgba(249,250,255,.96);
+
+      --shadow: 0 14px 30px rgba(2,6,23,.10);
+
+      --accentAvg:#e11d48;
+    }
+  :root{
+    --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
+    --shadow: 0 12px 28px rgba(0,0,0,.35);
+    --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:var(--font);
+    background:linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 40%, var(--bg1) 100%);
+    color:var(--text);
+  }
+  header{
+    position:sticky; top:0; z-index:60;
+    background:color-mix(in srgb, var(--bg1) 78%, transparent); backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .wrap{max-width:1280px; margin:0 auto; padding:16px 18px;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .logo{
+    width:34px; height:34px; border-radius:12px;
+    background: radial-gradient(circle at 30% 30%, #4cc9f0 0%, #4361ee 55%, #3a0ca3 100%);
+    box-shadow: 0 10px 20px rgba(67,97,238,.35);
+  }
+  h1{font-size:15px; margin:0; font-weight:900; letter-spacing:.2px}
+  .sub{margin:2px 0 0; color:var(--muted); font-size:12px}
+  button, input{
+    background:var(--panel); color:var(--text);
+    border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+    font-size:13px; outline:none;
+  }
+  button{cursor:pointer}
+  button:hover{border-color:#2b3c63}
+  button.primary{
+    background:linear-gradient(180deg, rgba(76,201,240,.18), rgba(67,97,238,.10));
+    border-color:rgba(76,201,240,.35);
+  }
+  .card{
+    background:linear-gradient(180deg, var(--cardA), var(--cardB));
+    border:1px solid var(--line);
+    border-radius:var(--r);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    margin-top:14px;
+  }
+  .hd{
+    padding:14px 14px 10px; border-bottom:1px solid var(--line);
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  }
+  .hd h2{margin:0; font-size:14px; letter-spacing:.2px}
+  .hint{margin:3px 0 0; font-size:12px; color:var(--muted)}
+  .bd{padding:14px}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:end}
+  .row > *{flex:1}
+  .kpis{
+    display:grid; gap:10px;
+    grid-template-columns: repeat(12, 1fr);
+  }
+  @media (max-width: 1100px){ .kpis{grid-template-columns:repeat(6,1fr)} }
+  @media (max-width: 720px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width: 520px){ .kpis{grid-template-columns:1fr} }
+  .kpi{
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(18,31,58,.7), rgba(15,26,48,.55));
+    border-radius:16px;
+    padding:12px;
+    min-height: 86px;
+  }
+  .kpi .lbl{font-size:12px; color:var(--muted)}
+  .kpi .val{margin-top:6px; font-size:18px; font-weight:900; letter-spacing:.3px}
+  .kpi .meta{margin-top:6px; font-size:12px; color:var(--muted)}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 8px; border-radius:999px;
+    background:rgba(76,201,240,.10);
+    border:1px solid rgba(76,201,240,.22);
+    color:var(--text);
+    font-size:12px;
+    white-space:nowrap;
+  }
+
+  /* ===== Combo (single select) ===== */
+  .combo{ position:relative; min-width: 320px; }
+  .combo input{ width:100%; }
+  .comboPanel{
+    position:absolute; top: calc(100% + 8px); left:0; right:0;
+    z-index:80;
+    background: rgba(11,18,32,.98);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow: var(--shadow);
+    padding:10px;
+    display:none;
+  }
+  .combo.open .comboPanel{ display:block; }
+  .comboList{
+    max-height: 300px; overflow:auto;
+    border:1px solid rgba(30,43,74,.75);
+    border-radius:12px;
+    background: rgba(18,31,58,.25);
+  }
+  .comboItem{
+    padding:10px 10px;
+    border-bottom:1px solid rgba(30,43,74,.55);
+    cursor:pointer;
+    display:flex; justify-content:space-between; gap:10px;
+  }
+  .comboItem:last-child{ border-bottom:none; }
+  .comboItem:hover{ background: rgba(76,201,240,.06); }
+  .tag{ color:var(--muted); font-size:12px; }
+  .grid2{ display:grid; grid-template-columns: 1.3fr .7fr; gap:10px; align-items:start; }
+  @media (max-width: 980px){ .grid2{ grid-template-columns:1fr; } }
+  .tableWrap{
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    background:rgba(18,31,58,.35);
+  }
+  table{width:100%; border-collapse:collapse; font-size:12.5px}
+  thead{ background:rgba(11,18,32,.95); }
+  th, td{ padding:10px 10px; border-bottom:1px solid rgba(30,43,74,.75); text-align:left; white-space:nowrap; }
+  tbody tr:hover{ background:rgba(76,201,240,.06); }
+  .scrollY{ max-height: 420px; overflow:auto; }
+
+/* === OVERRIDE: Datos de contacto (Huéspedes) iconos ultra compactos === */
+#contactLine { line-height: 1.15 !important; }
+.contactRow { align-items: center !important; gap: 6px !important; }
+a.waLink, a.mailLink{
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:6px !important;
+  padding:4px 8px !important;
+  border-radius:999px !important;
+  font-weight:700 !important;
+  font-size:12px !important;
+  line-height:1.05 !important;
+  white-space:nowrap !important;
+}
+.waIcon, .mailIcon, svg.waIcon, svg.mailIcon{
+  width:12px !important;
+  height:12px !important;
+  min-width:12px !important;
+  min-height:12px !important;
+  flex:0 0 12px !important;
+  display:inline-block !important;
+  vertical-align:middle !important;
+}
+a.waLink span, a.mailLink span{ line-height:1.05 !important; }
+
+  /* --- Huéspedes: título grande con nombre --- */
+  #guestTitleBig{
+    font-size:30px;
+    font-weight:950;
+    letter-spacing:-0.02em;
+    line-height:1.05;
+    margin:0;
+  }
+
+</style>
+<script>
+  // Load Chart.js without document.write-inserted parser-blocking script warnings
+  (function(){
+    var s = document.createElement('script');
+    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+    s.async = true;
+    s.onload = function(){ window.dispatchEvent(new Event("chartjs:ready")); };
+    s.onerror = function(){ console.warn("Chart.js no cargó. Algunas gráficas podrían no mostrarse."); window.dispatchEvent(new Event("chartjs:ready")); };
+    document.head.appendChild(s);
+  })();
+<\/script>
+
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>Huéspedes · Resumen</h1>
+          <div class="sub">Se alimenta del universo actual del OTC (Parámetros + filtros).</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnRefresh" class="ghost">Actualizar</button>
+        <button id="btnClose" class="primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card" style="overflow:visible;">
+    <div class="hd">
+      <div>
+        <h2>Buscar huésped</h2>
+        <div class="hint">Escribe nombre o teléfono. Ignora acentos y mayúsculas. También acepta coincidencias parciales.</div>
+      </div>
+      <div class="hint"><span class="pill" id="pillUniverse">—</span></div>
+    </div>
+    <div class="bd">
+      <div class="row">
+        <div class="combo" id="comboGuest" style="flex:2">
+          <div class="hint">Huésped (combo)</div>
+          <input id="guestInput" placeholder="Ej. José Pérez / 8441234567" autocomplete="off" />
+          <div class="comboPanel">
+            <div class="comboList" id="guestList"></div>
+            <div class="hint" style="margin-top:8px">Tip: puedes pegar un número; se normaliza a dígitos para buscar.</div>
+          </div>
+        </div>
+
+        <div style="flex:1">
+          <div class="hint">Selección actual</div>
+          <div class="pill" id="pillSelected">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card cardB">
+    <div class="hd">
+      <div>
+        <h2 id="guestTitleBig">Indicadores del huésped</h2>
+        <div class="hint">Reservas, monto, alojamientos, sources y clasificación (estrellas).</div>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="kpis">
+        <!-- Fila 1 -->
+        <div class="kpi" style="grid-column: span 3;">
+          <div class="lbl">Clasificación</div>
+          <div class="val" id="kpiStars">—</div>
+          <div class="meta" id="kpiScore">—</div>
+
+          <div class="hint" style="margin-top:10px">
+            Metodología de estrellas:
+            <br/>Score (0-100) = 60% Reservas + 40% Monto.
+            <br/>★★★★★ ≥ 85 · ★★★★ ≥ 70 · ★★★ ≥ 55 · ★★ ≥ 40 · ★ resto.
+          </div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 5;">
+          <div class="lbl">Datos de contacto</div>
+          <div class="meta mono" id="contactLine" style="margin-top:8px">—</div>
+        </div>
 
         <div class="kpi" id="kpiSourcesMini" style="grid-column: span 4;">
           <div class="lbl">Reservas por Source</div>
@@ -850,15 +2535,15 @@ body{
 
     list.innerHTML = top.map(({g})=>{
       const nm = labelForGuest(g);
-      const right = `${starText(g.stars)} · ${g.score}`;
-      return `<div class="comboItem" data-key="${g.guestKey}">
+      const right = \`\${starText(g.stars)} · \${g.score}\`;
+      return \`<div class="comboItem" data-key="\${g.guestKey}">
         <div>
-          <div>${escapeHtml(nm)}</div>
-          <div class="tag">${g.bookings.length} reservas · ${moneyMXN(g.totalGross)} · ${g.houses.size} aloj. · ${fmtYMD(g.firstArrivalTs)} → ${fmtYMD(g.lastArrivalTs)}</div>
+          <div>\${escapeHtml(nm)}</div>
+          <div class="tag">\${g.bookings.length} reservas · \${moneyMXN(g.totalGross)} · \${g.houses.size} aloj. · \${fmtYMD(g.firstArrivalTs)} → \${fmtYMD(g.lastArrivalTs)}</div>
         </div>
-        <div class="tag">${escapeHtml(right)}</div>
-      </div>`;
-    }).join("") || `<div class="comboItem"><span class="tag">Sin resultados</span></div>`;
+        <div class="tag">\${escapeHtml(right)}</div>
+      </div>\`;
+    }).join("") || \`<div class="comboItem"><span class="tag">Sin resultados</span></div>\`;
 
     list.querySelectorAll(".comboItem[data-key]").forEach(el=>{
       el.addEventListener("click", ()=>{
@@ -934,7 +2619,7 @@ function selectGuest(key){
 
     $("pillSelected").textContent = labelForGuest(selected);
     $("kpiStars").innerHTML = renderStars(selected.stars, selected.score);
-    $("kpiScore").textContent = `Score: ${selected.score}/100`;
+    $("kpiScore").textContent = \`Score: \${selected.score}/100\`;
     $("kpiBookings").textContent = String(selected.bookings.length);
     $("kpiGross").textContent = moneyMXN(selected.totalGross);
     $("kpiNights").textContent = String(selected.totalNights);
@@ -1030,9 +2715,8 @@ renderSourcesChart(selected);
         responsive:true,
         maintainAspectRatio:false,
         indexAxis: "y",
-        plugins:{ legend:{ display:false
-          onClick: occLegendClick,
-},
+        plugins:{
+          legend:{ display:false },
           tooltip:{ callbacks:{ label:(ctx)=> " " + ctx.raw + " reservas" } }
         },
         scales:{
@@ -1048,22 +2732,22 @@ renderSourcesChart(selected);
     const tb = $("tbBookings");
     const arr = [...g.bookings].sort((a,b)=> (new Date(a.DateArrival).getTime() - new Date(b.DateArrival).getTime()));
     tb.innerHTML = arr.map(b=>{
-      return `<tr>
-        <td class="mono">${escapeHtml(b.id)}</td>
-        <td class="mono">${escapeHtml(b.DateArrival || "—")}</td>
-        <td class="mono">${escapeHtml(b.DateDeparture || "—")}</td>
-        <td>${escapeHtml(b.Property || "—")}</td>
-        <td title="${escapeHtml(b.HouseName||"")}">${escapeHtml(b.HouseName || "—")}</td>
-        <td>${escapeHtml(b.Source || "—")}</td>
-        <td>${escapeHtml(b.Status || "—")}</td>
-        <td class="mono">${moneyMXN(b.Gross)}</td>
-      </tr>`;
-    }).join("") || `<tr><td colspan="8" class="tag">Sin reservas</td></tr>`;
+      return \`<tr>
+        <td class="mono">\${escapeHtml(b.id)}</td>
+        <td class="mono">\${escapeHtml(b.DateArrival || "—")}</td>
+        <td class="mono">\${escapeHtml(b.DateDeparture || "—")}</td>
+        <td>\${escapeHtml(b.Property || "—")}</td>
+        <td title="\${escapeHtml(b.HouseName||"")}">\${escapeHtml(b.HouseName || "—")}</td>
+        <td>\${escapeHtml(b.Source || "—")}</td>
+        <td>\${escapeHtml(b.Status || "—")}</td>
+        <td class="mono">\${moneyMXN(b.Gross)}</td>
+      </tr>\`;
+    }).join("") || \`<tr><td colspan="8" class="tag">Sin reservas</td></tr>\`;
   }
 
   function refreshFromOpener(){
     profiles = (window.opener && window.opener.__guestProfiles) ? window.opener.__guestProfiles : [];
-    $("pillUniverse").textContent = `${profiles.length} huéspedes`;
+    $("pillUniverse").textContent = \`\${profiles.length} huéspedes\`;
     // si ya había selección, intenta mantenerla
     const key = selected?.guestKey;
     renderList();
@@ -1081,7 +2765,7 @@ renderSourcesChart(selected);
     const combo = $("comboGuest");
     const input = $("guestInput");
 
-    $("pillUniverse").textContent = `${profiles.length} huéspedes`;
+    $("pillUniverse").textContent = \`\${profiles.length} huéspedes\`;
     $("pillSelected").textContent = "—";
 
     function open(){ combo.classList.add("open"); renderList(); }
