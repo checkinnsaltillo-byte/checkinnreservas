@@ -486,6 +486,57 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     color: white;
   }
 
+
+/* === FINAL OVERRIDES (readability & no washed-out text) === */
+html[data-theme="light"] body,
+html[data-theme="light"] .card,
+html[data-theme="light"] .kpi,
+html[data-theme="light"] .kpi *{
+  color: var(--text) !important;
+}
+
+html[data-theme="light"] .sub,
+html[data-theme="light"] .hint,
+html[data-theme="light"] .lbl,
+html[data-theme="light"] .mini,
+html[data-theme="light"] .muted,
+html[data-theme="light"] .chip,
+html[data-theme="light"] .small{
+  color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="light"] h1,
+html[data-theme="light"] h2,
+html[data-theme="light"] h3{
+  color: var(--text) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="light"] .kpi .val,
+html[data-theme="light"] .kpi .big,
+html[data-theme="light"] .kpi strong{
+  color: var(--text) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="light"] .card{
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--cardA) 78%, rgba(14,165,233,.08)),
+    color-mix(in srgb, var(--cardB) 82%, rgba(236,72,153,.06))
+  ) !important;
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select{
+  color: var(--text) !important;
+}
+
+html[data-theme="light"] ::placeholder{
+  color: color-mix(in srgb, var(--muted) 70%, transparent) !important;
+  opacity: 1 !important;
+}
+
 </style>
 </head>
 
@@ -847,6 +898,11 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
       Chart.defaults.scale.grid.color = line;
       Chart.defaults.scale.ticks.color = muted;
     }
+    // Update charts to adopt colors
+    try{ if(window.chartSource) window.chartSource.update(); }catch(e){}
+    try{ if(window.chartStatus) window.chartStatus.update(); }catch(e){}
+    try{ if(window.occChart) window.occChart.update(); }catch(e){}
+
     // Re-render charts to adopt colors
     try{ renderMiniChartsByAmount(); }catch(e){}
     try{ renderOccLineChart(); }catch(e){}
@@ -2294,6 +2350,22 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     letter-spacing:-0.02em;
     line-height:1.05;
     margin:0;
+  }
+
+
+  /* === FINAL OVERRIDES (guest) === */
+  html[data-theme="light"] body, 
+  html[data-theme="light"] .card, 
+  html[data-theme="light"] .kpi, 
+  html[data-theme="light"] .kpi *{
+    color: var(--text) !important;
+    opacity: 1 !important;
+  }
+  html[data-theme="light"] .sub,
+  html[data-theme="light"] .lbl,
+  html[data-theme="light"] .hint{
+    color: var(--muted) !important;
+    opacity: 1 !important;
   }
 
 </style>
