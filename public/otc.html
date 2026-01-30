@@ -7,58 +7,58 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
-        :root{
-      /* === Theme: Dark (Ocean Neon) === */
-      --bg1:#071327;          /* deep ocean */
-      --bg2:#0a1e3b;
+  :root{
+    /* === Theme: Light default (Vibrant Pastel) === */
+    --bg1:#fff7ed;      /* warm peach */
+    --bg2:#eff6ff;      /* soft sky */
 
-      --panel:#0c2550;        /* panels */
-      --text:#f4f7ff;         /* high contrast */
-      --muted:#c7d2fe;        /* soft lavender */
+    --panel:#ffffff;
+    --text:#0b1220;     /* near-black for readability */
+    --muted:#1f3a66;    /* deep blue */
 
-      --line: rgba(129,140,248,.28);
+    --line: rgba(30,64,175,.18);
 
-      /* section tints (vivid but harmonic) */
-      --tint-params: rgba(34,211,238,.14);   /* cyan */
-      --tint-kpis:   rgba(99,102,241,.16);   /* indigo */
-      --tint-charts: rgba(244,63,94,.10);    /* rose */
-      --tint-table:  rgba(34,197,94,.14);    /* emerald */
+    /* section tints */
+    --tint-params: rgba(14,165,233,.16);   /* cyan */
+    --tint-kpis:   rgba(99,102,241,.14);   /* indigo */
+    --tint-charts: rgba(236,72,153,.12);   /* pink */
+    --tint-table:  rgba(34,197,94,.14);  /* green */
 
-      --cardA: rgba(12,37,80,.96);
-      --cardB: rgba(10,30,59,.96);
+    --cardA: rgba(255,255,255,.98);
+    --cardB: rgba(250,252,255,.98);
 
-      --shadow: 0 16px 38px rgba(2,6,23,.55);
-      --r:16px;
-      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    --shadow: 0 16px 34px rgba(2,6,23,.10);
+    --r:16px;
+    --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 
-      --accentAvg:#fb7185; /* rose */
-      --accent:#22d3ee;    /* cyan accent */
-    }
-    [data-theme="light"]{
-      /* === Theme: Light (Fresh Sky) === */
-      --bg1:#f7fbff;
-      --bg2:#eef6ff;
+    --accentAvg:#e11d48;
+    --accent:#2563eb;
+  }
+  [data-theme="dark"]{
+    /* === Theme: Dark (Colorful Night) === */
+    --bg1:#1b1b5e;      /* indigo night (NOT black) */
+    --bg2:#0b4a6f;      /* teal blue */
 
-      --panel:#ffffff;
-      --text:#0b1b3a;
-      --muted:#29406b;
+    --panel:#1d2b7a;    /* rich indigo */
+    --text:#f7fbff;
+    --muted:#c7d2fe;
 
-      --line: rgba(37,99,235,.18);
+    --line: rgba(165,180,252,.26);
 
-      --tint-params: rgba(14,165,233,.14);
-      --tint-kpis:   rgba(79,70,229,.12);
-      --tint-charts: rgba(244,63,94,.10);
-      --tint-table:  rgba(34,197,94,.12);
+    --tint-params: rgba(34,211,238,.16);
+    --tint-kpis:   rgba(129,140,248,.18);
+    --tint-charts: rgba(244,63,94,.12);
+    --tint-table:  rgba(34,197,94,.14);
 
-      --cardA: rgba(255,255,255,.98);
-      --cardB: rgba(245,250,255,.98);
+    --cardA: rgba(29,43,122,.94);
+    --cardB: rgba(27,27,94,.94);
 
-      --shadow: 0 16px 34px rgba(2,6,23,.12);
+    --shadow: 0 18px 44px rgba(0,0,0,.35);
 
-      --accentAvg:#e11d48;
-      --accent:#2563eb;
-    }
-    :root{
+    --accentAvg:#fb7185;
+    --accent:#22d3ee;
+  }
+  :root{
       --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
     --accentAvg:#ff3b30;
       --shadow: 0 12px 28px rgba(0,0,0,.35);
@@ -436,21 +436,33 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
   h1,h2,h3{ color: var(--text); }
   .sub{ color: var(--muted); }
 
-  /* section-specific backgrounds (main layout) */
-  #panelParams.card{ background: linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-params)), var(--cardB)); }
-  #panelKPIs.card{ background: linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-kpis)),   var(--cardB)); }
-  #panelCharts.card{ background: linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-charts)), var(--cardB)); }
-  #panelTable.card{ background: linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-table)),  var(--cardB)); }
+    /* section-specific backgrounds (main layout) */
+  #panelParams.card{ background: linear-gradient(135deg,
+      color-mix(in srgb, var(--cardA) 84%, var(--tint-params)),
+      color-mix(in srgb, var(--cardB) 84%, rgba(255,255,255,.06))
+    ); }
+  #panelKPIs.card{ background: linear-gradient(135deg,
+      color-mix(in srgb, var(--cardA) 84%, var(--tint-kpis)),
+      color-mix(in srgb, var(--cardB) 84%, rgba(255,255,255,.06))
+    ); }
+  #panelCharts.card{ background: linear-gradient(135deg,
+      color-mix(in srgb, var(--cardA) 84%, var(--tint-charts)),
+      color-mix(in srgb, var(--cardB) 84%, rgba(255,255,255,.06))
+    ); }
+  #panelTable.card{ background: linear-gradient(135deg,
+      color-mix(in srgb, var(--cardA) 84%, var(--tint-table)),
+      color-mix(in srgb, var(--cardB) 84%, rgba(255,255,255,.06))
+    ); }
 
-  /* KPI tiles */
+  /* KPI tiles */  /* KPI tiles */
   .kpi{
-    background: linear-gradient(180deg,
-      color-mix(in srgb, var(--cardA) 92%, rgba(255,255,255,.06)),
-      color-mix(in srgb, var(--cardB) 92%, rgba(0,0,0,.10))
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--cardA) 82%, rgba(37,99,235,.10)),
+      color-mix(in srgb, var(--cardB) 82%, rgba(236,72,153,.08))
     );
     border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
   }
-  .kpi .lbl{ color: color-mix(in srgb, var(--muted) 92%, var(--text)); }
+  .kpi .lbl{ color: var(--muted); font-weight:700; }
 
   /* inputs */
   input, select{
@@ -816,7 +828,7 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
   // 
   // ===== Theme (claro / oscuro) =====
   function getTheme(){
-    return localStorage.getItem("theme") || "dark";
+    return localStorage.getItem("theme") || "light";
   }
   function setTheme(t){
     const theme = (t === "light") ? "light" : "dark";
@@ -2101,7 +2113,7 @@ tbody.appendChild(frag);
 
       --accentAvg:#fb7185; /* rose */
     }
-  [data-theme="light"]{
+  [data-theme="dark"]{
       /* === Theme: Light (Snow/Indigo) === */
       --bg1:#f6f7fb;
       --bg2:#eef2ff;
