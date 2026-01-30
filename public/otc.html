@@ -365,6 +365,26 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
       font-weight: 800;
     }
 
+
+  /* --- Huéspedes: título grande con nombre --- */
+  #guestTitleBig{
+    font-size:28px !important;
+    font-weight:900 !important;
+    letter-spacing:-0.02em;
+    line-height:1.05;
+  }
+
+
+  /* --- Huéspedes: KPIs en 2 filas --- */
+  .kpis{ padding:0; }
+  .kpisGrid{ display:flex; flex-direction:column; gap:10px; }
+  .kpisRow1{ display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px; }
+  .kpisRow2{ display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap:10px; }
+  @media (max-width: 980px){
+    .kpisRow1{ grid-template-columns: 1fr; }
+    .kpisRow2{ grid-template-columns: 1fr 1fr; }
+  }
+
 </style>
 </head>
 
@@ -477,8 +497,21 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
 
     <div class="bd">
       <div class="kpis">
-        <div class="kpi">
-          <div class="lbl">Reservas únicas</div>
+  <div class="kpisGrid">
+    <div class="kpisRow1">
+      
+      
+      
+    </div>
+    <div class="kpisRow2">
+      
+      
+      
+      
+      
+    </div>
+  </div>
+</div>
           <div class="val" id="kpiBookings">—</div>
           <div class="meta">IDs distintos</div>
         </div>
@@ -2411,6 +2444,7 @@ function selectGuest(key){
     $("kpiHouses").textContent = String(selected.houses.size);
     $("kpiFirstLast").innerHTML = "<div><b>Primera:</b> " + fmtYMD(selected.firstArrivalTs) + "</div><div><b>Última:</b> " + fmtYMD(selected.lastArrivalTs) + "</div>";
         const name = selected.GuestName || "Huésped";
+    var t = document.getElementById("guestTitleBig"); if(t) t.textContent = name;
     const phoneRaw = selected.GuestPhone || "";
     const emailRaw = selected.GuestEmail || "";
 
