@@ -850,15 +850,15 @@ body{
 
     list.innerHTML = top.map(({g})=>{
       const nm = labelForGuest(g);
-      const right = \`\${starText(g.stars)} · \${g.score}\`;
-      return \`<div class="comboItem" data-key="\${g.guestKey}">
+      const right = `${starText(g.stars)} · ${g.score}`;
+      return `<div class="comboItem" data-key="${g.guestKey}">
         <div>
-          <div>\${escapeHtml(nm)}</div>
-          <div class="tag">\${g.bookings.length} reservas · \${moneyMXN(g.totalGross)} · \${g.houses.size} aloj. · \${fmtYMD(g.firstArrivalTs)} → \${fmtYMD(g.lastArrivalTs)}</div>
+          <div>${escapeHtml(nm)}</div>
+          <div class="tag">${g.bookings.length} reservas · ${moneyMXN(g.totalGross)} · ${g.houses.size} aloj. · ${fmtYMD(g.firstArrivalTs)} → ${fmtYMD(g.lastArrivalTs)}</div>
         </div>
-        <div class="tag">\${escapeHtml(right)}</div>
-      </div>\`;
-    }).join("") || \`<div class="comboItem"><span class="tag">Sin resultados</span></div>\`;
+        <div class="tag">${escapeHtml(right)}</div>
+      </div>`;
+    }).join("") || `<div class="comboItem"><span class="tag">Sin resultados</span></div>`;
 
     list.querySelectorAll(".comboItem[data-key]").forEach(el=>{
       el.addEventListener("click", ()=>{
@@ -934,7 +934,7 @@ function selectGuest(key){
 
     $("pillSelected").textContent = labelForGuest(selected);
     $("kpiStars").innerHTML = renderStars(selected.stars, selected.score);
-    $("kpiScore").textContent = \`Score: \${selected.score}/100\`;
+    $("kpiScore").textContent = `Score: ${selected.score}/100`;
     $("kpiBookings").textContent = String(selected.bookings.length);
     $("kpiGross").textContent = moneyMXN(selected.totalGross);
     $("kpiNights").textContent = String(selected.totalNights);
@@ -1048,22 +1048,22 @@ renderSourcesChart(selected);
     const tb = $("tbBookings");
     const arr = [...g.bookings].sort((a,b)=> (new Date(a.DateArrival).getTime() - new Date(b.DateArrival).getTime()));
     tb.innerHTML = arr.map(b=>{
-      return \`<tr>
-        <td class="mono">\${escapeHtml(b.id)}</td>
-        <td class="mono">\${escapeHtml(b.DateArrival || "—")}</td>
-        <td class="mono">\${escapeHtml(b.DateDeparture || "—")}</td>
-        <td>\${escapeHtml(b.Property || "—")}</td>
-        <td title="\${escapeHtml(b.HouseName||"")}">\${escapeHtml(b.HouseName || "—")}</td>
-        <td>\${escapeHtml(b.Source || "—")}</td>
-        <td>\${escapeHtml(b.Status || "—")}</td>
-        <td class="mono">\${moneyMXN(b.Gross)}</td>
-      </tr>\`;
-    }).join("") || \`<tr><td colspan="8" class="tag">Sin reservas</td></tr>\`;
+      return `<tr>
+        <td class="mono">${escapeHtml(b.id)}</td>
+        <td class="mono">${escapeHtml(b.DateArrival || "—")}</td>
+        <td class="mono">${escapeHtml(b.DateDeparture || "—")}</td>
+        <td>${escapeHtml(b.Property || "—")}</td>
+        <td title="${escapeHtml(b.HouseName||"")}">${escapeHtml(b.HouseName || "—")}</td>
+        <td>${escapeHtml(b.Source || "—")}</td>
+        <td>${escapeHtml(b.Status || "—")}</td>
+        <td class="mono">${moneyMXN(b.Gross)}</td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="8" class="tag">Sin reservas</td></tr>`;
   }
 
   function refreshFromOpener(){
     profiles = (window.opener && window.opener.__guestProfiles) ? window.opener.__guestProfiles : [];
-    $("pillUniverse").textContent = \`\${profiles.length} huéspedes\`;
+    $("pillUniverse").textContent = `${profiles.length} huéspedes`;
     // si ya había selección, intenta mantenerla
     const key = selected?.guestKey;
     renderList();
@@ -1081,7 +1081,7 @@ renderSourcesChart(selected);
     const combo = $("comboGuest");
     const input = $("guestInput");
 
-    $("pillUniverse").textContent = \`\${profiles.length} huéspedes\`;
+    $("pillUniverse").textContent = `${profiles.length} huéspedes`;
     $("pillSelected").textContent = "—";
 
     function open(){ combo.classList.add("open"); renderList(); }
