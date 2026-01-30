@@ -1907,6 +1907,19 @@ function renderOccLineChart(){
     return n === "N/A from Airbnb . N/A from Airbnb" || /^N\/A\s+from\s+Airbnb/i.test(n);
   }
 
+
+  // ===== EXCLUDE INVALID AIRBNB N/A GUESTS (GLOBAL) =====
+  function isInvalidGuest(name){
+    if(!name) return true;
+    const n = String(name).trim();
+    return (
+      n === "N/A from Airbnb . N/A from Airbnb" ||
+      n === "N/A from Airbnb - N/A from Airbnb" ||
+      n === "N/A from Airbnb" ||
+      /^N\/A\s+from\s+Airbnb/i.test(n)
+    );
+  }
+
 function normalizeText(s){
     return safeStr(s)
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")  // quita acentos
