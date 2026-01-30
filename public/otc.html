@@ -7,20 +7,55 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
-    :root{
-      --bg1:#070b15; --bg2:#0b1220;
-      --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
-    --accentAvg:#ff3b30;
-      --cardA: rgba(15,26,48,.98); --cardB: rgba(11,18,32,.98);
-      --shadow: 0 12px 28px rgba(0,0,0,.35);
-      --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        :root{
+      /* === Theme: Dark (Slate/Indigo) === */
+      --bg1:#0b1020;
+      --bg2:#0f172a;
+
+      --panel:#111a33;
+      --text:#e7eefc;
+      --muted:#a7b3d1;
+
+      --line: rgba(148,163,184,.22);
+
+      /* section tints */
+      --tint-params: rgba(56,189,248,.10);  /* sky */
+      --tint-kpis:   rgba(99,102,241,.10);  /* indigo */
+      --tint-charts: rgba(244,114,182,.08); /* pink */
+      --tint-table:  rgba(34,197,94,.10);   /* green */
+
+      --cardA: rgba(17,26,51,.96);
+      --cardB: rgba(15,23,42,.96);
+
+      --shadow: 0 14px 34px rgba(0,0,0,.38);
+      --r:16px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+
+      --accentAvg:#fb7185; /* rose */
     }
     [data-theme="light"]{
-      --bg1:#f6f8ff; --bg2:#eef2ff;
-      --panel:#ffffff; --text:#0b1220; --muted:#475569; --line:#d6deef;
-    --accentAvg:#ef4444;
-      --cardA: rgba(255,255,255,.95); --cardB: rgba(248,250,255,.95);
-      --shadow: 0 10px 24px rgba(2,6,23,.10);
+      /* === Theme: Light (Snow/Indigo) === */
+      --bg1:#f6f7fb;
+      --bg2:#eef2ff;
+
+      --panel:#ffffff;
+      --text:#0b1220;
+      --muted:#4b5563;
+
+      --line: rgba(15,23,42,.10);
+
+      /* section tints */
+      --tint-params: rgba(14,165,233,.08);
+      --tint-kpis:   rgba(79,70,229,.08);
+      --tint-charts: rgba(236,72,153,.06);
+      --tint-table:  rgba(34,197,94,.08);
+
+      --cardA: rgba(255,255,255,.96);
+      --cardB: rgba(249,250,255,.96);
+
+      --shadow: 0 14px 30px rgba(2,6,23,.10);
+
+      --accentAvg:#e11d48;
     }
     :root{
       --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
@@ -382,10 +417,57 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     }
 
 
-  /* --- Variación de fondos por sección (cards) --- */
-  .cardA{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, rgba(76,201,240,.18)), var(--cardB)); }
-  .cardB{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, rgba(67,97,238,.18)), var(--cardB)); }
-  .cardC{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, rgba(74,222,128,.16)), var(--cardB)); }
+    /* --- Variación de fondos por sección (cards) --- */
+  .cardA{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-params)), var(--cardB)); }
+  .cardB{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-kpis)),   var(--cardB)); }
+  .cardC{ background:linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-table)),  var(--cardB)); }
+
+
+  /* === Visual polish === */
+  .card{
+    border:1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+  h1,h2,h3{ color: var(--text); }
+  .sub{ color: var(--muted); }
+
+  /* section-specific backgrounds (main layout) */
+  #panelParams.card{ background: linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-params)), var(--cardB)); }
+  #panelKPIs.card{ background: linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-kpis)),   var(--cardB)); }
+  #panelCharts.card{ background: linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-charts)), var(--cardB)); }
+  #panelTable.card{ background: linear-gradient(180deg, color-mix(in srgb, var(--cardA) 88%, var(--tint-table)),  var(--cardB)); }
+
+  /* KPI tiles */
+  .kpi{
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--cardA) 92%, rgba(255,255,255,.06)),
+      color-mix(in srgb, var(--cardB) 92%, rgba(0,0,0,.10))
+    );
+    border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  }
+  .kpi .lbl{ color: color-mix(in srgb, var(--muted) 92%, var(--text)); }
+
+  /* inputs */
+  input, select{
+    border:1px solid color-mix(in srgb, var(--line) 92%, transparent);
+    background: color-mix(in srgb, var(--panel) 90%, var(--bg2));
+    color: var(--text);
+  }
+  ::placeholder{ color: color-mix(in srgb, var(--muted) 78%, transparent); }
+
+  /* buttons */
+  button, .btn{
+    border:1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  }
+  button.ghost{
+    background: color-mix(in srgb, var(--panel) 85%, transparent);
+    color: var(--text);
+  }
+  button.primary{
+    background: linear-gradient(135deg, rgba(99,102,241,.95), rgba(56,189,248,.85));
+    border-color: transparent;
+    color: white;
+  }
 
 </style>
 </head>
@@ -419,7 +501,7 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
 <main class="wrap">
 
   <!-- Parámetros -->
-  <section class="card cardA" style="overflow:visible;">
+  <section class="card cardA" style="overflow:visible;" id="panelParams">
     <div class="hd">
       <div>
         <h2>Parámetros</h2>
@@ -490,7 +572,7 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
   </section>
 
   <!-- KPIs + mini charts por monto -->
-  <section class="card">
+  <section class="card" id="panelKPIs">
     <div class="hd">
       <div>
         <h2>KPIs</h2>
@@ -1989,20 +2071,56 @@ tbody.appendChild(frag);
 <title>Huéspedes · Resumen</title>
 <style>
   :root{
-      --bg1:#070b15; --bg2:#0b1220;
-      --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
-      --cardA: rgba(15,26,48,.98); --cardB: rgba(11,18,32,.98);
-      --shadow: 0 12px 28px rgba(0,0,0,.35);
-      --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      /* === Theme: Dark (Slate/Indigo) === */
+      --bg1:#0b1020;
+      --bg2:#0f172a;
+
+      --panel:#111a33;
+      --text:#e7eefc;
+      --muted:#a7b3d1;
+
+      --line: rgba(148,163,184,.22);
+
+      /* section tints */
+      --tint-params: rgba(56,189,248,.10);  /* sky */
+      --tint-kpis:   rgba(99,102,241,.10);  /* indigo */
+      --tint-charts: rgba(244,114,182,.08); /* pink */
+      --tint-table:  rgba(34,197,94,.10);   /* green */
+
+      --cardA: rgba(17,26,51,.96);
+      --cardB: rgba(15,23,42,.96);
+
+      --shadow: 0 14px 34px rgba(0,0,0,.38);
+      --r:16px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+
+      --accentAvg:#fb7185; /* rose */
     }
-    [data-theme="light"]{
-      --bg1:#f6f8ff; --bg2:#eef2ff;
-      --panel:#ffffff; --text:#0b1220; --muted:#475569; --line:#d6deef;
-    --accentAvg:#ef4444;
-      --cardA: rgba(255,255,255,.95); --cardB: rgba(248,250,255,.95);
-      --shadow: 0 10px 24px rgba(2,6,23,.10);
+  [data-theme="light"]{
+      /* === Theme: Light (Snow/Indigo) === */
+      --bg1:#f6f7fb;
+      --bg2:#eef2ff;
+
+      --panel:#ffffff;
+      --text:#0b1220;
+      --muted:#4b5563;
+
+      --line: rgba(15,23,42,.10);
+
+      /* section tints */
+      --tint-params: rgba(14,165,233,.08);
+      --tint-kpis:   rgba(79,70,229,.08);
+      --tint-charts: rgba(236,72,153,.06);
+      --tint-table:  rgba(34,197,94,.08);
+
+      --cardA: rgba(255,255,255,.96);
+      --cardB: rgba(249,250,255,.96);
+
+      --shadow: 0 14px 30px rgba(2,6,23,.10);
+
+      --accentAvg:#e11d48;
     }
-    :root{
+  :root{
     --panel:#0f1a30; --text:#e8eefc; --muted:#9fb0d0; --line:#1e2b4a;
     --shadow: 0 12px 28px rgba(0,0,0,.35);
     --r:16px; --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
