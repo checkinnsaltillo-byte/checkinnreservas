@@ -251,24 +251,6 @@
     }
 
 
-
-    /* --- Semáforo ocupación (mes target, días transcurridos) --- */
-    #occTable thead th.semaCol{ min-width: 170px; }
-    #occTable td.semaCol{ min-width: 170px; }
-    .occBadge{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:6px 10px; border-radius:999px;
-      font-weight:800; font-size:12px;
-      border:1px solid transparent;
-      box-shadow: 0 1px 0 rgba(0,0,0,.08);
-      user-select:none;
-    }
-    .occBadgeGreen{ background:#dcfce7; border-color:#22c55e; color:#064e3b; }
-    .occBadgeLime{ background:#ecfccb; border-color:#84cc16; color:#365314; }
-    .occBadgeAmber{ background:#fffbeb; border-color:#f59e0b; color:#78350f; }
-    .occBadgeRose{ background:#fff1f2; border-color:#fb7185; color:#881337; }
-    .occBadgeSky{ background:#e0f2fe; border-color:#38bdf8; color:#0c4a6e; }
-
     .occCell{ min-width: 210px; white-space: normal; line-height: 1.25; }
     .occTop{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--muted); }
     .occMain{ margin-top:6px; display:flex; align-items:center; gap:10px; }
@@ -485,37 +467,6 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     color: white;
   }
 
-
-/* ===== Switch (toggle) ===== */
-.switch input{ display:none; }
-.switchTrack{
-  width:44px; height:24px; border-radius:999px;
-  background: color-mix(in srgb, var(--line) 65%, transparent);
-  border:1px solid color-mix(in srgb, var(--line) 85%, transparent);
-  position:relative; flex:0 0 auto;
-}
-.switchThumb{
-  width:20px; height:20px; border-radius:999px;
-  background: linear-gradient(180deg, var(--cardA), var(--cardB));
-  position:absolute; top:1px; left:1px;
-  box-shadow: 0 6px 14px rgba(0,0,0,.18);
-  transition: transform .18s ease;
-}
-.switch input:checked + .switchTrack{
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-}
-.switch input:checked + .switchTrack .switchThumb{
-  transform: translateX(20px);
-}
-
-
-/* === Ocupación: heatmap semaforizado en barras === */
-.occBar{ height:14px; border-radius:999px; background: color-mix(in srgb, var(--line) 60%, transparent); overflow:hidden; }
-.occFill{ height:100%; border-radius:999px; }
-.occCellWrap{ display:flex; flex-direction:column; gap:6px; }
-.occPct{ font-size:12px; font-weight:900; }
-
 </style>
 </head>
 
@@ -720,15 +671,7 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
           </select>
         </label>
 
-        <label class="small" style="min-width:220px">
-          <div class="hint">Columnas</div>
-          <label class="switch" style="display:flex;align-items:center;gap:10px;margin-top:6px">
-            <input id="occShowAllMonths" type="checkbox">
-            <span class="switchTrack"><span class="switchThumb"></span></span>
-            <span id="occShowAllMonthsLbl" class="small" style="font-weight:800">Mostrar todos los meses</span>
-          </label>
-        </label>
-
+        
         <div class="mcb" id="mcbOccAvgMonths" style="flex:1.2">
           <div class="hint">Promedio (mes-año)</div>
           <button class="mcbBtn" type="button">
@@ -938,6 +881,27 @@ const API_BASE = "https://checkinnreservas-1044570371371.northamerica-south1.run
     var g = Math.round(180 * s / 100);
     return "rgb(" + r + "," + g + ",60)";
   }
+
+  // ===== Ocupación: semáforo por celda (heatmap) =====
+  function occIsCurrentMonth(mo){
+    if(!mo) return false;
+    const now = new Date();
+    return mo.y === now.getFullYear() && mo.m0 === now.getMonth();
+  }
+  // Para el mes más reciente (último en rango), si es el mes en curso, usar días transcurridos como denominador
+  function occDenomForMonth(mo, totalDaysInMonth, lastMonthKey){
+    if(!mo) return totalDaysInMonth;
+    if(mo.key === lastMonthKey && occIsCurrentMonth(mo)){
+      const d = new Date().getDate();
+      return Math.max(1, Math.min(totalDaysInMonth, d));
+    }
+    return totalDaysInMonth;
+  }
+  function occHeatColor(pct){
+    // pct 0-100 -> rojo->verde (sin grises)
+    return semaforoColor(pct);
+  }
+
 
   function renderStars(stars, score){
     var n = Math.max(0, Math.min(5, Number(stars)||0));
@@ -1521,52 +1485,11 @@ function unescapeHtml(s){
     setMCBItems("mcbOccAvgMonths", availableMonths, true);
   }
 
-  
-  function toggleOccAvgMonthsUI(){
-    const on = $("occShowAllMonths")?.checked;
-    const mcb = $("mcbOccAvgMonths");
-    if(mcb) mcb.style.opacity = on ? "1" : ".55";
-  }
-
-
-  // ===== Ocupación: color semaforizado (0% rojo -> 100% verde) =====
-  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-  function occHeatColor(pct){
-    const p = clamp(pct, 0, 100);
-    const hue = (p * 1.2); // 0..120
-    return `hsl(${hue} 85% 50%)`;
-  }
-
-function renderOccupancyByMonth(){
-    toggleOccAvgMonthsUI();
+  function renderOccupancyByMonth(){
     const fromISO = $("from").value;
     const toISO = $("to").value;
     const months = monthsBetween(fromISO, toISO);
-
-    // --- Semáforo de ocupación (mes más reciente / último seleccionado) ---
-    const targetMo = months.length ? months[months.length-1] : null; // {key,y,m0}
-    const showAllMonths = $("occShowAllMonths") ? $("occShowAllMonths").checked : false;
-    const monthsShown = (showAllMonths ? months : (targetMo ? [targetMo] : months)); // {key,y,m0}
-    const now = new Date();
-    const nowY = now.getUTCFullYear();
-    const nowM0 = now.getUTCMonth();
-    const nowD = now.getUTCDate();
-    const daysInTarget = targetMo ? (new Date(Date.UTC(targetMo.y, targetMo.m0+1, 0))).getUTCDate() : 0;
-    const isCurrentTarget = targetMo ? (targetMo.y === nowY && targetMo.m0 === nowM0) : false;
-    const daysElapsed = targetMo ? (isCurrentTarget ? Math.min(nowD, daysInTarget) : daysInTarget) : 0;
-    const targetCutoffEx = targetMo ? (isCurrentTarget
-        ? new Date(Date.UTC(targetMo.y, targetMo.m0, 1 + daysElapsed, 0,0,0))
-        : monthEndUTCExclusive(targetMo.y, targetMo.m0)
-      ) : null;
-
-    function occSemaforo(pct){
-      const p = isFinite(pct) ? pct : -1;
-      if(p < 0) return { cls:"occBadgeSky", dot:"🔵", txt:"—" };
-      if(p >= 90) return { cls:"occBadgeGreen", dot:"🟢", txt:`${p.toFixed(0)}%` };
-      if(p >= 75) return { cls:"occBadgeLime", dot:"🟡", txt:`${p.toFixed(0)}%` };
-      if(p >= 55) return { cls:"occBadgeAmber", dot:"🟠", txt:`${p.toFixed(0)}%` };
-      return { cls:"occBadgeRose", dot:"🔴", txt:`${p.toFixed(0)}%` };
-    }
+    const lastMonthKey = months.length ? months[months.length-1].key : "";
 
     const thead = $("occThead");
     const tbody = $("occTbody");
@@ -1598,7 +1521,6 @@ function renderOccupancyByMonth(){
 
     // nights per house/month
     const map = new Map(); // house -> Map(monthKey -> nights)
-    const mapElapsedTarget = new Map(); // house -> nights (solo mes target y solo días transcurridos)
     const propertyByHouse = new Map();
     const houseSet = new Set();
     const propSet = new Set();
@@ -1617,15 +1539,6 @@ function renderOccupancyByMonth(){
         if(!map.has(b.house)) map.set(b.house, new Map());
         const hm = map.get(b.house);
         hm.set(mo.key, (hm.get(mo.key) || 0) + n);
-      }
-
-      // también calcula ocupación del mes target, pero solo hasta el día de la consulta (días transcurridos)
-      if(targetMo && targetCutoffEx && daysElapsed > 0){
-        const msT = monthStartUTC(targetMo.y, targetMo.m0);
-        const nT = intersectNights(b.start, b.endEx, msT, targetCutoffEx);
-        if(nT > 0){
-          mapElapsedTarget.set(b.house, (mapElapsedTarget.get(b.house) || 0) + nT);
-        }
       }
     }
 
@@ -1667,9 +1580,8 @@ function renderOccupancyByMonth(){
     const trh = document.createElement("tr");
     trh.innerHTML = `
       <th class="houseCol">HouseName</th>
-      <th class="semaCol">Semáforo (${escapeHtml(targetMo ? targetMo.key : "—")})</th>
-      ${monthsShown.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
-      ${showAllMonths ? `<th>Promedio (${avgCount} meses)</th>` : ``}
+      ${months.map(mo => `<th>${escapeHtml(mo.key)}</th>`).join("")}
+      <th>Promedio (${avgCount} meses)</th>
     `;
     thead.appendChild(trh);
 
@@ -1679,16 +1591,17 @@ function renderOccupancyByMonth(){
       const tr = document.createElement("tr");
       const hm = map.get(house) || new Map();
 
-      const rowCells = monthsShown.map(mo=>{
+      const rowCells = months.map(mo=>{
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
+        const denom = occDenomForMonth(mo, totalNightsMonth, lastMonthKey);
 
         const occ = hm.get(mo.key) || 0;
-        const pct = totalNightsMonth > 0 ? (occ / totalNightsMonth) * 100 : 0;
+        const pct = denom > 0 ? (occ / denom) * 100 : 0;
 
         const pctTxt = `${pct.toFixed(0)}%`;
-        const occTxt = `${occ}/${totalNightsMonth} noches`;
+        const occTxt = `${occ}/${denom} noches`;
 
         return `
           <td class="occCell">
@@ -1697,8 +1610,8 @@ function renderOccupancyByMonth(){
               <span class="mono">${escapeHtml(pctTxt)}</span>
             </div>
             <div class="occMain">
-              <div class="occBar" title="${escapeHtml(pctTxt)}">
-                <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></div>
+              <div class="bar" title="${escapeHtml(pctTxt)}">
+                <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%; background:${occHeatColor(pct)}; box-shadow: 0 8px 20px rgba(0,0,0,.12)"></div>
               </div>
             </div>
           </td>
@@ -1713,36 +1626,28 @@ for(const mo of months){
   const ms = monthStartUTC(mo.y, mo.m0);
   const me = monthEndUTCExclusive(mo.y, mo.m0);
   const totalNightsMonth = daysBetweenUTC(ms, me);
-  totalSum += totalNightsMonth;
+  const denom = occDenomForMonth(mo, totalNightsMonth, lastMonthKey);
+  totalSum += denom;
   occSum += (hm.get(mo.key) || 0);
 }
 const avgPct = totalSum > 0 ? (occSum / totalSum) * 100 : 0;
 const avgPctTxt = `${avgPct.toFixed(0)}%`;
 const avgOccTxt = `${occSum}/${totalSum} noches`;
-const avgCell = showAllMonths ? `
+const avgCell = `
   <td class="occCell">
     <div class="occTop">
       <span class="mono">${escapeHtml(avgOccTxt)}</span>
       <span class="mono">${escapeHtml(avgPctTxt)}</span>
     </div>
     <div class="occMain">
-      <div class="occBar" title="${escapeHtml(avgPctTxt)}">
-        <div style="width:${Math.max(0, Math.min(100, avgPct)).toFixed(1)}%"></div>
+      <div class="bar" title="${escapeHtml(avgPctTxt)}">
+        <div style="width:${Math.max(0, Math.min(100, avgPct)).toFixed(1)}%; background:${occHeatColor(avgPct)}; box-shadow: 0 8px 20px rgba(0,0,0,.12)"></div>
       </div>
     </div>
   </td>
-` : ``;
+`;
 
-// Semáforo (mes más reciente, días transcurridos)
-      const occSoFar = targetMo ? (mapElapsedTarget.get(house) || 0) : 0;
-      const pctSoFar = (targetMo && daysElapsed > 0) ? (occSoFar / daysElapsed) * 100 : NaN;
-      const sem = occSemaforo(Math.max(0, Math.min(100, pctSoFar)));
-      const semTitle = (targetMo && daysElapsed > 0)
-        ? `${targetMo.key} · ${occSoFar}/${daysElapsed} noches (hasta hoy) · ${sem.txt}`
-        : "—";
-      const semHtml = `<span class="occBadge ${sem.cls}" title="${escapeHtml(semTitle)}">${sem.dot} ${escapeHtml(sem.txt)}</span>`;
-
-tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol"></td>${rowCells}${avgCell}`;
+tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td>${rowCells}${avgCell}`;
 
       frag.appendChild(tr);
     }
@@ -1752,10 +1657,11 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol
       const AVG_NAME = "Promedio de los alojamientos";
       const trA = document.createElement("tr");
       trA.className = "occAvgRow";
-      const avgCells = monthsShown.map(mo=>{
+      const avgCells = months.map(mo=>{
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
+        const denom = occDenomForMonth(mo, totalNightsMonth, lastMonthKey);
 
         let sumOcc = 0;
         for(const h of housesToShow){
@@ -1763,10 +1669,10 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol
           sumOcc += (hm2.get(mo.key) || 0);
         }
         const avgOcc = housesToShow.length ? (sumOcc / housesToShow.length) : 0;
-        const pct = totalNightsMonth > 0 ? (avgOcc / totalNightsMonth) * 100 : 0;
+        const pct = denom > 0 ? (avgOcc / denom) * 100 : 0;
 
         const pctTxt = `${pct.toFixed(0)}%`;
-        const occTxt = `${avgOcc.toFixed(1)}/${totalNightsMonth} noches`;
+        const occTxt = `${avgOcc.toFixed(1)}/${denom} noches`;
 
         return `
           <td class="occCell">
@@ -1775,8 +1681,8 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol
               <span class="mono">${escapeHtml(pctTxt)}</span>
             </div>
             <div class="occMain">
-              <div class="occBar" title="${escapeHtml(pctTxt)}">
-                <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></div>
+              <div class="bar" title="${escapeHtml(pctTxt)}">
+                <div style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%; background:${occHeatColor(pct)}; box-shadow: 0 8px 20px rgba(0,0,0,.12)"></div>
               </div>
             </div>
           </td>
@@ -1791,7 +1697,8 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
-        totalSumAll += totalNightsMonth;
+        const denom = occDenomForMonth(mo, totalNightsMonth, lastMonthKey);
+        totalSumAll += denom;
 
         let sumOccMo = 0;
         for(const h of housesToShow){
@@ -1804,17 +1711,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol
       const tdAvgA = document.createElement("td");
       tdAvgA.innerHTML = `<span class="mono">${avgPctAll.toFixed(0)}%</span>`;
 
-      // Semáforo del promedio (mes target, días transcurridos)
-      const sumSoFar = targetMo ? housesToShow.reduce((acc,h)=> acc + (mapElapsedTarget.get(h)||0), 0) : 0;
-      const avgSoFar = housesToShow.length ? (sumSoFar / housesToShow.length) : 0;
-      const pctAvgSoFar = (targetMo && daysElapsed > 0) ? (avgSoFar / daysElapsed) * 100 : NaN;
-      const semA = occSemaforo(Math.max(0, Math.min(100, pctAvgSoFar)));
-      const semATitle = (targetMo && daysElapsed > 0)
-        ? `${targetMo.key} · ${avgSoFar.toFixed(1)}/${daysElapsed} noches (prom. hasta hoy) · ${semA.txt}`
-        : "—";
-      const semAHtml = `<span class="occBadge ${semA.cls}" title="${escapeHtml(semATitle)}">${semA.dot} ${escapeHtml(semA.txt)}</span>`;
-
-      trA.innerHTML = `<td class="houseCol">${escapeHtml(AVG_NAME)}</td><td class="semaCol">${semAHtml}</td>` + avgCells;
+      trA.innerHTML = `<td class="houseCol">${escapeHtml(AVG_NAME)}</td>` + avgCells;
       trA.appendChild(tdAvgA);
       frag.appendChild(trA);
     }
@@ -1822,7 +1719,7 @@ tr.innerHTML = `<td class="houseCol">${escapeHtml(house)}</td><td class="semaCol
 tbody.appendChild(frag);
 
     $("occMeta").textContent =
-      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length} · Promedio: ${avgCount} meses` + (targetMo ? ` · Semáforo: ${targetMo.key} (días transcurridos: ${daysElapsed})` : "");
+      `Reservas únicas usadas: ${bookings.size.toLocaleString("es-MX")} · Alojamientos mostrados: ${housesToShow.length.toLocaleString("es-MX")} · Meses: ${months.length} · Promedio: ${avgCount} meses`;
 
     // Build series for line chart using housesToShow
     buildOccupancySeriesForChart(months, housesToShow, map);
@@ -1832,6 +1729,7 @@ tbody.appendChild(frag);
 
   function buildOccupancySeriesForChart(months, housesArr, mapHouseMonth){
     const pctByHouse = new Map();
+    const lastMonthKey = months && months.length ? months[months.length-1].key : "";
 
     // normal series for each house
     for(const house of housesArr){
@@ -1841,8 +1739,9 @@ tbody.appendChild(frag);
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
+        const denom = occDenomForMonth(mo, totalNightsMonth, lastMonthKey);
         const occ = hm.get(mo.key) || 0;
-        const pct = totalNightsMonth > 0 ? (occ / totalNightsMonth) * 100 : 0;
+        const pct = denom > 0 ? (occ / denom) * 100 : 0;
         arr.push(+pct.toFixed(2));
       }
       pctByHouse.set(house, arr);
@@ -1856,6 +1755,7 @@ tbody.appendChild(frag);
         const ms = monthStartUTC(mo.y, mo.m0);
         const me = monthEndUTCExclusive(mo.y, mo.m0);
         const totalNightsMonth = daysBetweenUTC(ms, me);
+        const denom = occDenomForMonth(mo, totalNightsMonth, lastMonthKey);
 
         let sumOcc = 0;
         for(const h of housesArr){
@@ -1863,7 +1763,7 @@ tbody.appendChild(frag);
           sumOcc += (hm.get(mo.key) || 0);
         }
         const avgOcc = sumOcc / housesArr.length;
-        const pct = totalNightsMonth > 0 ? (avgOcc / totalNightsMonth) * 100 : 0;
+        const pct = denom > 0 ? (avgOcc / denom) * 100 : 0;
         arrAvg.push(+pct.toFixed(2));
       }
       pctByHouse.set(AVG_NAME, arrAvg);
