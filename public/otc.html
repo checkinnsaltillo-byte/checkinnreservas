@@ -1992,9 +1992,9 @@ tbody.appendChild(frag);
   .row > *{flex:1}
   .kpis{
     display:grid; gap:10px;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(12, 1fr);
   }
-  @media (max-width: 1100px){ .kpis{grid-template-columns:repeat(3,1fr)} }
+  @media (max-width: 1100px){ .kpis{grid-template-columns:repeat(6,1fr)} }
   @media (max-width: 720px){ .kpis{grid-template-columns:repeat(2,1fr)} }
   @media (max-width: 520px){ .kpis{grid-template-columns:1fr} }
   .kpi{
@@ -2156,44 +2156,14 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
     </div>
     <div class="bd">
       <div class="kpis">
-        <div class="kpi">
+        <!-- Fila 1 -->
+        <div class="kpi" style="grid-column: span 3;">
           <div class="lbl">Clasificación</div>
           <div class="val" id="kpiStars">—</div>
           <div class="meta" id="kpiScore">—</div>
         </div>
-        <div class="kpi">
-          <div class="lbl">Reservas</div>
-          <div class="val" id="kpiBookings">—</div>
-          <div class="meta">IDs distintos</div>
-        </div>
-        <div class="kpi">
-          <div class="lbl">Monto pagado (Gross)</div>
-          <div class="val" id="kpiGross">—</div>
-          <div class="meta">Suma de line-items por reserva</div>
-        </div>
-        <div class="kpi">
-          <div class="lbl">Noches</div>
-          <div class="val" id="kpiNights">—</div>
-          <div class="meta">Suma Nights</div>
-        </div>
-        <div class="kpi">
-          <div class="lbl">Alojamientos distintos</div>
-          <div class="val" id="kpiHouses">—</div>
-          <div class="meta">HouseName únicos</div>
-        </div>
-        <div class="kpi">
-          <div class="lbl">Primera / última reserva</div>
-          <div class="val" id="kpiFirstLast" style="font-size:13px; line-height:1.35">—</div>
-          <div class="meta">Fechas de llegada (DateArrival)</div>
-        </div>
 
-        <div class="kpi" id="kpiSourcesMini">
-          <div class="lbl">Reservas por Source</div>
-          <div class="meta">Distribución por canal</div>
-          <div class="mini" style="height:110px; margin-top:8px;"><canvas id="chSources"></canvas></div>
-        </div>
-
-        <div class="kpi" style="grid-column: span 3;">
+        <div class="kpi" style="grid-column: span 5;">
           <div class="lbl">Datos de contacto</div>
           <div class="meta mono" id="contactLine" style="margin-top:8px">—</div>
           <div class="hint" style="margin-top:10px">
@@ -2201,6 +2171,43 @@ a.waLink span, a.mailLink span{ line-height:1.05 !important; }
             <br/>Score (0-100) = 60% Reservas + 40% Monto.
             <br/>★★★★★ ≥ 85 · ★★★★ ≥ 70 · ★★★ ≥ 55 · ★★ ≥ 40 · ★ resto.
           </div>
+        </div>
+
+        <div class="kpi" id="kpiSourcesMini" style="grid-column: span 4;">
+          <div class="lbl">Reservas por Source</div>
+          <div class="meta">Distribución por canal</div>
+          <div class="mini" style="height:120px; margin-top:8px;"><canvas id="chSources"></canvas></div>
+        </div>
+
+        <!-- Fila 2 -->
+        <div class="kpi" style="grid-column: span 3;">
+          <div class="lbl">Monto pagado (Gross)</div>
+          <div class="val" id="kpiGross">—</div>
+          <div class="meta">Suma de line-items por reserva</div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 2;">
+          <div class="lbl">Reservas</div>
+          <div class="val" id="kpiBookings">—</div>
+          <div class="meta">IDs distintos</div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 2;">
+          <div class="lbl">Noches</div>
+          <div class="val" id="kpiNights">—</div>
+          <div class="meta">Suma Nights</div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 2;">
+          <div class="lbl">Alojamientos distintos</div>
+          <div class="val" id="kpiHouses">—</div>
+          <div class="meta">HouseName únicos</div>
+        </div>
+
+        <div class="kpi" style="grid-column: span 3;">
+          <div class="lbl">Primera / última reserva</div>
+          <div class="val" id="kpiFirstLast" style="font-size:13px; line-height:1.35">—</div>
+          <div class="meta">Fechas de llegada (DateArrival)</div>
         </div>
       </div>
     </div>
