@@ -2631,6 +2631,12 @@ function selectGuest(key){
     $("kpiNights").textContent = String(selected.totalNights);
     $("kpiHouses").textContent = String(selected.houses.size);
     $("kpiFirstLast").innerHTML = "<div><b>Primera:</b> " + fmtYMD(selected.firstArrivalTs) + "</div><div><b>Última:</b> " + fmtYMD(selected.lastArrivalTs) + "</div>";
+
+    // ✅ Título grande: nombre del huésped seleccionado (del combo)
+    var titleEl = document.getElementById("guestTitleBig");
+    var nameForTitle = (selected.GuestName && selected.GuestName !== "—") ? selected.GuestName : "Huésped";
+    if (titleEl) titleEl.textContent = nameForTitle;
+
         const name = selected.GuestName || "Huésped";
     const phoneRaw = selected.GuestPhone || "";
     const emailRaw = selected.GuestEmail || "";
@@ -2760,7 +2766,8 @@ renderSourcesChart(selected);
 
   function startApp(){
     applyGuestTheme();
-    const t0=document.getElementById('guestTitleBig'); if(t0) t0.textContent='Huésped';
+    // Título inicial (sin selección)
+    const t0=document.getElementById('guestTitleBig'); if(t0) t0.textContent='Indicadores del huésped';
     const combo = $("comboGuest");
     const input = $("guestInput");
 
